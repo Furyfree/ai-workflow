@@ -58,8 +58,11 @@ fi
 
 for private_name in auth.json history.jsonl installation_id \
   '*.sqlite' '*.sqlite-shm' '*.sqlite-wal'; do
-  if find "$repo_root" -path "$repo_root/.git" -prune -o \
-    -name "$private_name" -print | grep -q .; then
+  private_match="$(
+    find "$repo_root" -path "$repo_root/.git" -prune -o \
+      -name "$private_name" -print -quit
+  )"
+  if [[ -n "$private_match" ]]; then
     fail "private runtime file found: $private_name"
   fi
 done
@@ -143,18 +146,20 @@ if command -v codex >/dev/null 2>&1; then
 
   check_allowed_rule "$project_rules_file" git ls-remote --exit-code --heads \
     origin chore/tighten-workflow
-  check_allowed_rule "$project_rules_file" git fetch origin main
-  check_allowed_rule "$project_rules_file" git switch -c \
-    chore/tighten-workflow origin/main
-  check_allowed_rule "$project_rules_file" git add -- AGENTS.md
-  check_allowed_rule "$project_rules_file" git add -- README.md scripts/install.sh
-  check_allowed_rule "$project_rules_file" git commit -m "Update workflow"
-  check_allowed_rule "$project_rules_file" git push -u origin HEAD
-  check_allowed_rule "$project_rules_file" gh pr create --fill --draft
   check_allowed_rule "$project_rules_file" gh pr view --json number,url
   check_allowed_rule "$project_rules_file" gh pr checks
+  check_unmatched_rule "$project_rules_file" git fetch origin main
+  check_unmatched_rule "$project_rules_file" git switch -c \
+    chore/tighten-workflow origin/main
+  check_unmatched_rule "$project_rules_file" git add -- AGENTS.md
+  check_unmatched_rule "$project_rules_file" git add -- .
   check_unmatched_rule "$project_rules_file" git add .
   check_unmatched_rule "$project_rules_file" git add -A
+  check_unmatched_rule "$project_rules_file" git commit -m "Update workflow"
+  check_unmatched_rule "$project_rules_file" git commit -m "Update workflow" --all
+  check_unmatched_rule "$project_rules_file" git push -u origin HEAD
+  check_unmatched_rule "$project_rules_file" git push -u origin HEAD --force
+  check_unmatched_rule "$project_rules_file" gh pr create --fill --draft
   check_unmatched_rule "$project_rules_file" gh pr merge
 else
   if [[ "${CI:-}" == "true" ]]; then
@@ -176,7 +181,11 @@ fi
 "$repo_root/scripts/test-install.sh" || fail "installer tests failed"
 
 if git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git -C "$repo_root" status --short ||
+    fail "git status inspection failed"
   git -C "$repo_root" diff --check || fail "git diff whitespace validation failed"
+else
+  printf 'notice: Git worktree checks unavailable\n'
 fi
 
 if [[ $errors -gt 0 ]]; then

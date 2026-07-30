@@ -21,14 +21,14 @@ across multiple repositories.
 - Support safe repeated symlink installation and uninstall.
 - Run one deterministic local validation command in CI.
 - Keep external state changes behind explicit user intent.
-- Provide trusted repository-local Codex rules for the branch and draft
-  pull-request workflow without changing live Codex configuration.
+- Provide trusted repository-local Codex rules for read-only branch and
+  pull-request inspection without changing live Codex configuration.
 
 ## Components
 
 - `global/`: shared global instructions
 - `codex/`: narrow Codex-specific command rules
-- `.codex/`: repository-local branch and pull-request command rules
+- `.codex/`: repository-local branch and pull-request inspection rules
 - `.agents/skills/`: canonical skills and project templates
 - `scripts/`: symlink installation, uninstall, tests, and validation
 - `.github/`: pull-request evidence and CI
@@ -45,7 +45,11 @@ point. It plans; implementation requires a separate user request.
 ### `pr-readiness`
 
 Inspects the complete change and reports whether local validation, manual
-evidence, CI, and review state are current. It does not publish or merge.
+evidence, CI, and review state are current. When a local CodeRabbit review
+runs, actionable findings block pull-request creation or update. The skill
+reports each problem and proposed fix and waits for user direction. Missing or
+unavailable CodeRabbit is reported as unavailable evidence but does not block
+publication. The skill does not publish or merge.
 
 ### `html-plan`
 
@@ -55,14 +59,19 @@ materially clearer as HTML. Markdown remains canonical.
 ### `subagent`
 
 Delegates one bounded, independent, read-only task through the current agent or
-an explicitly selected Codex, Claude, or Grok provider. The main agent verifies
-the returned result.
+an explicitly selected Codex, Claude, or Grok provider. External runs select
+the latest stable provider flagship at high reasoning, avoid interactive
+permission prompts without removing the read-only boundary, and stop for user
+direction when access or model availability fails. Concrete model IDs are
+verified current defaults rather than permanent pins. The main agent verifies
+the result.
 
 ### `passthrough`
 
 Audits and tightens a repository as a whole. It supports a main-agent pass,
-exactly one optional provider-selected subagent pass, and an explicit loop mode
-limited to three sequential subagent passes with early stopping.
+exactly one optional provider-selected subagent pass before or after the main
+pass, and an explicit loop mode limited to three sequential subagent passes
+with early stopping.
 
 ## Installation
 
@@ -76,10 +85,11 @@ limited to three sequential subagent passes with early stopping.
 - Codex rules allow only documented low-risk inspection and validation
   prefixes. They do not allow generic shells, privilege escalation, publishing,
   remote administration, package installation, or infrastructure changes.
-- Trusted project-local Codex rules reduce prompts for narrow branch, commit,
-  push, and draft pull-request commands. They do not grant authorization;
-  commit, push, opening a pull request, and updating an existing pull request
-  each require an explicit user request. They never allow merge.
+- Trusted project-local Codex rules reduce prompts for read-only branch and
+  pull-request inspection. Git and pull-request mutations remain unmatched;
+  commit, push, opening or updating a pull request, merge, installation,
+  deployment, privileged actions, and infrastructure apply each require an
+  explicit user request.
 - Installation never modifies credentials, sessions, plugins, trust, sandbox
   or approval settings, permission profiles, `config.toml`, models, hooks, or
   connector state.
@@ -104,8 +114,8 @@ limited to three sequential subagent passes with early stopping.
   rules file.
 - Codex policy checks allow the documented low-risk examples and leave
   mutation, network, publication, and generic shell commands unmatched.
-- Project policy checks allow the documented repository pull-request commands
-  and leave broad staging and merge commands unmatched.
+- Project policy checks allow documented read-only branch and pull-request
+  inspection and leave Git and pull-request mutations unmatched.
 - The five skills have valid metadata and all referenced templates exist.
 - Controlled user-level tests confirm Codex and Claude discover installed
   instructions and skills.

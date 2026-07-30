@@ -15,20 +15,59 @@ Delegate one independent task without creating an agent tree.
 - If the requested provider is unavailable, report that. Do not silently
   substitute another provider.
 
+Use the latest stable flagship from the requested provider at `high`
+reasoning. Prefer a provider-maintained flagship alias when one is documented.
+The current verified command values are:
+
+- Codex: `gpt-5.6-sol`
+- Claude: `opus`, Anthropic's maintained alias for the latest Opus model
+- Grok: `grok-4.5`
+
+Treat concrete versioned IDs as current defaults, not permanent pins. Before
+an external run, verify the latest stable flagship through the installed
+client's model listing or official provider documentation unless current
+evidence already exists in the same task. Pass the resolved model and `high`
+reasoning explicitly when a native subagent tool supports those overrides; do
+not rely on inherited defaults.
+
 Prefer native subagent tools. When an external CLI is required, first inspect
-its current help. Suitable read-only starting points are:
+its current help, authentication, and available models where the CLI exposes
+them. Suitable bounded read-only starting points are:
 
 ```sh
-codex exec --ignore-user-config --ignore-rules --sandbox read-only \
-  --ephemeral -C REPOSITORY PROMPT
-(cd REPOSITORY && claude --print --permission-mode plan \
+codex -a never exec --ignore-user-config --ignore-rules \
+  --sandbox read-only --ephemeral -m gpt-5.6-sol \
+  -c 'model_reasoning_effort="high"' -C REPOSITORY PROMPT
+(cd REPOSITORY && claude --print --model opus --effort high \
+  --permission-mode dontAsk --tools "Read,Glob,Grep" --max-turns 20 \
   --no-session-persistence PROMPT)
-grok --cwd REPOSITORY --single PROMPT --permission-mode plan \
-  --no-subagents --no-memory --disable-web-search
+grok --cwd REPOSITORY --single PROMPT --model grok-4.5 --effort high \
+  --sandbox read-only --always-approve --max-turns 20 --no-plan \
+  --no-subagents --no-memory --disable-web-search --no-auto-update
 ```
+
+The Codex approval override prevents interactive prompts while its read-only
+sandbox remains enforced. Claude receives only file-reading tools. Grok
+auto-approves tool calls inside its read-only sandbox; the sandbox, disabled
+web search, and disabled auto-update remain the safety boundary.
 
 Do not change authentication, configuration, or permissions to make a provider
 work.
+
+If authentication, subscription, entitlement, rate limits, or model
+availability block the requested provider, report the exact state and ask
+whether to use a currently available stable model. Do not silently select a
+preview, labs, experimental, cheaper, or different-provider model.
+
+## Refresh model defaults
+
+When the verified flagship changes, update the concrete command examples in
+this repository's skill source and related canonical documents, then validate
+the repository. Do not edit live agent configuration.
+
+A model refresh authorizes local repository edits only. Commit, push, and
+pull-request creation or update still require an explicit request naming that
+publication action.
 
 ## Define one bounded task
 

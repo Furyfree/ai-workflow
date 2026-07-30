@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Trap callbacks are invoked indirectly.
-# shellcheck disable=SC2317
+# shellcheck disable=SC2317,SC2329
 set -eEuo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -302,12 +302,14 @@ install_agent() (
     printf 'manifest: %s\n' "$manifest"
   fi
   complete=1
-  local restore
-  for restore in "${restore_paths[@]}"; do
-    case "$restore" in "$work_dir"/restore-*)
-      [[ ! -e "$restore" && ! -L "$restore" ]] || rm -- "$restore"
-    esac
-  done
+  if ((${#restore_paths[@]})); then
+    local restore
+    for restore in "${restore_paths[@]}"; do
+      case "$restore" in "$work_dir"/restore-*)
+        [[ ! -e "$restore" && ! -L "$restore" ]] || rm -- "$restore"
+      esac
+    done
+  fi
 )
 
 case "$selected_agent" in

@@ -50,16 +50,22 @@ When the user explicitly requests a commit, stage only the intended hunks
 within requested paths. Inspect both the staged path list and staged diff
 before committing, and preserve unrelated worktree changes. A commit request
 does not authorize a push. Before a requested push or pull-request action, run
-focused checks and `./scripts/validate.sh`. Push only when explicitly
-requested, and create or update a pull request only when that exact action is
-explicitly requested. Do not merge, install repository content, or
-automatically request Codex review without separate explicit authorization.
+focused checks, `./scripts/validate.sh`, and the `pr-readiness` workflow. Do
+not create or update a pull request when a completed local CodeRabbit review
+has actionable findings. List each problem and proposed fix, then wait for
+explicit user direction. If CodeRabbit is unavailable, continue the other
+checks and report it as unavailable evidence; its absence does not block
+publication. Push only when explicitly requested, and create or update a pull
+request only when that exact action is explicitly requested. Do not merge,
+install repository content, or automatically request Codex review without
+separate explicit authorization.
 
 After a requested publication, report completion as a short list:
 
 - pull request number and URL
 - branch and commit
 - checks that passed
+- actionable review findings, naming each problem and its disposition
 - unavailable or skipped evidence
 
 ## Document ownership

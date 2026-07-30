@@ -16,11 +16,17 @@ Current phase: **small portable core**.
 - [x] Include a narrow, tested Codex rules file for low-risk commands.
 - [x] Encode proportional editing and anti-bloat defaults globally.
 - [x] Add current-agent and one-subagent repository passthrough modes.
+- [x] Support one subagent audit before the independent main-agent pass.
 - [x] Add a provider-aware subagent skill for Codex, Claude, and Grok.
+- [x] Resolve the latest stable flagship subagent at high reasoning and fail
+      closed when provider access or model availability is missing.
 - [x] Limit normal subagent passthrough to one pass and explicit loop mode to
       three sequential passes with early stopping.
-- [x] Keep the repository PR workflow independent of live permission profiles.
+- [x] Keep repository inspection rules independent of live permission profiles
+      and leave mutation commands unmatched.
 - [x] Document optional CodeRabbit installation and unauthenticated fallback.
+- [x] Block pull-request publication on local CodeRabbit findings without
+      blocking when CodeRabbit is unavailable.
 - [x] Document manual Codex review with automatic reviews disabled.
 - [x] Review the complete tracked and untracked change.
 - [ ] Commit, push, open a pull request, or update an existing pull request

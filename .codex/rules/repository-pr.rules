@@ -1,5 +1,6 @@
-# Reduce approval prompts only after the user explicitly requests the matching
-# Git or pull-request action. These rules do not grant authorization.
+# Reduce approval prompts for read-only branch and pull-request inspection.
+# Mutation commands remain unmatched because prefix rules cannot reject risky
+# trailing arguments. These rules do not grant authorization.
 
 prefix_rule(
     pattern = ["git", "ls-remote", "--exit-code", "--heads", "origin"],
@@ -15,78 +16,9 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["git", "fetch", "origin", "main"],
-    decision = "allow",
-    justification = "Refresh origin/main before creating a task branch",
-    match = ["git fetch origin main"],
-    not_match = [
-        "git fetch --all",
-        "git pull",
-    ],
-)
-
-prefix_rule(
-    pattern = ["git", "switch", "-c"],
-    decision = "allow",
-    justification = "Create a fitting task branch",
-    match = ["git switch -c chore/tighten-workflow origin/main"],
-    not_match = [
-        "git switch main",
-        "git checkout -- README.md",
-    ],
-)
-
-prefix_rule(
-    pattern = ["git", "add", "--"],
-    decision = "allow",
-    justification = "Stage explicitly named requested paths",
-    match = [
-        "git add -- AGENTS.md",
-        "git add -- README.md scripts/install.sh",
-    ],
-    not_match = [
-        "git add .",
-        "git add -A",
-    ],
-)
-
-prefix_rule(
-    pattern = ["git", "commit", "-m"],
-    decision = "allow",
-    justification = "Commit the verified requested change",
-    match = ["git commit -m Tighten workflow"],
-    not_match = [
-        "git commit --amend",
-        "git reset --hard",
-    ],
-)
-
-prefix_rule(
-    pattern = ["git", "push", "-u", "origin", "HEAD"],
-    decision = "allow",
-    justification = "Push the verified task branch",
-    match = ["git push -u origin HEAD"],
-    not_match = [
-        "git push",
-        "git push --force",
-    ],
-)
-
-prefix_rule(
-    pattern = ["gh", "pr", "create", "--fill", "--draft"],
-    decision = "allow",
-    justification = "Open the validated change as a draft pull request",
-    match = ["gh pr create --fill --draft"],
-    not_match = [
-        "gh pr merge",
-        "gh repo delete",
-    ],
-)
-
-prefix_rule(
     pattern = ["gh", "pr", ["view", "checks"]],
     decision = "allow",
-    justification = "Report the created pull request and its checks",
+    justification = "Inspect the current pull request and its checks",
     match = [
         "gh pr view --json number,url",
         "gh pr checks",

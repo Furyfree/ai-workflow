@@ -54,7 +54,9 @@ These are reusable workflows loaded only when a task needs them:
 - `ai-project-manager` inspects or reconciles project documents and defines one
   bounded phase. It stops before implementation.
 - `pr-readiness` checks the complete change, validation, manual evidence, CI,
-  and review state without publishing or merging.
+  and review state without publishing or merging. Actionable findings from an
+  available local CodeRabbit review block publication and are listed with
+  proposed fixes for user approval.
 - `html-plan` creates a self-contained HTML explanation when a broad roadmap,
   explanation, analysis, architecture, dependency map, or comparison is
   materially easier to understand visually. It has no template or house style;
@@ -63,13 +65,16 @@ These are reusable workflows loaded only when a task needs them:
   not a second plan or source of truth. Simple questions and short plans should
   remain prose.
 - `subagent` delegates one bounded independent task through the current
-  provider or an explicitly selected Codex, Claude, or Grok CLI. It keeps the
-  task read-only by default and returns control to the main agent.
+  provider or an explicitly selected Codex, Claude, or Grok CLI. External runs
+  resolve the latest stable flagship at high reasoning and use bounded
+  read-only tools. If access or model availability fails, it asks before
+  substituting another model.
 - `passthrough` audits and tightens a complete repository for coherence, stale
   material, validation gaps, and generated bloat. It supports a main-agent
-  pass, one optional provider-selected subagent pass, and an explicit loop mode
-  capped at three sequential subagent passes. The main agent verifies findings
-  and owns every edit.
+  pass, one optional provider-selected subagent pass before or after the main
+  pass, and an explicit loop mode capped at three sequential subagent passes.
+  The main agent independently completes the audit, verifies findings, and owns
+  every edit.
 
 The project-manager skill also contains optional templates for `AGENTS.md`,
 `CLAUDE.md`, `SPEC.md`, `ROADMAP.md`, and `TASKS.md`.
@@ -107,12 +112,13 @@ Set this up manually:
 
 ### `.codex/`
 
-This contains trusted project-local Codex command rules for this repository's
-branch and draft pull-request workflow. It does not select a permission profile
-or modify live Codex configuration. Repository instructions define the
-authorized workflow and require requested-path staging and staged-path review.
-Prefix rules reduce repeated prompts; they are not an end-anchored security
-boundary, so the staged-path and final-diff checks remain mandatory.
+This contains trusted project-local Codex rules for read-only branch and
+pull-request inspection. It does not select a permission profile or modify live
+Codex configuration. Mutation commands remain unmatched because prefix rules
+cannot safely reject trailing flags. Repository instructions define the
+authorized workflow. Requested-hunk staging and staged-diff review happen only
+after the user explicitly authorizes the associated commit or pull-request
+mutation.
 
 ## Installation
 
@@ -185,8 +191,11 @@ coderabbit auth login
 coderabbit auth status --agent
 ```
 
-When `pr-readiness` finds CodeRabbit installed but unauthenticated, it reports
-that state, skips only the CodeRabbit review, and continues all other checks.
+When `pr-readiness` cannot run an authenticated CodeRabbit review, it reports
+that state as unavailable evidence and continues all other checks without
+blocking publication. When the review runs, actionable findings block
+publication: the agent lists each problem and proposed fix, then waits for
+approval instead of fixing or publishing automatically.
 The free tier is enough for occasional local reviews; paid plans mainly add
 higher limits and broader PR features. See
 [CodeRabbit plans](https://docs.coderabbit.ai/management/plans).
@@ -260,7 +269,7 @@ The installer never manages credentials, sessions, plugins, models, MCP
 servers, trust, permission profiles, `config.toml`, hooks, deployment, or
 infrastructure. It only creates managed symlinks and manifests. The global
 Codex rules authorize low-risk local commands; this repository's trusted local
-rules reduce prompts for narrow Git and draft pull-request commands. Those
-rules do not authorize the commands: commit, push, opening or updating a pull
-request, installation, deployment, and infrastructure actions still require an
-explicit user request.
+rules reduce prompts for read-only branch and pull-request inspection. Mutation
+commands remain unmatched. Commit, push, opening or updating a pull request,
+installation, deployment, and infrastructure actions require an explicit user
+request.

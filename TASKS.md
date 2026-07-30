@@ -18,11 +18,16 @@
 - [x] Add global defaults for existing patterns, proportional scope, and
       removal of generated bloat.
 - [x] Add and validate current-agent and one-subagent passthrough modes.
+- [x] Add a subagent-first mode followed by an independent main-agent pass.
 - [x] Add provider selection through a separate reusable subagent skill.
+- [x] Add latest stable flagship selection at high reasoning with bounded
+      no-prompt read-only execution.
 - [x] Add an explicit passthrough loop capped at three sequential passes.
 - [x] Remove the unsafe dependency on a live Codex permission profile.
-- [x] Keep only repository-local branch and draft pull-request command rules.
+- [x] Keep only read-only repository branch and pull-request inspection rules.
 - [x] Add optional CodeRabbit installation and unauthenticated fallback.
+- [x] Block pull-request publication on local CodeRabbit findings and report
+      unavailable CodeRabbit as skipped evidence.
 - [x] Add manual Codex review setup with automatic reviews disabled.
 - [x] Complete a full repository passthrough and resolve verified findings.
 - [ ] Commit, push, open a pull request, or update an existing pull request
@@ -33,3 +38,10 @@
 Mark tasks complete only after their evidence exists. Controlled agent
 discovery, publication, installation into real agent homes, GitHub settings,
 and Homelab adoption remain separate phases.
+
+Evidence for completed workflow controls:
+
+- Passthrough: one Grok-first full pass completed with main-agent verification.
+- Repository rules: `./scripts/validate.sh` checks inspection commands and
+  confirms mutation commands remain unmatched.
+- CodeRabbit gate: two PR updates stopped while actionable findings remained.

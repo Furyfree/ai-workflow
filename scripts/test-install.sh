@@ -47,6 +47,33 @@ HOME="$dry_root/home" CODEX_HOME="$dry_root/codex" \
   "$repo_root/scripts/install.sh" --source "$fixture" --dry-run >/dev/null
 [[ ! -e "$dry_root" ]] || fail "dry-run created target or state directories"
 
+rollback_root="$test_root/rollback"
+mkdir -p "$rollback_root/codex"
+printf 'rollback original\n' >"$rollback_root/codex/AGENTS.md"
+printf 'block rules directory\n' >"$rollback_root/codex/rules"
+if HOME="$rollback_root/home" CODEX_HOME="$rollback_root/codex" \
+  AGENTS_HOME="$rollback_root/agents" \
+  CLAUDE_CONFIG_DIR="$rollback_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$rollback_root/state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" \
+    --agent codex >/dev/null 2>&1; then
+  fail "install succeeded despite a blocked target parent"
+fi
+compgen -G "$rollback_root/state/backups/codex-*" >/dev/null ||
+  fail "rollback did not reach the first target mutation"
+[[ -f "$rollback_root/codex/AGENTS.md" &&
+  ! -L "$rollback_root/codex/AGENTS.md" ]] ||
+  fail "original instructions were not restored as a regular file"
+grep -Fqx "rollback original" "$rollback_root/codex/AGENTS.md" ||
+  fail "failed install did not restore the original instructions"
+[[ -f "$rollback_root/codex/rules" &&
+  ! -L "$rollback_root/codex/rules" ]] ||
+  fail "blocking path was changed"
+grep -Fqx "block rules directory" "$rollback_root/codex/rules" ||
+  fail "failed install changed the blocking path"
+[[ ! -e "$rollback_root/state/codex.tsv" ]] ||
+  fail "failed install left a completed manifest"
+
 mkdir -p "$CODEX_HOME"
 printf 'original codex instructions\n' >"$CODEX_HOME/AGENTS.md"
 mkdir -p "$CODEX_HOME/rules"

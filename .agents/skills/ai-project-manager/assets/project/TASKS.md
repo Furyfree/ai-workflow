@@ -12,5 +12,6 @@
 ## Completion rule
 
 Mark a task complete only after its required validation passes. Keep commit,
-push, pull-request creation, merge, installation, deployment, and apply
-separate unless explicitly authorized.
+push, pull-request creation or update, merge, installation, deployment,
+privileged action, and infrastructure apply separate; each requires an
+explicit user request.

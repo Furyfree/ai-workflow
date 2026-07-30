@@ -1,6 +1,6 @@
 ---
 name: passthrough
-description: Audit and tighten an entire repository for coherence, stale or duplicated material, validation gaps, and AI-generated bloat. Use for passthrough, passthrough subagent, provider-specific passthrough with Codex, Claude, or Grok, passthrough subagent loop, full repository audit, coherence pass, or repository-wide cleanup.
+description: Audit and tighten an entire repository for coherence, stale or duplicated material, validation gaps, and AI-generated bloat. Use for passthrough, passthrough subagent, subagent-first passthrough, provider-specific passthrough with Codex, Claude, or Grok, passthrough subagent loop, full repository audit, coherence pass, or repository-wide cleanup.
 ---
 
 # Repository passthrough
@@ -15,6 +15,10 @@ Review the repository as a whole without turning the audit into a rewrite.
   current provider.
 - `passthrough subagent codex|claude|grok`: do the same one-subagent pass with
   the selected provider.
+- `passthrough subagent first [provider]`, or an explicit request to receive
+  subagent feedback before the main pass: use `$subagent` for exactly one
+  fresh-context read-only audit, verify its findings, then complete the full
+  main-agent pass.
 - `passthrough subagent loop [provider]`: only when explicitly requested, run
   sequential fresh-context passes through `$subagent`, one at a time, with a
   maximum of three total subagent passes.
@@ -27,6 +31,9 @@ another pass. Subagents must never spawn subagents.
 
 If the chosen provider is unavailable, report it. Do not change live
 configuration or silently substitute another provider.
+
+In subagent-first mode, use the returned findings as leads, not as the scope of
+the main pass. Complete every inspection step below independently.
 
 ## Inspect
 
@@ -54,8 +61,11 @@ configuration or silently substitute another provider.
 
 Run focused checks and the complete repository gate, then inspect the final
 tracked and untracked change. Report the scope inspected, fixes, evidence,
-skipped checks, residual risks, and next authorization boundary.
+skipped checks, residual risks, and next authorization boundary. When a
+subagent was used, name its provider and summarize which findings were
+accepted or rejected and why.
 
 A passthrough does not by itself authorize commit, push, pull-request creation,
 merge, installation, deployment, privileged action, or infrastructure apply.
-Separate user or repository standing authorization still applies.
+Each action requires an explicit user request; repository policy may impose
+additional restrictions.

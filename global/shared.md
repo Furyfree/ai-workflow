@@ -77,8 +77,8 @@ instruction says otherwise.
 - Use `ai-project-manager` for repository planning and document reconciliation.
 - Use `pr-readiness` for local and pull-request evidence.
 - Use `html-plan` only when a visual materially improves a broad plan.
-- Use `subagent` for one bounded independent delegation, including an explicit
-  Codex, Claude, or Grok provider when requested.
+- Use `subagent` for one bounded independent delegation, including a specific
+  provider when requested.
 - Use `passthrough` for a current-agent repository-wide coherence pass.
 - Use passthrough subagent or loop modes only when the user explicitly requests
   them.

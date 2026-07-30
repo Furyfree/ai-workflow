@@ -9,7 +9,8 @@ Build a reliable project picture without inventing requirements.
 
 ## Inspect
 
-1. Read applicable repository instructions.
+1. Find and follow applicable repository instructions, including `AGENTS.md`
+   when present.
 2. Inspect the branch, worktree, layout, validation, and relevant documents.
 3. Identify the sources of truth for requirements, sequencing, and active work.
 4. Report conflicts, missing decisions, risks, and ambiguous scope.
@@ -23,14 +24,14 @@ When the user requests this planning structure, adapt the templates under
 `assets/project/`:
 
 - `AGENTS.md`: durable working rules
-- `README.md`: installation, recovery, validation, and public overview
 - `SPEC.md`: accepted requirements and boundaries
 - `ROADMAP.md`: ordered outcomes and exit criteria
 - `TASKS.md`: current phase and validation state
 
 Use the optional `CLAUDE.md` template only when the repository supports Claude
-Code. Remove unused sections and never overwrite existing requirements
-silently.
+Code. Inspect and reuse an existing `README.md`; this skill does not provide a
+generic README template. Remove unused sections and never overwrite existing
+requirements silently.
 
 Keep `ROADMAP.md` short. Order phases, use checkboxes for observable work, add
 only constraints that affect sequencing, and retain compact completed
