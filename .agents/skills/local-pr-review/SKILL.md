@@ -1,6 +1,6 @@
 ---
 name: local-pr-review
-description: Review a GitHub pull request from an authenticated local checkout. Use when the current request explicitly asks for local review or when pull-request readiness needs a fallback because hosted review is unavailable or stale.
+description: Review a GitHub pull request from an authenticated local checkout. Use when the current request explicitly asks for local review or when pull-request readiness needs one full-severity fallback.
 ---
 
 # Local pull-request review
@@ -8,8 +8,10 @@ description: Review a GitHub pull request from an authenticated local checkout. 
 Use the local checkout and `gh` authentication. Do not depend on Codex Cloud,
 CodeRabbit, or another hosted reviewer.
 
-Do not run this workflow automatically in addition to a current hosted review.
-An explicit request for a second local review overrides that default.
+Do not run this workflow merely to duplicate a current full-severity review.
+Hosted severity-limited review does not replace this fallback. When invoked by
+`pr-readiness`, run it at most once per pull-request cycle. An explicit request
+for another local review overrides that limit.
 
 ## Keep review and publication separate
 

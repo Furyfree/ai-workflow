@@ -31,6 +31,11 @@ Current phase: **controlled discovery**.
 - [x] Block pull-request publication on local CodeRabbit findings without
       blocking when CodeRabbit is unavailable.
 - [x] Document manual Codex review with automatic reviews disabled.
+- [x] Use a draft-first pull-request lifecycle with one deliberate hosted
+      review, a user-driven completion handoff, approved fixes, and final-head
+      CI before readiness.
+- [x] Bound each pull-request cycle to one hosted review, at most two
+      CodeRabbit runs, and one full local fallback.
 - [x] Add an authenticated local pull-request review fallback with explicit
       authorization before posting a GitHub comment.
 - [x] Use local pull-request review in readiness checks and propose coherent

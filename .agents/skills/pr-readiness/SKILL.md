@@ -8,6 +8,54 @@ description: Determine whether a change has complete current pull-request eviden
 Use this workflow for the current pull-request outcome only. Do not keep it
 active for later unrelated edits merely because it was used earlier.
 
+## Follow the pull-request lifecycle
+
+For a full pull-request workflow, prefer this sequence:
+
+1. Prepare and validate the change locally.
+2. Create a draft pull request when publication is authorized.
+3. Treat that explicit pull-request creation request as authorization for one
+   standard hosted review trigger unless the user opts out or hosted review is
+   unavailable. Confirm that the trigger was accepted, report the pending
+   handoff, and end the turn. Do not wait for completion or poll the pull
+   request.
+4. When the user returns after that review completes, inspect and report every
+   actionable finding, then wait for approval before editing.
+5. After approved fixes, rerun validation, create one coherent fix commit, and
+   update the branch only when those actions are authorized. Do not request
+   another hosted review by default.
+6. Wait for CI on the exact final head, verify every finding is resolved, and
+   report whether the draft is ready to mark ready for review and merge.
+
+Treat one deliberate hosted review as sufficient for a pull-request cycle.
+Never infer a review trigger from a commit, push, or update to an existing pull
+request. After the pull-request creation trigger, leave any additional hosted
+review requests to the user. If the first review failed or became insufficient
+because substantive new scope was added, report that evidence gap and use the
+local-review fallback when appropriate.
+
+Do not monitor hosted review in the background. The user owns the handoff back
+to this workflow after GitHub reports that review is complete.
+
+## Bound the review cycle
+
+Use this review budget for one pull-request cycle:
+
+- one hosted review
+- one complete CodeRabbit review, plus at most one rerun after approved fixes
+- at most one full `local-pr-review`, used only when explicitly requested or
+  when no current full-severity review is available
+
+Hosted review may remain useful evidence without covering ordinary-priority
+findings. When CodeRabbit is unavailable or does not cover the current scope,
+run the one local fallback even if hosted review is current.
+
+If the local fallback reports actionable findings, wait for approval, apply the
+approved fixes, rerun affected checks and the complete local gate, and inspect
+the exact fix diff. Do not start another full local review. Substantive new
+scope may justify a new review cycle, but explain the evidence gap and get user
+direction before starting it.
+
 ## Inspect scope
 
 1. Read repository instructions, requirements, and the accepted plan.
@@ -90,12 +138,13 @@ If the review reports an actionable finding:
 4. Wait for the user to approve the fixes and explicitly request any
    publication action.
 
-After approved fixes, rerun affected checks and one new CodeRabbit review. If
-it still reports an actionable finding, stop and report it again. Do not turn
-this into an automatic fix-and-review loop.
+After approved fixes from the first CodeRabbit review, rerun affected checks
+and at most one new local CodeRabbit CLI review. If it still reports an
+actionable finding, stop and report it again. After those findings are approved
+and fixed, use targeted verification rather than a third CodeRabbit review.
 
-When a local CodeRabbit review runs, a pull request may be created or updated
-only when that review completed without actionable findings.
+When a local CodeRabbit CLI review runs, a pull request may be created or
+updated only when that review completed without actionable findings.
 
 ## Inspect a pull request
 
@@ -108,23 +157,34 @@ When a pull request exists:
 3. Verify each apparent request against the current head and distinguish
    actionable feedback from informational, stale, duplicated, or invalid
    comments.
-4. Determine whether a hosted review is current for the exact remote head. Use
-   it as the independent review evidence when it is available.
-5. If hosted review is unavailable or stale, use `local-pr-review` against the
-   exact remote head. Keep its report local unless the user separately asks to
-   post it. Do not run local review merely to duplicate a current hosted review.
-6. Verify required CI belongs to the latest commit and has completed.
-7. Confirm required screenshots, logs, rollout, or target-environment evidence.
-8. Confirm any repository-required independent review is current.
+4. Identify the latest hosted review and the commit it reviewed. Use it as
+   severity-limited independent review evidence when it covers the current
+   scope.
+5. If later commits contain only user-approved fixes for that review, verify
+   the fix diff and each finding directly. Do not require or request another
+   hosted review merely because those fixes changed the head.
+6. If no current full-severity review is available, use the one
+   `local-pr-review` fallback against the exact remote head even when hosted
+   review is current. Keep its report local unless the user separately asks to
+   post it. Do not duplicate a current CodeRabbit or other full-severity review.
+7. Verify required CI belongs to the latest commit and has completed.
+8. Confirm required screenshots, logs, rollout, or target-environment evidence.
+9. Confirm any repository-required independent review is sufficient.
 
 Unresolved actionable feedback and failed, pending, missing, or stale required
 evidence block readiness. Report each actionable request and its proposed
 disposition before editing or updating the pull request.
 
-Requesting a hosted review is a separate external action. Do not post its live
-invocation unless the user explicitly asks for that review. When creating or
-updating pull-request metadata, never put a live agent invocation in the title
-or body; describe the review in ordinary prose instead.
+An explicit request to create a pull request includes one standard hosted-review
+trigger unless the user opts out. A commit, push, or request to update an
+existing pull request does not authorize another trigger. Never put a live
+agent invocation in the pull-request title or body; post the one trigger as its
+own comment and leave any later triggers to the user.
+
+Marking a draft ready for review and merging are separate external actions.
+Ask before either action. If the repository may automatically start hosted
+review when a draft becomes ready, tell the user and do not add another manual
+review invocation at that transition.
 
 In Codex, `/review` is a useful user-run independent local review and `/diff`
 shows the exact working-tree change. Neither replaces the pull-request

@@ -15,11 +15,18 @@ Use a checkout that will remain at a stable path:
 ```sh
 ./scripts/validate.sh
 ./scripts/install.sh --dry-run
+```
+
+### Real installation
+
+Run installation only as an explicit user action:
+
+```sh
 ./scripts/install.sh
 ```
 
-Restart Codex and Claude Code after installation so they discover the linked
-instructions and skills.
+Restart Codex and Claude Code afterward so they discover the linked instructions
+and skills.
 
 ## Repository map
 
@@ -158,11 +165,33 @@ you trust the source. This repository uses the local CLI rather than the
 CodeRabbit GitHub App. The app's repository access has been removed; local CLI
 authentication remains available for readiness checks.
 
-For an existing GitHub pull request, `pr-readiness` uses a current hosted review
-when available. `local-pr-review` checks the exact remote head only when the
-user requests a local review or hosted review is unavailable. Posting its
-findings requires a separate explicit request and uses the account reported by
-`gh auth status`.
+For an existing GitHub pull request, `pr-readiness` uses hosted review as
+severity-limited evidence. It uses `local-pr-review` when explicitly requested
+or when CodeRabbit or another current full-severity review is unavailable.
+Posting local findings requires a separate explicit request and uses the
+account reported by `gh auth status`.
+
+The default publication flow is draft-first. An explicit request to create a
+pull request includes one standard hosted review after the draft is published,
+unless the user opts out. Actionable findings are reported for approval before
+editing. After approved fixes, rerun local validation and CodeRabbit. When
+commit and push are separately authorized, create one coherent fix commit,
+update the branch, and wait for CI on the final head. Do not request another
+hosted review merely because the approved fixes changed the commit.
+
+Each pull-request cycle is limited to one hosted review, at most two
+CodeRabbit runs, and at most one full local fallback. Approved findings from
+that fallback receive targeted verification and the complete local gate rather
+than another full review. Substantive new scope requires an explained,
+user-approved new review cycle.
+
+After GitHub accepts the review trigger, the agent reports the pending review
+and stops. It does not wait or poll. Resume the workflow with a new prompt after
+GitHub reports that Codex has finished.
+
+When the final head is clean, ask before marking the draft ready for review or
+merging. GitHub may trigger hosted Codex review when a draft becomes ready, so
+do not post another manual review invocation at that transition.
 
 ### Optional Codex Cloud review
 
@@ -177,12 +206,19 @@ complete validation command, then add only the setup or access it proves
 necessary. Keep automatic reviews off when reviews should be requested
 selectively.
 
-Requesting a hosted review is a separate GitHub action. Use the exact
-`@codex review` comment only when that action is intended; do not place a live
-agent invocation in a pull-request title or body. See
+Use the exact `@codex review` comment for the single review included with
+requested pull-request creation. A commit, push, or update to an existing pull
+request does not trigger another comment; the user owns any additional hosted
+reviews. Do not place a live agent invocation in a pull-request title or body.
+See
 [Codex Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environment.md),
 [Codex in GitHub](https://learn.chatgpt.com/docs/third-party/github.md), and the
 [Codex code review settings](https://chatgpt.com/codex/settings/code-review).
+
+With automatic reviews off, GitHub does not request Codex review by itself.
+This workflow posts the one manual review comment after an explicitly requested
+pull-request creation. A later commit, push, or pull-request update receives no
+additional trigger from the agent.
 
 ## Validation
 

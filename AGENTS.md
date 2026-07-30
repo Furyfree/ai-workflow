@@ -6,64 +6,23 @@ This repository owns portable coding-agent instructions, six reusable skills,
 project templates, a small Codex command policy, and a Linux installer for
 Codex and Claude Code.
 
-Keep shared instructions agent-neutral. Put tool-specific policy in clearly
-scoped files, and never use it to bypass explicit authorization boundaries.
+## Repository-specific boundaries
 
-## Working rules
-
-- Inspect the branch, worktree, relevant documents, and existing validation
-  before editing.
-- Preserve unrelated user changes.
-- Keep one coherent outcome per change.
-- Prefer the smallest implementation that meets accepted requirements.
-- Do not add automation for hypothetical future needs.
-- Never fabricate files, output, tests, commits, or review state.
-- Keep credentials and private agent runtime state out of the repository.
-- Never edit active agent homes or live configuration such as
-  `~/.codex/config.toml`, `~/.claude/`, or `~/.agents/` while maintaining this
-  repository. Change repository sources only. Installation is a separate
-  user-run action.
-- Keep commit, push, pull-request creation, merge, installation, deployment,
-  privileged action, and infrastructure apply behind explicit authorization.
+- Change repository sources only. Do not run real installation or uninstall
+  against active agent homes while maintaining this repository.
+- Keep shared instructions agent-neutral and put tool-specific policy in the
+  relevant skill, rules file, or other clearly scoped source.
+- Base task branches on `main` and use short names matching the requested work.
 
 ## Git and pull requests
 
-A request to change this repository authorizes local edits and validation only.
-Commit, push, pull-request creation, and adding commits to an existing pull
-request each require an explicit user request. Do not infer publication
-authorization from an implementation request, "go ahead", authenticated tools,
-or rules that reduce approval prompts.
-
-Before editing:
-
-- Confirm the branch descends from `main`, is not `main`, and has a short name
-  matching the requested work.
-- If it tracks a remote branch, confirm that branch still exists upstream.
-- Reuse a fitting live branch. Otherwise, with a clean worktree, fetch
-  `origin/main` and create a new branch from it before editing.
-- If unrelated or uncommitted work prevents a safe branch change, preserve it
-  and ask before moving it.
-
-Edit only requested paths and preserve unrelated worktree changes.
-
-When the user explicitly requests a commit, stage only the intended hunks
-within requested paths. Inspect both the staged path list and staged diff
-before committing, and preserve unrelated worktree changes. If the change
-contains independent reviewable outcomes, show an ordered coherent commit plan
-before committing; do not split mechanically by file or line count. A commit
-request does not authorize a push. Before a requested push or pull-request
-action, or before committing further work to an existing pull request, run
-focused checks, `./scripts/validate.sh`, and the `pr-readiness` workflow. Use a
-current hosted review when available; run `local-pr-review` only when the user
-asks for it or hosted review is unavailable. Do not create or update a pull
-request when a completed local CodeRabbit review has actionable findings. List
-each problem and proposed fix, then wait for explicit user direction. If
-CodeRabbit is unavailable, continue the other checks and report it as
-unavailable evidence; its absence does not block publication. Push only when
-explicitly requested, and create or update a pull request only when that exact
-action is explicitly requested. Do not merge, install repository content, or
-request hosted Codex review without separate explicit authorization. Never put
-a live agent invocation in a pull-request title or body.
+- Follow the global authorization boundaries without broadening them.
+- For a requested commit, stage only intended paths and inspect the staged
+  diff.
+- Before a requested commit, push, pull-request creation, or pull-request
+  update, run focused checks, `./scripts/validate.sh`, and `pr-readiness`.
+- Keep hosted and local review lifecycle policy in the relevant skills rather
+  than duplicating it here.
 
 After a requested publication, report completion as a short list:
 
@@ -96,6 +55,16 @@ when `ROADMAP.md` links it and the phase cannot stay concise without it.
   contract changes.
 - Do not mark work complete before its evidence passes.
 
+## Code Review Rules
+
+### Documentation contracts
+
+- Review changed documentation and instructions as first-class behavior. Flag
+  claims, commands, paths, authorization boundaries, or recovery guidance that
+  contradict the implementation or would materially mislead an operator.
+- Leave spelling, formatting, and other deterministic Markdown checks to local
+  validation unless they change meaning.
+
 ## Validation
 
 Run `./scripts/validate.sh` after changing instructions, skills, templates,
@@ -107,6 +76,4 @@ git diff --check
 git diff --cached --check
 ```
 
-Report checks that could not run. Publication requires an explicit request as
-described above. Installation into real agent homes remains a separate
-user-run action.
+Report checks that could not run.

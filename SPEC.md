@@ -59,21 +59,43 @@ Inspects the complete change and reports whether local validation, manual
 evidence, CI, review state, and a coherent commit plan are current before
 creating or updating a pull request, committing further work to an existing
 pull request, or assessing merge readiness. For an existing pull request it
-uses a current hosted review when available and `local-pr-review` as an explicit
-or unavailable-hosted-review fallback. When a local CodeRabbit review runs,
-actionable findings block pull-request creation or update. Missing or
-unavailable CodeRabbit is reported as unavailable evidence but does not block
-publication. The skill does not commit, publish, request hosted review, or
-merge.
+uses hosted review as severity-limited evidence and `local-pr-review` as an
+explicit fallback or when no current full-severity review is available. When a
+local CodeRabbit review runs, actionable findings block pull-request creation
+or update. Missing or unavailable CodeRabbit is reported as unavailable
+evidence but does not block publication by itself. The workflow does not
+commit, publish, mark ready, or merge without the authorization described
+below.
+
+The normal pull-request lifecycle is draft-first. An explicit pull-request
+creation request includes one standard hosted review unless the user opts out.
+A commit, push, or update to an existing pull request does not authorize another
+trigger, and the user owns any additional hosted review requests. After
+user-approved findings are fixed, the reviewed commit plus the verified fix
+diff remains sufficient evidence unless substantive scope was added. Final
+readiness requires validation and CI on the exact final head. Marking ready and
+merging remain separate user-approved actions, and the agent does not duplicate
+hosted review that the ready transition may trigger.
+
+One pull-request cycle permits one hosted review, one complete CodeRabbit
+review plus at most one rerun after approved fixes, and at most one full local
+fallback. Findings from that fallback are followed by approved fixes, targeted
+verification, and the complete local gate rather than another full local
+review. Substantive new scope may start a new cycle only after the evidence gap
+is explained and the user directs it.
+
+After an authorized hosted-review trigger is accepted, the workflow returns
+control without waiting or polling. The user starts the review-inspection step
+with a later prompt after hosted review completes.
 
 ### `local-pr-review`
 
 Reviews the exact remote pull-request head through the authenticated local
 checkout. It reports findings locally by default and posts one clearly labelled
 comment as the authenticated GitHub user only when explicitly requested. It is
-used for an explicit local review or when hosted review is unavailable or stale,
-not automatically in addition to a current hosted review. It does not
-impersonate the hosted Codex reviewer or mutate the change.
+used for an explicit local review or as the single full-severity fallback when
+another current full-severity review is unavailable. It does not impersonate
+the hosted Codex reviewer or mutate the change.
 
 ### `html-plan`
 

@@ -45,6 +45,12 @@ archived, local-only, or sensitive repositories may not be. Planning or
 describing an external setting does not authorize creating an environment,
 granting connector access, changing review settings, or adding secrets.
 
+When hosted review is selected, keep durable repository-specific review
+expectations in a concise `## Code Review Rules` section in `AGENTS.md`. Treat
+operational documentation as behavior when inaccurate commands, paths,
+permissions, or recovery guidance could mislead users. Leave mechanical style
+and formatting checks to deterministic validation.
+
 ## Create or reconcile documents
 
 When the user requests this planning structure, adapt the templates under

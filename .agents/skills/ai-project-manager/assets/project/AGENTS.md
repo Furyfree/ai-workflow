@@ -17,6 +17,9 @@ Describe what `{{PROJECT_NAME}}` owns and the user outcome it supports.
 - Require an explicit user request for each commit, push, pull-request
   creation or update, merge, installation, deployment, privileged action, and
   infrastructure apply.
+- When hosted review is configured, treat an explicit pull-request creation
+  request as authorization for one standard review trigger unless the user opts
+  out. Do not infer another trigger from later commits, pushes, or updates.
 
 ## Repository map
 
@@ -36,3 +39,13 @@ and actions that require explicit authorization.
 - `SPEC.md` owns accepted requirements and boundaries.
 - `ROADMAP.md` owns phase order and exit criteria.
 - `TASKS.md` owns current work and validation state.
+
+## Code Review Rules
+
+### Documentation contracts
+
+- Review changed documentation and instructions as first-class behavior. Flag
+  claims, commands, paths, authorization boundaries, or recovery guidance that
+  contradict the implementation or would materially mislead a user.
+- Leave spelling, formatting, and other deterministic documentation checks to
+  local validation unless they change meaning.

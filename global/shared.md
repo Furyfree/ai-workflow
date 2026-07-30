@@ -82,11 +82,26 @@ instruction says otherwise.
   committing further work to an existing pull request, or for an explicit
   merge-readiness check.
 - Use `local-pr-review` only when the user asks for a local review or
-  `pr-readiness` needs a fallback because hosted review is unavailable. Do not
-  duplicate a current hosted review automatically. Post local findings to
-  GitHub only when the user explicitly requests the comment.
-- Request a hosted review only with separate explicit authorization. Never put
-  a live agent invocation in a pull-request title or body.
+  `pr-readiness` needs one full-severity fallback. Do not duplicate a current
+  full-severity review. Post local findings to GitHub only when the user
+  explicitly requests the comment.
+- Treat an explicit request to create a pull request as authorization for one
+  standard hosted-review trigger unless the user opts out. Never infer another
+  trigger from a commit, push, or update to an existing pull request, and leave
+  any additional hosted review requests to the user. Never put a live agent
+  invocation in a pull-request title or body.
+- Prefer a draft-first pull-request flow. After approved findings are fixed,
+  validate the final head and wait for CI without requesting another hosted
+  review. Ask before marking the draft ready or merging, and do not duplicate
+  review automation that the ready transition may trigger.
+- Bound each pull-request cycle to one hosted review, at most two CodeRabbit
+  runs, and at most one full local fallback. After approved local findings,
+  verify the exact fix diff and complete local gate instead of starting another
+  full review. Start a new cycle only for substantive new scope and after user
+  direction.
+- After an authorized hosted-review trigger is accepted, return control to the
+  user. Do not wait for completion or poll; inspect the result when the user
+  returns after review.
 - Use `html-plan` when the user asks for HTML or a visual materially improves a
   broad plan or explanation.
 - Before starting multiple substantive independent outcomes, use `subagent` to
