@@ -364,13 +364,27 @@ else
     printf '  curl -fsSL https://cli.coderabbit.ai/install.sh | sh\n'
     printf '  coderabbit auth login\n'
     printf '  coderabbit auth status --agent\n'
-  elif coderabbit_auth_status="$(
-    coderabbit auth status --agent 2>/dev/null
-  )" && grep -Fq '"authenticated":true' <<<"$coderabbit_auth_status"; then
-    :
   else
-    printf '\nCodeRabbit CLI authentication required:\n'
-    printf '  coderabbit auth login\n'
-    printf '  coderabbit auth status --agent\n'
+    if coderabbit_auth_status="$(
+      coderabbit auth status --agent 2>/dev/null
+    )"; then
+      if grep -Eq \
+        '"authenticated"[[:space:]]*:[[:space:]]*true' \
+        <<<"$coderabbit_auth_status"; then
+        :
+      elif grep -Eq \
+        '"authenticated"[[:space:]]*:[[:space:]]*false' \
+        <<<"$coderabbit_auth_status"; then
+        printf '\nCodeRabbit CLI authentication required:\n'
+        printf '  coderabbit auth login\n'
+        printf '  coderabbit auth status --agent\n'
+      else
+        printf '\nCodeRabbit CLI authentication status unavailable:\n'
+        printf '  coderabbit auth status --agent\n'
+      fi
+    else
+      printf '\nCodeRabbit CLI authentication status unavailable:\n'
+      printf '  coderabbit auth status --agent\n'
+    fi
   fi
 fi

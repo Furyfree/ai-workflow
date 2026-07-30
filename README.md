@@ -151,6 +151,7 @@ coderabbit auth status --agent
 After a real installation, the installer prints only the missing steps: setup
 when the CLI is absent, or authentication when the installed CLI is not
 authenticated. It prints no CodeRabbit guidance when authentication is current.
+If the status check fails, it reports that failure without recommending login.
 
 The first command downloads and executes remote code. Inspect it first unless
 you trust the source. This repository uses the local CLI rather than the

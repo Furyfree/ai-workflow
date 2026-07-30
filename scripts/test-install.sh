@@ -136,8 +136,19 @@ printf 'original claude instructions\n' >"$CLAUDE_CONFIG_DIR/CLAUDE.md"
 mkdir -p "$AGENTS_HOME/skills"
 ln -s "../../source/.agents/skills/passthrough" \
   "$AGENTS_HOME/skills/passthrough"
+
+isolated_bin="$test_root/isolated-bin"
+mkdir -p "$isolated_bin"
+for command_name in \
+  awk basename bash cat cmp date dirname grep head ln mkdir mktemp mv \
+  readlink rm; do
+  command_path="$(command -v "$command_name")" ||
+    fail "test dependency missing: $command_name"
+  ln -s "$command_path" "$isolated_bin/$command_name"
+done
+
 install_output="$(
-  PATH="/usr/bin:/bin" "$repo_root/scripts/install.sh" --source "$fixture"
+  PATH="$isolated_bin" "$repo_root/scripts/install.sh" --source "$fixture"
 )"
 grep -Fqx "  curl -fsSL https://cli.coderabbit.ai/install.sh | sh" \
   <<<"$install_output" ||
@@ -147,16 +158,24 @@ grep -Fqx "  coderabbit auth status --agent" <<<"$install_output" ||
 
 fake_bin="$test_root/fake-bin"
 mkdir -p "$fake_bin"
+# The single-quoted values below are source for the generated fake CLI.
+# shellcheck disable=SC2016
 printf '%s\n' \
   '#!/usr/bin/env bash' \
   'set -euo pipefail' \
   "[[ \"\${1:-}:\${2:-}:\${3:-}\" == \"auth:status:--agent\" ]] || exit 2" \
-  "printf '{\"authenticated\":%s}\\n' \"\${FAKE_CODERABBIT_AUTHENTICATED:-false}\"" \
+  'case "${FAKE_CODERABBIT_AUTHENTICATED:-false}" in' \
+  '  true|false)' \
+  '    printf "{\"authenticated\":%s}\n" "$FAKE_CODERABBIT_AUTHENTICATED"' \
+  '    ;;' \
+  '  error) exit 2 ;;' \
+  '  *) printf "unexpected fake auth state\n" >&2; exit 2 ;;' \
+  'esac' \
   >"$fake_bin/coderabbit"
 chmod +x "$fake_bin/coderabbit"
 
 unauthenticated_output="$(
-  PATH="$fake_bin:/usr/bin:/bin" FAKE_CODERABBIT_AUTHENTICATED=false \
+  PATH="$fake_bin:$isolated_bin" FAKE_CODERABBIT_AUTHENTICATED=false \
     "$repo_root/scripts/install.sh" --source "$fixture"
 )"
 if grep -Fq "curl -fsSL" <<<"$unauthenticated_output"; then
@@ -167,11 +186,22 @@ grep -Fqx "CodeRabbit CLI authentication required:" \
   fail "install did not report missing CodeRabbit authentication"
 
 authenticated_output="$(
-  PATH="$fake_bin:/usr/bin:/bin" FAKE_CODERABBIT_AUTHENTICATED=true \
+  PATH="$fake_bin:$isolated_bin" FAKE_CODERABBIT_AUTHENTICATED=true \
     "$repo_root/scripts/install.sh" --source "$fixture"
 )"
 if grep -Fq "CodeRabbit" <<<"$authenticated_output"; then
   fail "install printed CodeRabbit guidance for an authenticated CLI"
+fi
+
+status_error_output="$(
+  PATH="$fake_bin:$isolated_bin" FAKE_CODERABBIT_AUTHENTICATED=error \
+    "$repo_root/scripts/install.sh" --source "$fixture"
+)"
+grep -Fqx "CodeRabbit CLI authentication status unavailable:" \
+  <<<"$status_error_output" ||
+  fail "install did not distinguish a failed CodeRabbit status check"
+if grep -Fq "coderabbit auth login" <<<"$status_error_output"; then
+  fail "install recommended login after a failed CodeRabbit status check"
 fi
 
 assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
