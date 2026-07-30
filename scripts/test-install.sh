@@ -136,9 +136,43 @@ printf 'original claude instructions\n' >"$CLAUDE_CONFIG_DIR/CLAUDE.md"
 mkdir -p "$AGENTS_HOME/skills"
 ln -s "../../source/.agents/skills/passthrough" \
   "$AGENTS_HOME/skills/passthrough"
-install_output="$("$repo_root/scripts/install.sh" --source "$fixture")"
+install_output="$(
+  PATH="/usr/bin:/bin" "$repo_root/scripts/install.sh" --source "$fixture"
+)"
+grep -Fqx "  curl -fsSL https://cli.coderabbit.ai/install.sh | sh" \
+  <<<"$install_output" ||
+  fail "install did not print setup for a missing CodeRabbit CLI"
 grep -Fqx "  coderabbit auth status --agent" <<<"$install_output" ||
-  fail "install did not print the CodeRabbit authentication check"
+  fail "install did not print authentication after CodeRabbit setup"
+
+fake_bin="$test_root/fake-bin"
+mkdir -p "$fake_bin"
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'set -euo pipefail' \
+  "[[ \"\${1:-}:\${2:-}:\${3:-}\" == \"auth:status:--agent\" ]] || exit 2" \
+  "printf '{\"authenticated\":%s}\\n' \"\${FAKE_CODERABBIT_AUTHENTICATED:-false}\"" \
+  >"$fake_bin/coderabbit"
+chmod +x "$fake_bin/coderabbit"
+
+unauthenticated_output="$(
+  PATH="$fake_bin:/usr/bin:/bin" FAKE_CODERABBIT_AUTHENTICATED=false \
+    "$repo_root/scripts/install.sh" --source "$fixture"
+)"
+if grep -Fq "curl -fsSL" <<<"$unauthenticated_output"; then
+  fail "install printed CodeRabbit setup for an installed CLI"
+fi
+grep -Fqx "CodeRabbit CLI authentication required:" \
+  <<<"$unauthenticated_output" ||
+  fail "install did not report missing CodeRabbit authentication"
+
+authenticated_output="$(
+  PATH="$fake_bin:/usr/bin:/bin" FAKE_CODERABBIT_AUTHENTICATED=true \
+    "$repo_root/scripts/install.sh" --source "$fixture"
+)"
+if grep -Fq "CodeRabbit" <<<"$authenticated_output"; then
+  fail "install printed CodeRabbit guidance for an authenticated CLI"
+fi
 
 assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
 assert_link "$CODEX_HOME/rules/ai-workflow.rules" \

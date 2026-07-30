@@ -358,9 +358,19 @@ if [[ $dry_run -eq 1 ]]; then
   printf 'dry-run complete: %s unchanged\n' "$selected_agent"
 else
   printf 'installation complete: %s\n' "$selected_agent"
-  printf '\noptional CodeRabbit CLI setup (not run automatically):\n'
-  printf '  warning: the curl command downloads and executes remote code\n'
-  printf '  curl -fsSL https://cli.coderabbit.ai/install.sh | sh\n'
-  printf '  coderabbit auth login\n'
-  printf '  coderabbit auth status --agent\n'
+  if ! command -v coderabbit >/dev/null 2>&1; then
+    printf '\noptional CodeRabbit CLI setup (not run automatically):\n'
+    printf '  warning: the curl command downloads and executes remote code\n'
+    printf '  curl -fsSL https://cli.coderabbit.ai/install.sh | sh\n'
+    printf '  coderabbit auth login\n'
+    printf '  coderabbit auth status --agent\n'
+  elif coderabbit_auth_status="$(
+    coderabbit auth status --agent 2>/dev/null
+  )" && grep -Fq '"authenticated":true' <<<"$coderabbit_auth_status"; then
+    :
+  else
+    printf '\nCodeRabbit CLI authentication required:\n'
+    printf '  coderabbit auth login\n'
+    printf '  coderabbit auth status --agent\n'
+  fi
 fi
