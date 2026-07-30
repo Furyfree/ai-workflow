@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent"
+  short_description: "Delegate one bounded independent agent task"
+  default_prompt: "Use $subagent to delegate one bounded independent task and return the result to the main agent."

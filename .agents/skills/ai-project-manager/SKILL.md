@@ -1,72 +1,60 @@
 ---
 name: ai-project-manager
-description: Inspect, create, or reconcile repository planning documents and turn an accepted roadmap outcome into one bounded phase. Use for new repository foundations, AGENTS.md/SPEC.md/ROADMAP.md/TASKS.md setup, plan reviews, conflicting project documents, phase selection, or planning-only requests that must stop before implementation.
+description: Inspect or reconcile repository planning documents and define one bounded phase. Use for repository foundations, plan reviews, conflicting project documents, phase selection, or planning-only requests.
 ---
 
-# AI Project Manager
+# AI project manager
 
-Build a reliable project picture before proposing work. Preserve existing
-requirements and stop at the authorization boundary.
+Build a reliable project picture without inventing requirements.
 
 ## Inspect
 
 1. Read applicable repository instructions.
-2. Inspect the branch, worktree, tracked and untracked changes, repository
-   layout, validation entry points, and relevant project documents.
-3. Identify the current source of truth for requirements, sequencing, and
-   active work.
-4. Report conflicts, missing decisions, unstated risks, and ambiguous scope.
+2. Inspect the branch, worktree, layout, validation, and relevant documents.
+3. Identify the sources of truth for requirements, sequencing, and active work.
+4. Report conflicts, missing decisions, risks, and ambiguous scope.
 
-Do not create the four-document structure automatically when an existing
-project has another clear planning system. Reconcile first.
+Do not impose a new document structure on a repository that already has a clear
+planning system.
 
-## Create or reconcile project documents
+## Create or reconcile documents
 
-When the user requests this structure, use the templates under
+When the user requests this planning structure, adapt the templates under
 `assets/project/`:
 
-- `AGENTS.md`: durable repository working rules
-- `CLAUDE.md`: thin Claude Code route to `AGENTS.md`
-- `SPEC.md`: requirements, boundaries, non-goals, and acceptance criteria
+- `AGENTS.md`: durable working rules
+- `README.md`: installation, recovery, validation, and public overview
+- `SPEC.md`: accepted requirements and boundaries
 - `ROADMAP.md`: ordered outcomes and exit criteria
-- `TASKS.md`: current phase tasks and validation state
+- `TASKS.md`: current phase and validation state
 
-Replace template markers with project facts. Remove unused sections. Never
-leave generic filler or overwrite existing documents silently.
+Use the optional `CLAUDE.md` template only when the repository supports Claude
+Code. Remove unused sections and never overwrite existing requirements
+silently.
 
-Keep each fact in one canonical place:
+Keep `ROADMAP.md` short. Order phases, use checkboxes for observable work, add
+only constraints that affect sequencing, and retain compact completed
+milestones when useful. Put current implementation detail in `TASKS.md` or the
+phase plan.
 
-- working behavior in `AGENTS.md`
-- accepted product behavior in `SPEC.md`
-- phase order in `ROADMAP.md`
-- current execution state in `TASKS.md`
+When their shared contract changes, update `SPEC.md`, `ROADMAP.md`, and
+`TASKS.md` together without mixing their ownership.
 
 ## Plan one phase
 
-1. Select one accepted roadmap outcome.
-2. Define observable acceptance criteria.
-3. List implementation tasks in dependency order.
-4. Define focused checks, the full local gate, and manual validation.
-5. Define rollback or recovery for stateful changes.
-6. Identify decisions or permissions needed before work can continue.
-7. State where the work must pause.
+Define:
 
-Prefer a phase that produces one coherent, reviewable pull request.
+- one accepted outcome and observable acceptance criteria
+- implementation tasks in dependency order
+- focused checks, the complete local gate, and manual validation
+- recovery for stateful changes
+- unresolved decisions and required permissions
+- the explicit stop point
 
-## Stop correctly
+Stop after the plan. Implementation requires a separate user request. Do not
+infer permission to commit, push, publish, merge, install, deploy, or apply.
 
-- If the user asked for analysis or planning, stop before implementation.
-- Do not mark a task complete until its required evidence exists.
-- Do not infer permission to commit, push, open a pull request, merge, install,
-  deploy, or apply infrastructure.
+## Report
 
-## Output
-
-Summarize:
-
-- current state
-- conflicts or missing decisions
-- documents created or changed
-- selected phase and acceptance criteria
-- validation and rollback
-- explicit next authorization boundary
+Summarize current state, conflicts, the selected phase, validation, recovery,
+and the next authorization boundary.

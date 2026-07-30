@@ -1,75 +1,62 @@
 ---
 name: pr-readiness
-description: Determine whether a local change or pull request has complete, current evidence without publishing or merging it. Use when reviewing a diff, preparing a PR, checking merge readiness, running local CodeRabbit, inspecting CI or review feedback, or deciding what remains before a change can merge.
+description: Determine whether a local change or pull request has complete current evidence. Use for diff review, pull-request preparation, CI and review inspection, or merge-readiness checks.
 ---
 
 # Pull-request readiness
 
-Treat readiness as evidence tied to the latest change, not as a general feeling.
+## Inspect scope
 
-## Establish scope
-
-1. Read repository instructions and the current plan.
-2. Inspect the branch, status, complete diff, staged changes, and untracked
-   files.
+1. Read repository instructions, requirements, and the accepted plan.
+2. Inspect the branch, status, staged and unstaged changes, and untracked files.
 3. Identify unrelated, accidental, generated, secret, or oversized changes.
-4. Confirm the change matches one coherent outcome and its acceptance criteria.
+4. Confirm the change matches one coherent outcome.
 
-Do not hide unrelated changes by resetting or deleting them. Report and
-separate them safely.
+## Validate
 
-## Validate locally
+1. Run focused checks.
+2. Run the repository's complete local gate.
+3. Perform required manual tests.
+4. Inspect the final complete change.
+5. Run `git status --short` and `git diff --check`.
+6. Record exact commands, results, skipped checks, and residual risk.
 
-1. Run focused checks for the changed area.
-2. Run the repository's complete local validation command.
-3. Perform required manual tests in the stated environment.
-4. Inspect the final diff after automated fixes.
-5. Record exact commands and results.
+When CodeRabbit is installed, check authentication once:
 
-Missing or unavailable required evidence is not a pass.
+```sh
+coderabbit auth status --agent
+```
 
-## Run independent AI review
+If it reports that authentication is unavailable, tell the user, skip only the
+CodeRabbit review, and continue every other readiness check. Do not start login
+or install it implicitly.
 
-When the CodeRabbit CLI is available and the repository permits it, run:
+When authenticated and permitted, run one review:
 
 ```sh
 coderabbit review --agent --uncommitted --include-untracked
 ```
 
-Evaluate findings against requirements and code. Fix valid findings, rerun
-affected deterministic checks, and report rejected findings briefly. Do not
-repeat AI review indefinitely; stop after the repository's configured pass
-limit or two passes when no limit exists.
+Fix valid findings and rerun affected checks. Do not start a CodeRabbit review
+loop unless the user explicitly requests one.
 
-If CodeRabbit is unavailable, unauthenticated, or fails, record that exact
-state. Do not install or authenticate it implicitly.
+## Inspect a pull request
 
-## Inspect pull-request state
+When a pull request exists:
 
-Only when a pull request exists:
+1. Identify its latest commit.
+2. Verify required CI belongs to that commit and has completed.
+3. Inspect review decisions, actionable comments, and unresolved threads.
+4. Confirm required screenshots, logs, rollout, or target-environment evidence.
+5. Confirm any repository-required independent review is current.
 
-1. Identify the latest pull-request commit.
-2. Verify required CI checks belong to that commit and have completed.
-3. Inspect review decisions, inline comments, and unresolved threads.
-4. Distinguish actionable feedback from stale, resolved, or informational
-   comments.
-5. Confirm required screenshots, logs, rollout, accessibility, or target
-   environment evidence.
-
-Failed, pending, missing, or stale required checks block readiness.
+Failed, pending, missing, or stale required evidence blocks readiness.
 
 ## Report
 
-Return:
-
-- scope reviewed
-- focused and full validation
-- manual evidence
-- local AI-review status
-- CI status for the latest commit
-- unresolved actionable feedback
-- limitations and residual risk
-- one verdict: `ready`, `not ready`, or `ready except for explicit human action`
+Return the reviewed scope, local checks, manual evidence, review state, current
+CI, unresolved feedback, residual risk, and one verdict: `ready`, `not ready`,
+or `ready except for explicit human action`.
 
 Do not commit, push, create a pull request, resolve threads, merge, deploy, or
-apply infrastructure unless the user separately authorizes that action.
+apply unless the user separately authorizes that action.

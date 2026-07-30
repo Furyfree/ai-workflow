@@ -1,175 +1,110 @@
 # AI workflow specification
 
-## Problem
+## Purpose
 
-Coding-agent setup is often copied between machines and repositories without a
-clear boundary between reusable workflow, project requirements, and private
-runtime state. Agent-specific instruction formats also encourage duplicated
-rules that drift apart.
-
-## Users
-
-The primary user is a developer working across multiple repositories who wants
-the same safe planning, implementation, review, and installation workflow with
-more than one coding agent.
+Provide a small shared workflow for a developer who uses Codex and Claude Code
+across multiple repositories.
 
 ## Required behavior
 
 - Store shared coding-agent behavior once.
-- Support Codex and Claude Code through thin adapters first.
-- Allow future adapters without rewriting shared skills or project templates.
-- Install selected global instructions and reusable skills.
-- Keep project requirements and commands in project repositories.
-- Provide adaptable templates for `AGENTS.md`, `SPEC.md`, `ROADMAP.md`, and
-  `TASKS.md`.
-- Preview installation without changing the target system.
-- Back up conflicting managed files before replacement.
-- Support safe repeated installation and recovery.
-- Record managed targets and installed fingerprints in a machine-readable
-  manifest.
-- Validate repository structure, skills, adapters, templates, scripts, and
-  installer behavior.
-- Test the supported Linux workflow on selected distribution containers.
+- Keep shared guidance concise and bias changes toward existing project
+  patterns, proportional scope, and removal of generated bloat.
+- Link the same global instructions into the supported Codex and Claude Code
+  locations.
+- Install a small Codex-only rules file for low-risk inspection and validation
+  commands.
+- Install the five canonical skills for either or both agents.
+- Provide adaptable project templates without overwriting existing documents.
+- Preview installation without changing agent homes.
+- Back up conflicting targets before replacing them.
+- Support safe repeated symlink installation and uninstall.
+- Run one deterministic local validation command in CI.
 - Keep external state changes behind explicit user intent.
+- Provide trusted repository-local Codex rules for the branch and draft
+  pull-request workflow without changing live Codex configuration.
 
-## Architecture
+## Components
 
-Component ownership:
+- `global/`: shared global instructions
+- `codex/`: narrow Codex-specific command rules
+- `.codex/`: repository-local branch and pull-request command rules
+- `.agents/skills/`: canonical skills and project templates
+- `scripts/`: symlink installation, uninstall, tests, and validation
+- `.github/`: pull-request evidence and CI
+- `README.md`: installation, recovery, validation, and public usage
 
-- Root planning documents define how this repository is maintained.
-- `global/` stores shared global guidance and agent adapters.
-- `.agents/skills/` stores canonical reusable skills.
-- `scripts/` stores deterministic installation and validation automation.
-- `.github/` stores pull-request templates and CI.
-- `containers/` stores Linux portability environments.
-- `tests/` stores deterministic fixtures and realistic skill case inventories.
-- `docs/` stores reference material that is loaded only when routed.
-
-The canonical skill source is `.agents/skills/`. Each adapter must use a
-verified discovery or installation path for its agent. Do not assume all agents
-load the same filenames or directories.
-
-## Global instructions
-
-Shared global behavior should cover:
-
-- repository instruction discovery
-- preservation of unrelated changes
-- small reviewable changes
-- validation and honest reporting
-- secrets and private-state boundaries
-- destructive and external-action authorization
-- explicit stop points
-- routing detailed workflows to skills
-
-Global instructions must not contain:
-
-- repository-specific commands or hazards
-- host-specific paths
-- language-specific style rules
-- copied skill procedures
-- credentials or private state
-- broad trust, sandbox, approval, or command allowlists
-
-## Initial skills
+## Skills
 
 ### `ai-project-manager`
 
-- Inspect existing instructions, plans, branch state, and changes.
-- Create or reconcile planning documents only when requested.
-- Find conflicts, missing requirements, risks, and decisions.
-- Define acceptance criteria, validation, rollback, and pause points.
-- Implement one approved phase at a time.
-- Update task status only after validation.
+Inspects and reconciles repository planning documents, then produces one
+bounded phase with acceptance criteria, validation, recovery, and a clear stop
+point. It plans; implementation requires a separate user request.
 
 ### `pr-readiness`
 
-- Inspect the complete diff and untracked files.
-- Separate unrelated changes.
-- Run focused checks and the repository's full local gate.
-- Run local CodeRabbit when available.
-- Record skipped or unavailable checks.
-- Verify CI, reviews, and threads against the latest commit.
-- Stop before unauthorized commit, push, PR, or merge actions.
+Inspects the complete change and reports whether local validation, manual
+evidence, CI, and review state are current. It does not publish or merge.
 
 ### `html-plan`
 
-- Visualize broad plans, architecture, dependencies, comparisons, and status.
-- Choose a visual only when it improves understanding.
-- Generate self-contained HTML without required network assets.
-- Use semantic, accessible, responsive, and print-friendly output.
-- Link back to canonical Markdown sources.
-- Render and inspect the result when browser tooling is available.
-- Keep HTML derived; never make it a second specification or roadmap.
+Creates a self-contained visual explanation when a broad plan or comparison is
+materially clearer as HTML. Markdown remains canonical.
 
-## Installer
+### `subagent`
 
-The first installer is Bash and targets Linux, Codex, and Claude Code.
+Delegates one bounded, independent, read-only task through the current agent or
+an explicitly selected Codex, Claude, or Grok provider. The main agent verifies
+the returned result.
 
-Required behavior:
+### `passthrough`
 
-- dry-run
-- explicit source and target paths
-- create, update, skip, and conflict reporting
-- timestamped backups
-- idempotence
-- validation after installation
-- isolated integration tests
-- documented recovery or uninstall
-- a current machine-readable manifest
-- rollback after an interrupted mutation
+Audits and tightens a repository as a whole. It supports a main-agent pass,
+exactly one optional provider-selected subagent pass, and an explicit loop mode
+limited to three sequential subagent passes with early stopping.
 
-Copy mode is the stable default. Link mode is an explicit option for developing
-this repository locally. Rendered instruction files are always copied.
+## Installation
 
-## Security and privacy
-
-- Never track or install credentials, tokens, sessions, history, caches, logs,
-  runtime databases, plugin state, or connector state.
-- Do not require administrator privileges for normal installation.
-- Keep destructive actions narrowly scoped and explicitly authorized.
-- Test installers with temporary home and agent-configuration directories.
-- Use synthetic fixtures.
-- Give CI the minimum permissions required.
-- Keep merge, deployment, installation, privileged actions, and apply
-  human-controlled.
-
-## Compatibility
-
-- Linux is the initial installer target.
-- Codex and Claude Code are the initial agent targets.
-- Ubuntu 24.04, Debian 12, and Fedora 43 are the initial container baselines.
-- Add an agent or platform only after its discovery, installation, and
-  validation behavior is tested.
-- Skills should remain agent-neutral where practical.
+- Linux and Bash are the first supported platform.
+- Symlinks are the only first-release installation mode.
+- Codex and Claude Code may be selected independently.
+- Codex installation links `codex/rules/ai-workflow.rules` without replacing
+  other rule files.
+- Conflicts receive timestamped backups.
+- Each agent has a small manifest used for safe updates and uninstall.
+- Codex rules allow only documented low-risk inspection and validation
+  prefixes. They do not allow generic shells, privilege escalation, publishing,
+  remote administration, package installation, or infrastructure changes.
+- Trusted project-local Codex rules allow the branch, commit, push, and draft
+  pull-request commands required for this repository. They never allow merge.
+- Installation never modifies credentials, sessions, plugins, trust, sandbox
+  or approval settings, permission profiles, `config.toml`, models, hooks, or
+  connector state.
 
 ## Non-goals
 
-- Mirroring an agent's complete home directory.
-- Installing or authenticating coding agents, CodeRabbit, plugins, connectors,
-  or local model servers.
-- Managing general agent configuration, trust entries, or broad permissions in
-  the first release.
-- Replacing project-specific instructions or requirements.
-- Managing Homelab, Nimbus, or Dotfiles implementation.
-- Generating HTML for plans that are clearer as prose or a short list.
-- Supporting untested platforms or agents.
+- Mirroring complete agent configuration directories
+- Copy installation
+- Cross-platform installers
+- Automatic plugin, model, MCP, CodeRabbit, or Codex code-review setup
+- Broad command allowlists or automatic trust and permission changes
+- Managing project-specific requirements
+- Simulating agent behavior in deterministic tests
+- Browser automation or a general HTML framework
+- Automatic merge, deployment, or infrastructure apply
 
 ## First-release acceptance criteria
 
-- Shared global instructions install safely for Codex and Claude Code.
-- Each agent adapter has an isolated discovery or installation test.
-- All three initial skills pass structural and realistic workflow tests.
-- `html-plan` produces a validated self-contained visualization.
-- Installation is previewable, reversible, and idempotent.
-- Interrupted installation rolls back completed target mutations.
-- One command runs the same validation locally and in CI.
-- Ubuntu, Debian, and Fedora validation images pass.
-- No private runtime state is selected or tracked.
-- One Homelab pull request completes the planned workflow.
-
-## Unresolved decisions
-
-There are no unresolved implementation decisions for the local first-release
-artifact. Live required checks and optional remote CodeRabbit remain external
-repository settings and must be confirmed after the first GitHub Actions run.
+- `./scripts/validate.sh` passes locally and in CI.
+- Isolated tests prove dry-run, symlink installation, conflict backup, repeated
+  installation, drift refusal, and uninstall for both agents and the Codex
+  rules file.
+- Codex policy checks allow the documented low-risk examples and leave
+  mutation, network, publication, and generic shell commands unmatched.
+- Project policy checks allow the documented repository pull-request commands
+  and leave broad staging and merge commands unmatched.
+- The five skills have valid metadata and all referenced templates exist.
+- Controlled user-level tests confirm Codex and Claude discover installed
+  instructions and skills.
+- One real repository change uses the workflow through human merge.

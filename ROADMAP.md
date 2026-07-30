@@ -1,124 +1,71 @@
 # AI workflow roadmap
 
-## Phase 1: Repository foundation
+This file tracks status and work order. Keep entries short; current task detail
+belongs in `TASKS.md`.
 
-Status: Implemented locally; publication pending
+Current phase: **small portable core**.
 
-### Outcome
+## 1. Small portable core
 
-A fresh coding agent can understand the project, current work, boundaries, and
-validation without relying on another repository.
+- [x] Keep one shared instruction body for Codex and Claude Code.
+- [x] Link instructions and five skills without managing private runtime state.
+- [x] Support preview, conflict backups, repeated installation, drift refusal,
+      and uninstall.
+- [x] Reduce validation and CI to one deterministic Linux gate.
+- [x] Keep this roadmap and its reusable template short and checkbox-driven.
+- [x] Include a narrow, tested Codex rules file for low-risk commands.
+- [x] Encode proportional editing and anti-bloat defaults globally.
+- [x] Add current-agent and one-subagent repository passthrough modes.
+- [x] Add a provider-aware subagent skill for Codex, Claude, and Grok.
+- [x] Limit normal subagent passthrough to one pass and explicit loop mode to
+      three sequential passes with early stopping.
+- [x] Keep the repository PR workflow independent of live permission profiles.
+- [x] Document optional CodeRabbit installation and unauthenticated fallback.
+- [x] Document manual Codex review with automatic reviews disabled.
+- [x] Review the complete tracked and untracked change.
+- [ ] Commit, push, or open a pull request only after separate authorization,
+      except for this repository's standing draft pull-request workflow.
 
-### Included work
+## 2. Controlled discovery
 
-- Add repository instructions and Claude routing.
-- Add the specification, roadmap, and current tasks.
-- Document workflow and accepted decisions.
-- Add a concise README and tailored `.gitignore`.
+Start after the portable core passes locally and installation is authorized.
 
-### Exit criteria
+- [ ] Confirm Codex and Claude Code load the linked global instructions.
+- [ ] Confirm both agents discover and invoke all five skills.
+- [ ] Handle discovery differences through paths or repository routing without
+      duplicating shared instructions.
+- [ ] Record recovery steps and any behavior that could not be verified.
 
-- All foundation documents exist and link correctly.
-- The first-release implementation is present and validated.
-- The final diff is reviewed before publication.
-- The foundation reaches `main` through a pull request.
+## 3. Real adoption
 
-## Phase 2: Shared instructions and adapters
+Start after controlled discovery passes.
 
-Status: Implemented locally; live discovery verification pending
+- [ ] Use the workflow for one bounded Homelab pull request.
+- [ ] Complete local validation, review, required manual evidence, and human
+      merge.
+- [ ] Keep only workflow steps that solve observed problems.
 
-### Outcome
+## 4. Pi personal tooling
 
-Shared global instructions work through tested Codex and Claude Code adapters
-without duplicated policy.
+The existing notes under `~/git/docs/pi/` are migration input. This repository
+should become their source of truth instead of maintaining parallel plans.
 
-### Included work
+- [ ] Create an in-repository Pi package area and consolidate the existing
+      design, extension, skill, prompt, and package notes into it.
+- [ ] Preserve Pi's native extension, skill, prompt, and package boundaries.
+- [ ] Build in value order: carryover, commit, then browser.
+- [ ] Add Pi installation and uninstall only after the first workflows are
+      useful and the package layout is stable.
+- [ ] Prove discovery without tracking credentials, sessions, or runtime state.
+- [ ] Remove the migrated copies from `~/git/docs/pi/` only after review.
 
-- Add canonical shared guidance.
-- Add thin Codex and Claude Code adapters.
-- Verify repository and global instruction discovery.
-- Decide copy versus symlink installation.
+## 5. Evidence-led refinements
 
-### Exit criteria
-
-- Both agents load the expected instructions in isolated test repositories.
-- Adapter files contain only required tool-specific behavior.
-
-## Phase 3: Project management
-
-Status: Implemented locally; real-repository exercise pending
-
-### Outcome
-
-`ai-project-manager` creates or reconciles project documents and produces one
-bounded, validated phase plan.
-
-### Exit criteria
-
-- Empty, existing, and conflicting repository fixtures pass.
-- Existing project requirements are never overwritten silently.
-- Planning-only requests stop before implementation.
-
-## Phase 4: Pull-request readiness
-
-Status: Implemented locally; live pull-request exercise pending
-
-### Outcome
-
-`pr-readiness` reports exact readiness from local diff through current PR state
-without performing unauthorized actions.
-
-### Exit criteria
-
-- Local validation, CodeRabbit failure handling, CI, review, thread, and manual
-  evidence paths are tested.
-- Commit, push, PR, and merge boundaries remain separate.
-
-## Phase 5: HTML plans
-
-Status: Implemented locally; visual use exercise pending
-
-### Outcome
-
-`html-plan` turns a broad canonical plan into a useful self-contained visual.
-
-### Exit criteria
-
-- Desktop and narrow viewport rendering are checked.
-- Accessibility and local asset checks pass.
-- The output links to, but does not replace, canonical Markdown.
-
-## Phase 6: Installer and CI
-
-Status: Implemented and validated locally
-
-### Outcome
-
-Selected instructions and skills install safely and repository validation runs
-locally and in CI.
-
-### Exit criteria
-
-- Dry-run, backup, conflict, idempotence, and recovery tests pass in temporary
-  directories.
-- CI runs the same validation command used locally.
-
-## Phase 7: Repository adoption
-
-Status: Planned
-
-### Outcome
-
-The workflow is proven on real changes before broader rollout.
-
-### Included work
-
-1. Pilot Homelab.
-2. Apply lessons to Nimbus.
-3. Adopt in Dotfiles after the Nimbus handoff is stable.
-
-### Exit criteria
-
-- One Homelab pull request completes local validation, AI review, CI, manual
-  evidence where required, and human merge.
-- Shared workflow changes remain reusable and project rules remain local.
+- [ ] Add instructions or automation only after repeated friction demonstrates
+      a need.
+- [ ] Expand the Codex allowlist only after repeated approval friction shows a
+      low-risk command is missing.
+- [ ] Never broadly allow generic shells, privilege escalation, publishing,
+      remote administration, package installation, or infrastructure changes.
+- [ ] Tighten an existing rule when a correction reveals a repeat mistake
+      instead of growing duplicate guidance.

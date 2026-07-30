@@ -2,4 +2,5 @@
 
 Read and follow [AGENTS.md](AGENTS.md) before planning or changing this
 repository. Use its documentation routing to load `SPEC.md`, `ROADMAP.md`,
-`TASKS.md`, or files under `docs/` only when the task requires them.
+or `TASKS.md` only when the task requires them. Use `README.md` for
+installation, recovery, validation, and the public overview.

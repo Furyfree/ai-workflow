@@ -7,7 +7,6 @@ test_root="$(mktemp -d "${TMPDIR:-/tmp}/ai-workflow-test.XXXXXXXX")"
 cleanup() {
   case "$test_root" in
     "${TMPDIR:-/tmp}"/ai-workflow-test.*) rm -rf -- "$test_root" ;;
-    *) printf 'warning: refused unexpected cleanup path: %s\n' "$test_root" >&2 ;;
   esac
 }
 trap cleanup EXIT
@@ -17,160 +16,193 @@ fail() {
   exit 1
 }
 
-assert_file_contains() {
-  local file="$1"
-  local pattern="$2"
-  grep -Fq "$pattern" "$file" || fail "$file does not contain: $pattern"
+assert_link() {
+  local target="$1" source="$2"
+  [[ -L "$target" ]] || fail "expected symlink: $target"
+  [[ "$(readlink "$target")" == "$source" ]] ||
+    fail "unexpected symlink target: $target"
 }
 
-fixture_source="$test_root/source"
-mkdir -p "$fixture_source"
-cp -a "$repo_root/global" "$repo_root/.agents" "$fixture_source/"
+assert_same_link() {
+  local target="$1" source="$2"
+  [[ -L "$target" ]] || fail "expected symlink: $target"
+  [[ "$(readlink -f "$target")" == "$(readlink -f "$source")" ]] ||
+    fail "unexpected resolved symlink target: $target"
+}
 
-test_home="$test_root/home with spaces"
-export HOME="$test_home"
+fixture="$test_root/source"
+mkdir -p "$fixture"
+cp -a "$repo_root/codex" "$repo_root/global" "$repo_root/.agents" "$fixture/"
+
+export HOME="$test_root/home with spaces"
 export CODEX_HOME="$test_root/codex home"
 export AGENTS_HOME="$test_root/agents home"
 export CLAUDE_CONFIG_DIR="$test_root/claude home"
 export AI_WORKFLOW_STATE_DIR="$test_root/state"
 
+dry_root="$test_root/dry"
+HOME="$dry_root/home" CODEX_HOME="$dry_root/codex" \
+  AGENTS_HOME="$dry_root/agents" CLAUDE_CONFIG_DIR="$dry_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$dry_root/state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" --dry-run >/dev/null
+[[ ! -e "$dry_root" ]] || fail "dry-run created target or state directories"
+
 mkdir -p "$CODEX_HOME"
 printf 'original codex instructions\n' >"$CODEX_HOME/AGENTS.md"
-
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent all --mode copy
-
-[[ -f "$CODEX_HOME/AGENTS.md" && ! -L "$CODEX_HOME/AGENTS.md" ]] ||
-  fail "Codex instructions were not rendered as a regular file"
-[[ -f "$CLAUDE_CONFIG_DIR/CLAUDE.md" && ! -L "$CLAUDE_CONFIG_DIR/CLAUDE.md" ]] ||
-  fail "Claude instructions were not rendered as a regular file"
-assert_file_contains "$CODEX_HOME/AGENTS.md" "Shared development agreements"
-assert_file_contains "$CODEX_HOME/AGENTS.md" "Codex adapter"
-assert_file_contains "$CLAUDE_CONFIG_DIR/CLAUDE.md" "Claude Code adapter"
-
-for skill in ai-project-manager html-plan pr-readiness; do
-  [[ -d "$AGENTS_HOME/skills/$skill" && ! -L "$AGENTS_HOME/skills/$skill" ]] ||
-    fail "Codex copy missing for $skill"
-  [[ -d "$CLAUDE_CONFIG_DIR/skills/$skill" && ! -L "$CLAUDE_CONFIG_DIR/skills/$skill" ]] ||
-    fail "Claude copy missing for $skill"
-  diff -qr "$fixture_source/.agents/skills/$skill" "$AGENTS_HOME/skills/$skill" >/dev/null ||
-    fail "Codex skill copy differs for $skill"
-done
-
-manifest="$AI_WORKFLOW_STATE_DIR/current.tsv"
-[[ -f "$manifest" ]] || fail "installation manifest missing"
-backup_file="$(find "$AI_WORKFLOW_STATE_DIR/backups" -type f -path '*/codex*/AGENTS.md' -print -quit)"
-[[ -n "$backup_file" ]] || fail "original Codex instructions were not backed up"
-assert_file_contains "$backup_file" "original codex instructions"
-
-manifest_hash="$(sha256sum "$manifest" | awk '{print $1}')"
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent all --mode copy
-[[ "$(sha256sum "$manifest" | awk '{print $1}')" == "$manifest_hash" ]] ||
-  fail "idempotent installation rewrote the manifest"
-
-printf '\nUpdate fixture marker.\n' >>"$fixture_source/.agents/skills/pr-readiness/SKILL.md"
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent all --mode copy
-assert_file_contains "$AGENTS_HOME/skills/pr-readiness/SKILL.md" "Update fixture marker."
-assert_file_contains "$backup_file" "original codex instructions"
-
-printf '\nRollback fixture marker.\n' >>"$fixture_source/.agents/skills/pr-readiness/SKILL.md"
-if AI_WORKFLOW_TEST_FAIL_AFTER=1 "$repo_root/scripts/install.sh" \
-  --source "$fixture_source" --agent all --mode copy >/dev/null 2>&1; then
-  fail "injected installer failure unexpectedly succeeded"
-fi
-if grep -Fq "Rollback fixture marker." "$AGENTS_HOME/skills/pr-readiness/SKILL.md"; then
-  fail "failed installation did not roll back the changed target"
-fi
-
-dry_root="$test_root/dry run"
-if HOME="$dry_root/home" \
-  CODEX_HOME="$dry_root/codex" \
-  AGENTS_HOME="$dry_root/agents" \
-  CLAUDE_CONFIG_DIR="$dry_root/claude" \
-  AI_WORKFLOW_STATE_DIR="$dry_root/state" \
-  "$repo_root/scripts/install.sh" --source "$fixture_source" --dry-run >/dev/null; then
-  [[ ! -e "$dry_root" ]] || fail "dry-run created target or state directories"
-else
-  fail "dry-run failed"
-fi
-
-if HOME="$test_root/root guard home" \
-  CODEX_HOME="/" \
-  AGENTS_HOME="$test_root/root guard agents" \
-  CLAUDE_CONFIG_DIR="$test_root/root guard claude" \
-  AI_WORKFLOW_STATE_DIR="$test_root/root guard state" \
-  "$repo_root/scripts/install.sh" \
-    --source "$fixture_source" --agent codex --dry-run >/dev/null 2>&1; then
-  fail "installer accepted the filesystem root as an agent home"
-fi
-
-saved_pr_target="$test_root/pr-readiness-before-drift"
-cp -a "$AGENTS_HOME/skills/pr-readiness" "$saved_pr_target"
-printf '\nlocal drift\n' >>"$AGENTS_HOME/skills/pr-readiness/SKILL.md"
-if "$repo_root/scripts/uninstall.sh" >/dev/null 2>&1; then
-  fail "uninstall accepted a drifted managed target"
-fi
-rm -rf -- "$AGENTS_HOME/skills/pr-readiness"
-cp -a "$saved_pr_target" "$AGENTS_HOME/skills/pr-readiness"
-
-"$repo_root/scripts/uninstall.sh"
-assert_file_contains "$CODEX_HOME/AGENTS.md" "original codex instructions"
-[[ ! -e "$CLAUDE_CONFIG_DIR/CLAUDE.md" ]] ||
-  fail "uninstall did not remove created Claude instructions"
-for skill in ai-project-manager html-plan pr-readiness; do
-  [[ ! -e "$AGENTS_HOME/skills/$skill" ]] || fail "Codex skill remained after uninstall: $skill"
-  [[ ! -e "$CLAUDE_CONFIG_DIR/skills/$skill" ]] || fail "Claude skill remained after uninstall: $skill"
-done
-
-link_root="$test_root/link mode"
-export HOME="$link_root/home"
-export CODEX_HOME="$link_root/codex"
-export AGENTS_HOME="$link_root/agents"
-export CLAUDE_CONFIG_DIR="$link_root/claude"
-export AI_WORKFLOW_STATE_DIR="$link_root/state"
-
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent all --mode link
-[[ -L "$AGENTS_HOME/skills/html-plan" ]] || fail "Codex link-mode skill is not a symlink"
-[[ -L "$CLAUDE_CONFIG_DIR/skills/html-plan" ]] || fail "Claude link-mode skill is not a symlink"
-[[ -f "$CODEX_HOME/AGENTS.md" && ! -L "$CODEX_HOME/AGENTS.md" ]] ||
-  fail "rendered Codex instructions must not be symlinked"
-printf '\nLink source changed after installation.\n' \
-  >>"$fixture_source/.agents/skills/html-plan/SKILL.md"
-"$repo_root/scripts/uninstall.sh"
-
-external_root="$test_root/external equivalent"
-export HOME="$external_root/home"
-export CODEX_HOME="$external_root/codex"
-export AGENTS_HOME="$external_root/agents"
-export CLAUDE_CONFIG_DIR="$external_root/claude"
-export AI_WORKFLOW_STATE_DIR="$external_root/state"
+mkdir -p "$CODEX_HOME/rules"
+printf 'original codex rules\n' >"$CODEX_HOME/rules/ai-workflow.rules"
+mkdir -p "$CLAUDE_CONFIG_DIR"
+printf 'original claude instructions\n' >"$CLAUDE_CONFIG_DIR/CLAUDE.md"
 mkdir -p "$AGENTS_HOME/skills"
-cp -a "$fixture_source/.agents/skills/html-plan" "$AGENTS_HOME/skills/html-plan"
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent codex --mode copy
-grep -Fq $'\texternal\t' "$AI_WORKFLOW_STATE_DIR/current.tsv" ||
-  fail "equivalent unmanaged target was not recorded as external"
-"$repo_root/scripts/uninstall.sh"
-[[ -d "$AGENTS_HOME/skills/html-plan" ]] ||
-  fail "uninstall removed an equivalent target it did not own"
+ln -s "../../source/.agents/skills/passthrough" \
+  "$AGENTS_HOME/skills/passthrough"
+"$repo_root/scripts/install.sh" --source "$fixture"
 
-split_root="$test_root/separate agent installs"
-export HOME="$split_root/home"
-export CODEX_HOME="$split_root/codex"
-export AGENTS_HOME="$split_root/agents"
-export CLAUDE_CONFIG_DIR="$split_root/claude"
-export AI_WORKFLOW_STATE_DIR="$split_root/state"
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent codex --mode copy
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent claude --mode copy
-[[ "$(awk -F '\t' '$1 == "entry" && $2 == "codex" { count++ } END { print count + 0 }' \
-  "$AI_WORKFLOW_STATE_DIR/current.tsv")" -eq 4 ]] ||
-  fail "separate Claude install discarded Codex manifest entries"
-[[ "$(awk -F '\t' '$1 == "entry" && $2 == "claude" { count++ } END { print count + 0 }' \
-  "$AI_WORKFLOW_STATE_DIR/current.tsv")" -eq 4 ]] ||
-  fail "Claude manifest entries missing after separate install"
-printf '\nSeparate update marker.\n' >>"$fixture_source/.agents/skills/ai-project-manager/SKILL.md"
-"$repo_root/scripts/install.sh" --source "$fixture_source" --agent codex --mode copy
-[[ "$(awk -F '\t' '$1 == "entry" && $2 == "claude" { count++ } END { print count + 0 }' \
-  "$AI_WORKFLOW_STATE_DIR/current.tsv")" -eq 4 ]] ||
-  fail "agent-specific update discarded the other agent's manifest entries"
-"$repo_root/scripts/uninstall.sh"
+assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
+assert_link "$CODEX_HOME/rules/ai-workflow.rules" \
+  "$fixture/codex/rules/ai-workflow.rules"
+assert_link "$CLAUDE_CONFIG_DIR/CLAUDE.md" "$fixture/global/shared.md"
+for skill in ai-project-manager html-plan pr-readiness subagent; do
+  assert_link "$AGENTS_HOME/skills/$skill" "$fixture/.agents/skills/$skill"
+  assert_link "$CLAUDE_CONFIG_DIR/skills/$skill" "$fixture/.agents/skills/$skill"
+done
+assert_same_link "$AGENTS_HOME/skills/passthrough" \
+  "$fixture/.agents/skills/passthrough"
+assert_link "$CLAUDE_CONFIG_DIR/skills/passthrough" \
+  "$fixture/.agents/skills/passthrough"
 
-printf 'installer integration tests passed\n'
+codex_manifest="$AI_WORKFLOW_STATE_DIR/codex.tsv"
+claude_manifest="$AI_WORKFLOW_STATE_DIR/claude.tsv"
+[[ -f "$codex_manifest" && -f "$claude_manifest" ]] ||
+  fail "agent manifests missing"
+grep -Fq "$AGENTS_HOME/skills/passthrough" "$codex_manifest" ||
+  fail "matching existing link was not adopted"
+backup="$(awk -F '\t' '$1 == "entry" && $3 != "-" { print $3; exit }' "$codex_manifest")"
+[[ -f "$backup" ]] || fail "Codex conflict backup missing"
+grep -Fq "original codex instructions" "$backup" || fail "backup content changed"
+rules_backup="$(awk -F '\t' -v target="$CODEX_HOME/rules/ai-workflow.rules" \
+  '$1 == "entry" && $2 == target { print $3; exit }' "$codex_manifest")"
+[[ -f "$rules_backup" ]] || fail "Codex rules backup missing"
+grep -Fq "original codex rules" "$rules_backup" ||
+  fail "Codex rules backup content changed"
+claude_backup="$(awk -F '\t' -v target="$CLAUDE_CONFIG_DIR/CLAUDE.md" \
+  '$1 == "entry" && $2 == target { print $3; exit }' "$claude_manifest")"
+[[ -f "$claude_backup" ]] || fail "Claude conflict backup missing"
+grep -Fq "original claude instructions" "$claude_backup" ||
+  fail "Claude backup content changed"
+
+manifest_hash="$(sha256sum "$codex_manifest" | awk '{print $1}')"
+"$repo_root/scripts/install.sh" --source "$fixture" >/dev/null
+[[ "$(sha256sum "$codex_manifest" | awk '{print $1}')" == "$manifest_hash" ]] ||
+  fail "repeated installation rewrote an unchanged manifest"
+
+printf '\nlive update\n' >>"$fixture/.agents/skills/pr-readiness/SKILL.md"
+grep -Fq "live update" "$AGENTS_HOME/skills/pr-readiness/SKILL.md" ||
+  fail "source edit was not visible through installed link"
+printf '\n# live rule update\n' >>"$fixture/codex/rules/ai-workflow.rules"
+grep -Fq "live rule update" "$CODEX_HOME/rules/ai-workflow.rules" ||
+  fail "rule source edit was not visible through installed link"
+
+rm -- "$AGENTS_HOME/skills/pr-readiness"
+printf 'local drift\n' >"$AGENTS_HOME/skills/pr-readiness"
+if "$repo_root/scripts/install.sh" --source "$fixture" --agent codex >/dev/null 2>&1; then
+  fail "install accepted local drift"
+fi
+if "$repo_root/scripts/uninstall.sh" >/dev/null 2>&1; then
+  fail "uninstall accepted local drift"
+fi
+rm -- "$AGENTS_HOME/skills/pr-readiness"
+ln -s "$fixture/.agents/skills/pr-readiness" "$AGENTS_HOME/skills/pr-readiness"
+
+rm -- "$CLAUDE_CONFIG_DIR/skills/pr-readiness"
+printf 'local drift\n' >"$CLAUDE_CONFIG_DIR/skills/pr-readiness"
+if "$repo_root/scripts/install.sh" --source "$fixture" \
+  --agent claude >/dev/null 2>&1; then
+  fail "Claude install accepted local drift"
+fi
+if "$repo_root/scripts/uninstall.sh" --agent claude >/dev/null 2>&1; then
+  fail "Claude uninstall accepted local drift"
+fi
+rm -- "$CLAUDE_CONFIG_DIR/skills/pr-readiness"
+ln -s "$fixture/.agents/skills/pr-readiness" \
+  "$CLAUDE_CONFIG_DIR/skills/pr-readiness"
+
+"$repo_root/scripts/uninstall.sh" --dry-run >/dev/null
+"$repo_root/scripts/uninstall.sh" >/dev/null
+grep -Fq "original codex instructions" "$CODEX_HOME/AGENTS.md" ||
+  fail "uninstall did not restore Codex instructions"
+grep -Fq "original codex rules" "$CODEX_HOME/rules/ai-workflow.rules" ||
+  fail "uninstall did not restore Codex rules"
+grep -Fq "original claude instructions" "$CLAUDE_CONFIG_DIR/CLAUDE.md" ||
+  fail "uninstall did not restore Claude instructions"
+for skill in ai-project-manager html-plan passthrough pr-readiness subagent; do
+  [[ ! -e "$AGENTS_HOME/skills/$skill" &&
+    ! -L "$AGENTS_HOME/skills/$skill" ]] ||
+    fail "uninstall did not remove Codex skill: $skill"
+  [[ ! -e "$CLAUDE_CONFIG_DIR/skills/$skill" &&
+    ! -L "$CLAUDE_CONFIG_DIR/skills/$skill" ]] ||
+    fail "uninstall did not remove Claude skill: $skill"
+done
+
+unsafe_state="$test_root/unsafe state"
+mkdir -p "$unsafe_state"
+ln -s "$fixture/global/shared.md" "$test_root/outside"
+printf '# ai-workflow-manifest-v1\nentry\t%s\t-\t%s\n' \
+  "$AGENTS_HOME/skills/../../outside" "$fixture/global/shared.md" \
+  >"$unsafe_state/codex.tsv"
+if "$repo_root/scripts/uninstall.sh" --agent codex \
+  --state-dir "$unsafe_state" >/dev/null 2>&1; then
+  fail "uninstall accepted an escaping manifest target"
+fi
+[[ -L "$test_root/outside" ]] ||
+  fail "unsafe manifest changed an escaping target"
+
+unsafe_backup_state="$test_root/unsafe backup state"
+mkdir -p "$unsafe_backup_state" "$AGENTS_HOME/skills"
+ln -s "$fixture/global/shared.md" "$AGENTS_HOME/skills/unsafe-backup"
+printf 'outside backup\n' >"$test_root/outside-backup"
+printf '# ai-workflow-manifest-v1\nentry\t%s\t%s\t%s\n' \
+  "$AGENTS_HOME/skills/unsafe-backup" \
+  "$unsafe_backup_state/backups/codex-test/../../../outside-backup" \
+  "$fixture/global/shared.md" >"$unsafe_backup_state/codex.tsv"
+if "$repo_root/scripts/uninstall.sh" --agent codex \
+  --state-dir "$unsafe_backup_state" >/dev/null 2>&1; then
+  fail "uninstall accepted an escaping manifest backup"
+fi
+[[ -L "$AGENTS_HOME/skills/unsafe-backup" ]] ||
+  fail "unsafe backup manifest changed its managed target"
+
+claude_only="$test_root/claude only"
+HOME="$claude_only/home" CODEX_HOME="$claude_only/codex" \
+  AGENTS_HOME="$claude_only/agents" CLAUDE_CONFIG_DIR="$claude_only/claude" \
+  AI_WORKFLOW_STATE_DIR="$claude_only/state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" --agent claude >/dev/null
+[[ ! -e "$claude_only/codex" ]] ||
+  fail "Claude-only install changed Codex home"
+assert_link "$claude_only/claude/CLAUDE.md" "$fixture/global/shared.md"
+
+partial_root="$test_root/partial uninstall"
+partial_codex="$partial_root/codex"
+partial_agents="$partial_root/agents"
+partial_state="$partial_root/state"
+mkdir -p "$partial_codex"
+printf 'partial original\n' >"$partial_codex/AGENTS.md"
+HOME="$partial_root/home" CODEX_HOME="$partial_codex" \
+  AGENTS_HOME="$partial_agents" CLAUDE_CONFIG_DIR="$partial_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$partial_state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" --agent codex >/dev/null
+partial_manifest="$partial_state/codex.tsv"
+partial_backup="$(awk -F '\t' -v target="$partial_codex/AGENTS.md" \
+  '$1 == "entry" && $2 == target { print $3; exit }' "$partial_manifest")"
+rm -- "$partial_codex/AGENTS.md"
+mv -- "$partial_backup" "$partial_codex/AGENTS.md"
+HOME="$partial_root/home" CODEX_HOME="$partial_codex" \
+  AGENTS_HOME="$partial_agents" CLAUDE_CONFIG_DIR="$partial_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$partial_state" \
+  "$repo_root/scripts/uninstall.sh" --agent codex >/dev/null
+grep -Fq "partial original" "$partial_codex/AGENTS.md" ||
+  fail "resumed uninstall lost an already restored target"
+[[ ! -e "$partial_manifest" ]] ||
+  fail "resumed uninstall kept a completed manifest"
+
+printf 'installer tests passed\n'

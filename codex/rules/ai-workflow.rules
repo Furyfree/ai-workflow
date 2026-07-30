@@ -1,0 +1,128 @@
+# Skip repeated approval for low-risk inspection and validation commands.
+#
+# Keep this list narrow. Do not broadly allow generic shells, file-content
+# readers, network clients, package managers, process control, Git mutations,
+# privilege escalation, containers, or infrastructure tools.
+# Do not allow prefixes such as `git diff`, `git log`, or `tree` that can gain
+# an output-file option after an otherwise read-only prefix.
+
+prefix_rule(
+    pattern = [[
+        "pwd",
+        "whoami",
+        "id",
+        "uname",
+        "ls",
+        "stat",
+        "readlink",
+        "realpath",
+        "dirname",
+        "basename",
+        "wc",
+        "du",
+        "df",
+        "tokei",
+    ]],
+    decision = "allow",
+    justification = "Read-only filesystem and host metadata inspection",
+    match = [
+        "pwd",
+        "ls -la",
+        "stat README.md",
+        "readlink /tmp/example",
+        "wc -l README.md",
+        "tokei .",
+    ],
+    not_match = [
+        "cat README.md",
+        "find . -delete",
+        "rm -rf build",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "rev-parse", "ls-files"]],
+    decision = "allow",
+    justification = "Read-only Git repository metadata",
+    match = [
+        "git status --short",
+        "git rev-parse --show-toplevel",
+        "git ls-files",
+    ],
+    not_match = [
+        "git add .",
+        "git commit -m change",
+        "git push",
+    ],
+)
+
+prefix_rule(
+    pattern = [["bash", "sh"], "-n"],
+    decision = "allow",
+    justification = "Parse shell scripts without executing them",
+    match = [
+        "bash -n scripts/install.sh",
+        "sh -n script.sh",
+    ],
+    not_match = [
+        "bash script.sh",
+        "bash -c command",
+        "sh script.sh",
+    ],
+)
+
+prefix_rule(
+    pattern = ["shellcheck"],
+    decision = "allow",
+    justification = "Static shell analysis without executing the script",
+    match = [
+        "shellcheck scripts/install.sh",
+        "shellcheck scripts/install.sh scripts/uninstall.sh",
+    ],
+    not_match = [
+        "bash scripts/install.sh",
+        "shfmt -w scripts/install.sh",
+    ],
+)
+
+prefix_rule(
+    pattern = [
+        [
+            "git",
+            "bash",
+            "zsh",
+            "python",
+            "python3",
+            "node",
+            "npm",
+            "pnpm",
+            "cargo",
+            "rustc",
+            "docker",
+            "terraform",
+        ],
+        "--version",
+    ],
+    decision = "allow",
+    justification = "Local tool version inspection",
+    match = [
+        "git --version",
+        "python3 --version",
+        "cargo --version",
+        "docker --version",
+    ],
+    not_match = [
+        "npm install",
+        "cargo build",
+        "docker run image",
+        "terraform apply",
+    ],
+)
+
+prefix_rule(
+    pattern = ["go", "version"],
+    decision = "allow",
+    justification = "Local Go version inspection",
+    match = ["go version"],
+    not_match = ["go install example.com/tool@latest"],
+)

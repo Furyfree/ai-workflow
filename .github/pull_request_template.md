@@ -1,39 +1,13 @@
-## Problem
+## Change
 
-Describe the problem this pull request solves.
+Describe the problem, approach, and explicit non-goals.
 
-## Approach
+## Evidence
 
-Summarize the implementation and important decisions.
-
-## Scope
-
-List included work and explicit non-goals.
-
-## Validation
-
-List exact commands and results.
-
-- [ ] Focused checks passed
+- [ ] Focused checks are recorded
 - [ ] `./scripts/validate.sh` passed
-- [ ] Pull-request CI passed on the latest commit
-- [ ] Local AI review completed or its unavailable/skipped state is recorded
+- [ ] Required manual testing is recorded
+- [ ] CI and review evidence belongs to the latest commit
 
-## Manual evidence
-
-Describe target environments, workflows, failure states, accessibility,
-rendering, installation, recovery, or rollback tested.
-
-- [ ] Required manual testing is complete
-- [ ] Screenshots or recordings are attached for visible changes
-
-## Review
-
-- [ ] Actionable review findings are addressed
-- [ ] Required review threads are resolved
-- [ ] Review evidence belongs to the latest commit
-
-## Limitations and follow-up
-
-Record skipped validation, accepted exceptions, residual risk, and follow-up.
-Use "None" when there are no known items.
+List exact commands, manual environments, unavailable checks, limitations, and
+follow-up work.

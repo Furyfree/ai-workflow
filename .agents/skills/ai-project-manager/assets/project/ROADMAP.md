@@ -1,21 +1,36 @@
 # {{PROJECT_NAME}} roadmap
 
-## Phase 1: {{PHASE_NAME}}
+This file tracks status and work order. Keep entries short, ordered, and
+observable.
 
-Status: Planned
+Current phase: **{{CURRENT_PHASE}}**.
 
-### Outcome
+## Principles
 
-Describe the user-visible or operational result.
+- List only constraints that affect more than one phase.
+- Remove this section when no cross-phase constraints are needed.
 
-### Included work
+## 1. {{CURRENT_PHASE}}
 
-- List the coherent work included in this phase.
+State the intended result and important dependency in one or two sentences.
 
-### Risks
+- [ ] List observable work in dependency order.
+- [ ] Include the validation or manual proof needed to finish the phase.
 
-- List material implementation or rollout risks.
+Exit criteria:
 
-### Exit criteria
+- [ ] State the observable condition that completes this phase.
 
-- List observable evidence required before the phase is complete.
+## 2. {{NEXT_PHASE}}
+
+Start only after the current phase is complete.
+
+- [ ] List the next ordered outcome.
+
+## Later
+
+- [ ] Keep genuinely deferred work brief.
+
+## Done
+
+- [x] Keep useful completed milestones without detailed history.

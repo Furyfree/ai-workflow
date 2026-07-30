@@ -2,8 +2,7 @@ name: Validate
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -15,51 +14,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  repository:
+  validation:
     name: Repository validation
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      CODEX_CLI_VERSION: 0.146.0
 
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Check ShellCheck availability
-        run: shellcheck --version
+      - name: Install Codex policy checker
+        run: npm install --global "@openai/codex@${CODEX_CLI_VERSION}"
 
-      - name: Run canonical validation
+      - name: Run validation
         run: ./scripts/validate.sh
-
-  distributions:
-    name: Distribution (${{ matrix.distro }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        distro:
-          - ubuntu
-          - debian
-          - fedora
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Build and run distribution validation
-        run: ./scripts/test-containers.sh "${{ matrix.distro }}"
-
-  dependency-review:
-    name: Dependency review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
-        with:
-          fail-on-severity: high

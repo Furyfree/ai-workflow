@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repository Passthrough"
+  short_description: "Audit and tighten a whole repository"
+  default_prompt: "Use $passthrough to audit and tighten this repository for coherence, stale material, bloat, and validation gaps."
