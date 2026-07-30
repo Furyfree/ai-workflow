@@ -1,4 +1,4 @@
 interface:
   display_name: "PR Readiness"
-  short_description: "Verify a change and pull request"
-  default_prompt: "Use $pr-readiness to determine whether this change is ready for review or merge."
+  short_description: "Prepare or update a pull request safely"
+  default_prompt: "Use $pr-readiness to determine whether this change is ready to create, update, or merge a pull request."

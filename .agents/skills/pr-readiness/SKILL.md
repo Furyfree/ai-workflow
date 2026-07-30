@@ -1,9 +1,12 @@
 ---
 name: pr-readiness
-description: Determine whether a local change or pull request has complete current evidence. Use for diff review, pull-request preparation, CI and review inspection, or merge-readiness checks.
+description: Determine whether a change has complete current pull-request evidence. Use when the current request asks to create or update a pull request, commit further work to an existing pull request, inspect its CI or feedback, or assess merge readiness.
 ---
 
 # Pull-request readiness
+
+Use this workflow for the current pull-request outcome only. Do not keep it
+active for later unrelated edits merely because it was used earlier.
 
 ## Inspect scope
 
@@ -98,22 +101,30 @@ only when that review completed without actionable findings.
 
 When a pull request exists:
 
-1. Use `local-pr-review` against the exact current remote head. Keep its report
-   local unless the user separately asks to post it.
-2. Identify the pull request's latest commit and current body.
-3. Read conversation comments, submitted reviews, inline review comments, and
+1. Identify the pull request's latest commit and current body.
+2. Read conversation comments, submitted reviews, inline review comments, and
    unresolved threads, including requests from the user and other reviewers.
    Do not rely only on check summaries or the latest review decision.
-4. Verify each apparent request against the current head and distinguish
+3. Verify each apparent request against the current head and distinguish
    actionable feedback from informational, stale, duplicated, or invalid
    comments.
-5. Verify required CI belongs to the latest commit and has completed.
-6. Confirm required screenshots, logs, rollout, or target-environment evidence.
-7. Confirm any repository-required independent review is current.
+4. Determine whether a hosted review is current for the exact remote head. Use
+   it as the independent review evidence when it is available.
+5. If hosted review is unavailable or stale, use `local-pr-review` against the
+   exact remote head. Keep its report local unless the user separately asks to
+   post it. Do not run local review merely to duplicate a current hosted review.
+6. Verify required CI belongs to the latest commit and has completed.
+7. Confirm required screenshots, logs, rollout, or target-environment evidence.
+8. Confirm any repository-required independent review is current.
 
 Unresolved actionable feedback and failed, pending, missing, or stale required
 evidence block readiness. Report each actionable request and its proposed
 disposition before editing or updating the pull request.
+
+Requesting a hosted review is a separate external action. Do not post its live
+invocation unless the user explicitly asks for that review. When creating or
+updating pull-request metadata, never put a live agent invocation in the title
+or body; describe the review in ordinary prose instead.
 
 In Codex, `/review` is a useful user-run independent local review and `/diff`
 shows the exact working-tree change. Neither replaces the pull-request

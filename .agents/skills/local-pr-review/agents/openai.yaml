@@ -1,4 +1,4 @@
 interface:
   display_name: "Local PR Review"
-  short_description: "Review a GitHub PR from the local checkout"
+  short_description: "Run an explicit or fallback local PR review"
   default_prompt: "Use $local-pr-review to review the current pull request locally without posting."

@@ -1,6 +1,6 @@
 ---
 name: subagent
-description: Delegate bounded independent work to Codex, Claude, or Grok subagents and return control to the main agent for review and integration. Use when the user asks for a subagent, fresh-context audit, provider-specific delegation, or lists multiple substantive tasks that may be independent enough to delegate.
+description: Delegate bounded independent work to Codex, Claude, or Grok and return control for integration. Use when the current request asks for a subagent, fresh-context audit, provider-specific delegation, or contains multiple substantive outcomes that may be independent.
 ---
 
 # Subagent

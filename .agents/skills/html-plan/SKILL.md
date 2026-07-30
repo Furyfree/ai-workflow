@@ -1,6 +1,6 @@
 ---
 name: html-plan
-description: Create a self-contained visual HTML page for a broad plan, explanation, analysis, architecture, dependency map, comparison, roadmap, or status report when the user asks for HTML or when relationships are materially clearer visually than in prose.
+description: Create a self-contained visual HTML page. Use when the current request asks for HTML or a visual explanation, or when a broad architecture, dependency map, comparison, roadmap, or status report is materially clearer visually than in prose.
 ---
 
 # HTML plan

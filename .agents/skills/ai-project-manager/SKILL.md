@@ -1,6 +1,6 @@
 ---
 name: ai-project-manager
-description: Inspect or reconcile repository planning documents and define one bounded phase. Use for repository foundations, plan reviews, conflicting project documents, phase selection, or planning-only requests.
+description: Inspect repository foundations or planning documents and define one bounded phase. Use when the current request asks for repository onboarding, foundation setup, a plan review, document reconciliation, phase selection, or planning only.
 ---
 
 # AI project manager
@@ -17,6 +17,33 @@ Build a reliable project picture without inventing requirements.
 
 Do not impose a new document structure on a repository that already has a clear
 planning system.
+
+## Inspect repository foundations
+
+When the user asks to set up, standardize, or review a new or existing
+repository, include only the foundations relevant to that repository:
+
+- repository instructions, ownership documents, validation, CI, and pull-request
+  evidence
+- supported coding agents, skill discovery, and project-specific review rules
+- dependency updates, generated files, secrets, permissions, and recovery
+- optional cloud execution and hosted review for providers the user intends to
+  use
+
+For Codex Cloud, determine whether the repository needs cloud tasks or hosted
+GitHub review before recommending an environment. Treat connector access, the
+per-repository cloud environment, and the code-review setting as separate
+prerequisites. Prefer a minimal environment: no secrets without a demonstrated
+need, agent internet access off unless the work requires it, and automatic
+setup plus caching until the repository's validation proves that manual setup
+is needed. Include a user-run check that the complete local gate also works in
+the cloud environment.
+
+Do not recommend cloud setup for every repository by default. Active
+repositories that will use cloud tasks or hosted review are good candidates;
+archived, local-only, or sensitive repositories may not be. Planning or
+describing an external setting does not authorize creating an environment,
+granting connector access, changing review settings, or adding secrets.
 
 ## Create or reconcile documents
 
@@ -56,7 +83,8 @@ Define:
 - one accepted outcome and observable acceptance criteria
 - implementation tasks in dependency order
 - focused checks, the complete local gate, and manual validation
-- recovery for stateful changes
+- recovery for stateful changes, including disabling or removing optional
+  external integrations
 - unresolved decisions and required permissions
 - the explicit stop point
 

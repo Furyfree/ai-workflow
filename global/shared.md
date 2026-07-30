@@ -74,16 +74,27 @@ instruction says otherwise.
 
 - Keep cross-repository workflows in skills and project-specific behavior in
   repository instructions.
-- Use `ai-project-manager` for repository planning and document reconciliation.
-- Use `pr-readiness` for local and pull-request evidence.
-- Use `local-pr-review` for an authenticated local pull-request review. Post
-  its findings to GitHub only when the user explicitly requests the comment.
-- Use `html-plan` only when a visual materially improves a broad plan.
+- Select skills from the current request. A skill used for an earlier request
+  does not remain active unless the new request independently matches it.
+- Use `ai-project-manager` when the user asks for repository foundations,
+  onboarding, planning, or document reconciliation.
+- Use `pr-readiness` before a requested pull-request creation or update, before
+  committing further work to an existing pull request, or for an explicit
+  merge-readiness check.
+- Use `local-pr-review` only when the user asks for a local review or
+  `pr-readiness` needs a fallback because hosted review is unavailable. Do not
+  duplicate a current hosted review automatically. Post local findings to
+  GitHub only when the user explicitly requests the comment.
+- Request a hosted review only with separate explicit authorization. Never put
+  a live agent invocation in a pull-request title or body.
+- Use `html-plan` when the user asks for HTML or a visual materially improves a
+  broad plan or explanation.
 - Before starting multiple substantive independent outcomes, use `subagent` to
   propose dependency-aware assignments and ask whether the user wants
   delegation. Use the current native model when none is selected. Keep ordered
   dependency chains with the main agent, and review and refine every delegated
   edit before final validation.
-- Use `passthrough` for a current-agent repository-wide coherence pass.
+- Use `passthrough` only when the user asks for a passthrough, full repository
+  audit, coherence pass, or repository-wide cleanup.
 - Use passthrough subagent or loop modes only when the user explicitly requests
   them.

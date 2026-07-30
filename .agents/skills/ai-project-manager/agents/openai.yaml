@@ -1,4 +1,4 @@
 interface:
   display_name: "AI Project Manager"
-  short_description: "Plan and reconcile repository work"
-  default_prompt: "Use $ai-project-manager to reconcile this repository and plan one bounded phase."
+  short_description: "Plan repository foundations and phases"
+  default_prompt: "Use $ai-project-manager to inspect this repository's foundations and plan one bounded phase."

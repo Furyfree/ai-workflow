@@ -52,15 +52,18 @@ before committing, and preserve unrelated worktree changes. If the change
 contains independent reviewable outcomes, show an ordered coherent commit plan
 before committing; do not split mechanically by file or line count. A commit
 request does not authorize a push. Before a requested push or pull-request
-action, run focused checks, `./scripts/validate.sh`, and the `pr-readiness`
-workflow. Do not create or update a pull request when a completed local
-CodeRabbit review has actionable findings. List each problem and proposed fix,
-then wait for explicit user direction. If CodeRabbit is unavailable, continue
-the other checks and report it as unavailable evidence; its absence does not
-block publication. Push only when explicitly requested, and create or update a
-pull request only when that exact action is explicitly requested. Do not merge,
-install repository content, or automatically request Codex review without
-separate explicit authorization.
+action, or before committing further work to an existing pull request, run
+focused checks, `./scripts/validate.sh`, and the `pr-readiness` workflow. Use a
+current hosted review when available; run `local-pr-review` only when the user
+asks for it or hosted review is unavailable. Do not create or update a pull
+request when a completed local CodeRabbit review has actionable findings. List
+each problem and proposed fix, then wait for explicit user direction. If
+CodeRabbit is unavailable, continue the other checks and report it as
+unavailable evidence; its absence does not block publication. Push only when
+explicitly requested, and create or update a pull request only when that exact
+action is explicitly requested. Do not merge, install repository content, or
+request hosted Codex review without separate explicit authorization. Never put
+a live agent invocation in a pull-request title or body.
 
 After a requested publication, report completion as a short list:
 

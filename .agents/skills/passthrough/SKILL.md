@@ -1,6 +1,6 @@
 ---
 name: passthrough
-description: Audit and tighten an entire repository for coherence, stale or duplicated material, validation gaps, and AI-generated bloat. Use for passthrough, passthrough subagent, subagent-first passthrough, provider-specific passthrough with Codex, Claude, or Grok, passthrough subagent loop, full repository audit, coherence pass, or repository-wide cleanup.
+description: Audit and tighten an entire repository for coherence, stale material, validation gaps, and generated bloat. Use when the current request asks for a passthrough, full repository audit, coherence pass, repository-wide cleanup, or a named passthrough subagent mode.
 ---
 
 # Repository passthrough

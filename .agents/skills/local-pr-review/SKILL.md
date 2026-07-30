@@ -1,12 +1,15 @@
 ---
 name: local-pr-review
-description: Review a GitHub pull request from an authenticated local checkout and optionally post one review comment as the authenticated GitHub user. Use for local PR review, private-repository review, a Codex GitHub review fallback, or an explicit request to comment local review findings on a PR.
+description: Review a GitHub pull request from an authenticated local checkout. Use when the current request explicitly asks for local review or when pull-request readiness needs a fallback because hosted review is unavailable or stale.
 ---
 
 # Local pull-request review
 
 Use the local checkout and `gh` authentication. Do not depend on Codex Cloud,
 CodeRabbit, or another hosted reviewer.
+
+Do not run this workflow automatically in addition to a current hosted review.
+An explicit request for a second local review overrides that default.
 
 ## Keep review and publication separate
 

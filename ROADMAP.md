@@ -47,6 +47,10 @@ Start after the portable core passes locally and installation is authorized.
 
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
 - [ ] Confirm both agents discover and invoke all six skills.
+- [ ] Confirm fresh requests select only matching skills and do not inherit a
+      workflow from earlier unrelated work.
+- [ ] Confirm repository-foundation planning assesses optional Codex Cloud and
+      hosted review without changing external state.
 - [ ] Confirm the installed global Codex policy handles required read-only
       branch and pull-request inspection.
 - [ ] Remove `.codex/rules/repository-pr.rules` and its documentation and

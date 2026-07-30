@@ -16,6 +16,8 @@ across multiple repositories.
   commands.
 - Install the six canonical skills for either or both agents.
 - Provide adaptable project templates without overwriting existing documents.
+- Assess repository foundations, including optional cloud execution and hosted
+  review, without changing external configuration.
 - Keep roadmap order concise while allowing one linked detail file for a
   research-heavy phase.
 - Preview installation without changing agent homes.
@@ -23,6 +25,8 @@ across multiple repositories.
 - Support safe repeated symlink installation and uninstall.
 - Run one deterministic local validation command in CI.
 - Keep external state changes behind explicit user intent.
+- Select reusable workflows from each current request without carrying an
+  earlier skill into unrelated work.
 - Include read-only branch and pull-request inspection in the canonical global
   Codex rules without changing live Codex configuration.
 - Keep the repository-local rule copy only as a bootstrap until the global
@@ -43,27 +47,33 @@ across multiple repositories.
 
 ### `ai-project-manager`
 
-Inspects and reconciles repository planning documents, then produces one
+Inspects repository foundations and planning documents, then produces one
 bounded phase with acceptance criteria, validation, recovery, and a clear stop
-point. It plans; implementation requires a separate user request.
+point. For new or existing repository onboarding, it assesses optional cloud
+execution and hosted review without configuring external state. It plans;
+implementation requires a separate user request.
 
 ### `pr-readiness`
 
 Inspects the complete change and reports whether local validation, manual
-evidence, CI, review state, and a coherent commit plan are current. For an
-existing pull request it uses `local-pr-review` against the exact remote head.
-When a local CodeRabbit review runs, actionable findings block pull-request
-creation or update. The skill reports each problem and proposed fix and waits
-for user direction. Missing or unavailable CodeRabbit is reported as
-unavailable evidence but does not block publication. The skill does not commit,
-publish, or merge.
+evidence, CI, review state, and a coherent commit plan are current before
+creating or updating a pull request, committing further work to an existing
+pull request, or assessing merge readiness. For an existing pull request it
+uses a current hosted review when available and `local-pr-review` as an explicit
+or unavailable-hosted-review fallback. When a local CodeRabbit review runs,
+actionable findings block pull-request creation or update. Missing or
+unavailable CodeRabbit is reported as unavailable evidence but does not block
+publication. The skill does not commit, publish, request hosted review, or
+merge.
 
 ### `local-pr-review`
 
 Reviews the exact remote pull-request head through the authenticated local
 checkout. It reports findings locally by default and posts one clearly labelled
-comment as the authenticated GitHub user only when explicitly requested. It
-does not impersonate the hosted Codex reviewer or mutate the change.
+comment as the authenticated GitHub user only when explicitly requested. It is
+used for an explicit local review or when hosted review is unavailable or stale,
+not automatically in addition to a current hosted review. It does not
+impersonate the hosted Codex reviewer or mutate the change.
 
 ### `html-plan`
 
@@ -138,4 +148,6 @@ with early stopping.
 - The six skills have valid metadata and all referenced templates exist.
 - Controlled user-level tests confirm Codex and Claude discover installed
   instructions and skills.
+- Fresh-session prompt checks confirm each request selects only its matching
+  workflow, including pull-request readiness without redundant local review.
 - One real repository change uses the workflow through human merge.

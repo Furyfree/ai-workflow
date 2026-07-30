@@ -39,16 +39,17 @@ they are not installed globally.
 
 ## Included workflows
 
-- `ai-project-manager`: reconcile project documents and define one bounded phase
+- `ai-project-manager`: assess repository foundations and define one bounded phase
 - `html-plan`: derive a self-contained visual explanation from canonical sources
-- `local-pr-review`: review an existing GitHub pull request from a local checkout
+- `local-pr-review`: provide an explicit or fallback review from a local checkout
 - `passthrough`: audit and tighten a repository as a whole
-- `pr-readiness`: verify scope, validation, CI, review state, and commit structure
+- `pr-readiness`: prepare pull-request creation, updates, and merge-readiness checks
 - `subagent`: delegate bounded independent work and return control for integration
 
 Each workflow's `SKILL.md` is its source of truth. The project-manager skill
 also provides optional `AGENTS.md`, `CLAUDE.md`, `SPEC.md`, `ROADMAP.md`, and
-`TASKS.md` templates.
+`TASKS.md` templates. Skills are selected from the current request; using one
+does not keep it active for later unrelated work.
 
 ## Installation
 
@@ -156,12 +157,30 @@ you trust the source. This repository uses the local CLI rather than the
 CodeRabbit GitHub App. The app's repository access has been removed; local CLI
 authentication remains available for readiness checks.
 
-For an existing GitHub pull request, `local-pr-review` checks the exact remote
-head and reports locally. Posting a review comment requires a separate explicit
-request and uses the account reported by `gh auth status`.
+For an existing GitHub pull request, `pr-readiness` uses a current hosted review
+when available. `local-pr-review` checks the exact remote head only when the
+user requests a local review or hosted review is unavailable. Posting its
+findings requires a separate explicit request and uses the account reported by
+`gh auth status`.
 
-Hosted Codex review is configured for this repository with automatic reviews
-off. Request a review with `@codex review` when useful. See the
+### Optional Codex Cloud review
+
+Hosted Codex review requires repository access, a per-repository Codex Cloud
+environment, and Code review enabled for that repository. Configure it for
+actively maintained repositories where cloud tasks or hosted review are useful;
+archived, local-only, or sensitive repositories may not need it.
+
+Start with the universal image, no secrets, caching on, automatic setup, and
+agent internet access off. Use the interactive terminal to run the repository's
+complete validation command, then add only the setup or access it proves
+necessary. Keep automatic reviews off when reviews should be requested
+selectively.
+
+Requesting a hosted review is a separate GitHub action. Use the exact
+`@codex review` comment only when that action is intended; do not place a live
+agent invocation in a pull-request title or body. See
+[Codex Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environment.md),
+[Codex in GitHub](https://learn.chatgpt.com/docs/third-party/github.md), and the
 [Codex code review settings](https://chatgpt.com/codex/settings/code-review).
 
 ## Validation
