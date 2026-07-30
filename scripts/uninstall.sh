@@ -19,13 +19,22 @@ Usage: scripts/uninstall.sh [options]
 EOF
 }
 
+require_value() {
+  local option="$1" argument_count="$2"
+  ((argument_count >= 2)) || {
+    printf 'error: %s requires a value\n' "$option" >&2
+    usage >&2
+    exit 2
+  }
+}
+
 while (($#)); do
   case "$1" in
-    --agent) [[ $# -ge 2 ]] || exit 2; selected_agent="$2"; shift 2 ;;
-    --state-dir) [[ $# -ge 2 ]] || exit 2; state_dir="$2"; shift 2 ;;
+    --agent) require_value "$1" "$#"; selected_agent="$2"; shift 2 ;;
+    --state-dir) require_value "$1" "$#"; state_dir="$2"; shift 2 ;;
     --dry-run) dry_run=1; shift ;;
     -h|--help) usage; exit 0 ;;
-    *) printf 'error: unknown argument: %s\n' "$1" >&2; exit 2 ;;
+    *) printf 'error: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
 done
 

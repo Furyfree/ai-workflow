@@ -47,7 +47,48 @@ HOME="$dry_root/home" CODEX_HOME="$dry_root/codex" \
   "$repo_root/scripts/install.sh" --source "$fixture" --dry-run >/dev/null
 [[ ! -e "$dry_root" ]] || fail "dry-run created target or state directories"
 
+argument_error="$test_root/argument-error.log"
+for option in --agent --source --state-dir; do
+  if "$repo_root/scripts/install.sh" "$option" \
+    >"$argument_error" 2>&1; then
+    fail "install accepted a missing value for $option"
+  fi
+  grep -Fqx "error: $option requires a value" "$argument_error" ||
+    fail "install did not explain the missing value for $option"
+done
+for option in --agent --state-dir; do
+  if "$repo_root/scripts/uninstall.sh" "$option" \
+    >"$argument_error" 2>&1; then
+    fail "uninstall accepted a missing value for $option"
+  fi
+  grep -Fqx "error: $option requires a value" "$argument_error" ||
+    fail "uninstall did not explain the missing value for $option"
+done
+
+alias_root="$test_root/source-target alias"
+alias_source="$alias_root/source"
+alias_error="$alias_root/error.log"
+mkdir -p "$alias_root"
+cp -a "$fixture" "$alias_source"
+if HOME="$alias_root/home" CODEX_HOME="$alias_root/codex" \
+  AGENTS_HOME="$alias_source/.agents" \
+  CLAUDE_CONFIG_DIR="$alias_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$alias_root/state" \
+  "$repo_root/scripts/install.sh" --source "$alias_source" \
+    --agent codex >"$alias_error" 2>&1; then
+  fail "install accepted a source-target alias"
+fi
+grep -Fq "install target aliases source" "$alias_error" ||
+  fail "source-target alias failure was not explained"
+for skill in "$alias_source"/.agents/skills/*; do
+  [[ -d "$skill" && ! -L "$skill" ]] ||
+    fail "source-target alias changed a source skill"
+done
+[[ ! -e "$alias_root/codex" && ! -e "$alias_root/state/codex.tsv" ]] ||
+  fail "source-target alias changed install targets or state"
+
 rollback_root="$test_root/rollback"
+rollback_log="$rollback_root/install.log"
 mkdir -p "$rollback_root/codex"
 printf 'rollback original\n' >"$rollback_root/codex/AGENTS.md"
 printf 'block rules directory\n' >"$rollback_root/codex/rules"
@@ -56,10 +97,12 @@ if HOME="$rollback_root/home" CODEX_HOME="$rollback_root/codex" \
   CLAUDE_CONFIG_DIR="$rollback_root/claude" \
   AI_WORKFLOW_STATE_DIR="$rollback_root/state" \
   "$repo_root/scripts/install.sh" --source "$fixture" \
-    --agent codex >/dev/null 2>&1; then
+    --agent codex >"$rollback_log" 2>&1; then
   fail "install succeeded despite a blocked target parent"
 fi
-compgen -G "$rollback_root/state/backups/codex-*" >/dev/null ||
+grep -Fq \
+  "backup: $rollback_root/codex/AGENTS.md -> $rollback_root/state/backups/codex-" \
+  "$rollback_log" ||
   fail "rollback did not reach the first target mutation"
 [[ -f "$rollback_root/codex/AGENTS.md" &&
   ! -L "$rollback_root/codex/AGENTS.md" ]] ||
@@ -89,7 +132,7 @@ assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
 assert_link "$CODEX_HOME/rules/ai-workflow.rules" \
   "$fixture/codex/rules/ai-workflow.rules"
 assert_link "$CLAUDE_CONFIG_DIR/CLAUDE.md" "$fixture/global/shared.md"
-for skill in ai-project-manager html-plan pr-readiness subagent; do
+for skill in ai-project-manager html-plan local-pr-review pr-readiness subagent; do
   assert_link "$AGENTS_HOME/skills/$skill" "$fixture/.agents/skills/$skill"
   assert_link "$CLAUDE_CONFIG_DIR/skills/$skill" "$fixture/.agents/skills/$skill"
 done
@@ -162,7 +205,7 @@ grep -Fq "original codex rules" "$CODEX_HOME/rules/ai-workflow.rules" ||
   fail "uninstall did not restore Codex rules"
 grep -Fq "original claude instructions" "$CLAUDE_CONFIG_DIR/CLAUDE.md" ||
   fail "uninstall did not restore Claude instructions"
-for skill in ai-project-manager html-plan passthrough pr-readiness subagent; do
+for skill in ai-project-manager html-plan local-pr-review passthrough pr-readiness subagent; do
   [[ ! -e "$AGENTS_HOME/skills/$skill" &&
     ! -L "$AGENTS_HOME/skills/$skill" ]] ||
     fail "uninstall did not remove Codex skill: $skill"

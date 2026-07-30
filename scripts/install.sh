@@ -24,11 +24,20 @@ Usage: scripts/install.sh [options]
 EOF
 }
 
+require_value() {
+  local option="$1" argument_count="$2"
+  ((argument_count >= 2)) || {
+    printf 'error: %s requires a value\n' "$option" >&2
+    usage >&2
+    exit 2
+  }
+}
+
 while (($#)); do
   case "$1" in
-    --agent) [[ $# -ge 2 ]] || exit 2; selected_agent="$2"; shift 2 ;;
-    --source) [[ $# -ge 2 ]] || exit 2; source_root="$2"; shift 2 ;;
-    --state-dir) [[ $# -ge 2 ]] || exit 2; state_dir="$2"; shift 2 ;;
+    --agent) require_value "$1" "$#"; selected_agent="$2"; shift 2 ;;
+    --source) require_value "$1" "$#"; source_root="$2"; shift 2 ;;
+    --state-dir) require_value "$1" "$#"; state_dir="$2"; shift 2 ;;
     --dry-run) dry_run=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'error: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -77,6 +86,7 @@ for required in \
   global/shared.md \
   .agents/skills/ai-project-manager/SKILL.md \
   .agents/skills/html-plan/SKILL.md \
+  .agents/skills/local-pr-review/SKILL.md \
   .agents/skills/passthrough/SKILL.md \
   .agents/skills/pr-readiness/SKILL.md \
   .agents/skills/subagent/SKILL.md; do
@@ -255,16 +265,33 @@ install_agent() (
     index=$((index + 1))
   }
 
-  local instruction_target skill_dir skill_target
+  install_entry_path() {
+    local path="$1"
+    printf '%s/%s\n' \
+      "$(readlink -m "$(dirname "$path")")" "$(basename "$path")"
+  }
+
+  validate_install_pair() {
+    local source="$1" target="$2"
+    [[ "$(install_entry_path "$source")" != \
+      "$(install_entry_path "$target")" ]] || {
+      printf 'error: install target aliases source: %s\n' "$target" >&2
+      return 1
+    }
+  }
+
+  local instruction_target skill_dir skill_target plan_index
+  local -a install_sources=() install_targets=()
   if [[ "$agent" == "codex" ]]; then
     instruction_target="$codex_home/AGENTS.md"
   else
     instruction_target="$claude_home/CLAUDE.md"
   fi
-  install_target "$source_root/global/shared.md" "$instruction_target"
+  install_sources+=("$source_root/global/shared.md")
+  install_targets+=("$instruction_target")
   if [[ "$agent" == "codex" ]]; then
-    install_target "$source_root/codex/rules/ai-workflow.rules" \
-      "$codex_home/rules/ai-workflow.rules"
+    install_sources+=("$source_root/codex/rules/ai-workflow.rules")
+    install_targets+=("$codex_home/rules/ai-workflow.rules")
   fi
 
   for skill_dir in "$source_root"/.agents/skills/*; do
@@ -274,7 +301,17 @@ install_agent() (
     else
       skill_target="$claude_home/skills/$(basename "$skill_dir")"
     fi
-    install_target "$skill_dir" "$skill_target"
+    install_sources+=("$skill_dir")
+    install_targets+=("$skill_target")
+  done
+
+  for ((plan_index=0; plan_index<${#install_sources[@]}; plan_index++)); do
+    validate_install_pair \
+      "${install_sources[$plan_index]}" "${install_targets[$plan_index]}"
+  done
+  for ((plan_index=0; plan_index<${#install_sources[@]}; plan_index++)); do
+    install_target \
+      "${install_sources[$plan_index]}" "${install_targets[$plan_index]}"
   done
 
   if [[ -f "$manifest" ]]; then
@@ -320,5 +357,6 @@ esac
 
 printf 'installation complete: %s\n' "$selected_agent"
 printf '\noptional CodeRabbit CLI setup (not run automatically):\n'
+printf '  warning: the curl command downloads and executes remote code\n'
 printf '  curl -fsSL https://cli.coderabbit.ai/install.sh | sh\n'
 printf '  coderabbit auth login\n'
