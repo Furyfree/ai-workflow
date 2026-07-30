@@ -3,7 +3,7 @@
 This file tracks status and work order. Keep entries short; current task detail
 belongs in `TASKS.md`.
 
-Current phase: **small portable core**.
+Current phase: **controlled discovery**.
 
 ## 1. Small portable core
 
@@ -40,8 +40,6 @@ Current phase: **small portable core**.
 - [x] Move read-only branch and pull-request inspection into the canonical
       global Codex policy.
 - [x] Review the complete tracked and untracked change.
-- [ ] Commit, push, open a pull request, or update an existing pull request
-      only after an explicit user request.
 
 ## 2. Controlled discovery
 

@@ -9,10 +9,9 @@ Review the repository as a whole without turning the audit into a rewrite.
 
 ## Select the mode
 
-- `passthrough`: complete the pass in the main agent.
-- `passthrough subagent` or `full passthrough`: complete the main-agent pass,
-  then use `$subagent` for exactly one fresh-context read-only audit with the
-  current provider.
+- `passthrough`: complete one full-scope pass in the main agent.
+- `passthrough subagent`: complete the main-agent pass, then use `$subagent`
+  for exactly one fresh-context read-only audit with the current provider.
 - `passthrough subagent codex|claude|grok`: do the same one-subagent pass with
   the selected provider.
 - `passthrough subagent first [provider]`, or an explicit request to receive

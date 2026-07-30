@@ -30,7 +30,8 @@ commit. This skill proposes the plan but does not stage or commit it.
 2. Run the repository's complete local gate.
 3. Perform required manual tests.
 4. Inspect the final complete change.
-5. Run `git status --short` and `git diff --check`.
+5. Run `git status --short`, `git diff --check`, and
+   `git diff --cached --check`.
 6. Record exact commands, results, skipped checks, and residual risk.
 
 When CodeRabbit is installed, check authentication once:

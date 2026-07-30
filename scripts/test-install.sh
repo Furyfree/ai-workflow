@@ -41,11 +41,21 @@ export CLAUDE_CONFIG_DIR="$test_root/claude home"
 export AI_WORKFLOW_STATE_DIR="$test_root/state"
 
 dry_root="$test_root/dry"
-HOME="$dry_root/home" CODEX_HOME="$dry_root/codex" \
-  AGENTS_HOME="$dry_root/agents" CLAUDE_CONFIG_DIR="$dry_root/claude" \
-  AI_WORKFLOW_STATE_DIR="$dry_root/state" \
-  "$repo_root/scripts/install.sh" --source "$fixture" --dry-run >/dev/null
+dry_output="$(
+  HOME="$dry_root/home" CODEX_HOME="$dry_root/codex" \
+    AGENTS_HOME="$dry_root/agents" CLAUDE_CONFIG_DIR="$dry_root/claude" \
+    AI_WORKFLOW_STATE_DIR="$dry_root/state" \
+    "$repo_root/scripts/install.sh" --source "$fixture" --dry-run
+)"
 [[ ! -e "$dry_root" ]] || fail "dry-run created target or state directories"
+grep -Fqx "dry-run complete: all unchanged" <<<"$dry_output" ||
+  fail "dry-run did not report that all targets remained unchanged"
+if grep -Fq "installation complete" <<<"$dry_output"; then
+  fail "dry-run reported a completed installation"
+fi
+if grep -Fq "optional CodeRabbit CLI setup" <<<"$dry_output"; then
+  fail "dry-run printed post-install setup guidance"
+fi
 
 argument_error="$test_root/argument-error.log"
 for option in --agent --source --state-dir; do
@@ -126,7 +136,9 @@ printf 'original claude instructions\n' >"$CLAUDE_CONFIG_DIR/CLAUDE.md"
 mkdir -p "$AGENTS_HOME/skills"
 ln -s "../../source/.agents/skills/passthrough" \
   "$AGENTS_HOME/skills/passthrough"
-"$repo_root/scripts/install.sh" --source "$fixture"
+install_output="$("$repo_root/scripts/install.sh" --source "$fixture")"
+grep -Fqx "  coderabbit auth status --agent" <<<"$install_output" ||
+  fail "install did not print the CodeRabbit authentication check"
 
 assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
 assert_link "$CODEX_HOME/rules/ai-workflow.rules" \

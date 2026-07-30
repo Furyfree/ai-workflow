@@ -27,6 +27,7 @@ required_files=(
   "TASKS.md"
   "codex/rules/ai-workflow.rules"
   "global/shared.md"
+  "roadmap/forgejo-pr-review.md"
   "scripts/install.sh"
   "scripts/test-install.sh"
   "scripts/uninstall.sh"
@@ -197,6 +198,8 @@ if git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git -C "$repo_root" status --short ||
     fail "git status inspection failed"
   git -C "$repo_root" diff --check || fail "git diff whitespace validation failed"
+  git -C "$repo_root" diff --cached --check ||
+    fail "staged diff whitespace validation failed"
 else
   printf 'notice: Git worktree checks unavailable\n'
 fi

@@ -326,7 +326,6 @@ install_agent() (
   fi
 
   if [[ $dry_run -eq 1 ]]; then
-    printf 'dry-run complete: %s unchanged\n' "$agent"
     complete=1
     return
   fi
@@ -355,8 +354,13 @@ case "$selected_agent" in
   all) install_agent codex; install_agent claude ;;
 esac
 
-printf 'installation complete: %s\n' "$selected_agent"
-printf '\noptional CodeRabbit CLI setup (not run automatically):\n'
-printf '  warning: the curl command downloads and executes remote code\n'
-printf '  curl -fsSL https://cli.coderabbit.ai/install.sh | sh\n'
-printf '  coderabbit auth login\n'
+if [[ $dry_run -eq 1 ]]; then
+  printf 'dry-run complete: %s unchanged\n' "$selected_agent"
+else
+  printf 'installation complete: %s\n' "$selected_agent"
+  printf '\noptional CodeRabbit CLI setup (not run automatically):\n'
+  printf '  warning: the curl command downloads and executes remote code\n'
+  printf '  curl -fsSL https://cli.coderabbit.ai/install.sh | sh\n'
+  printf '  coderabbit auth login\n'
+  printf '  coderabbit auth status --agent\n'
+fi

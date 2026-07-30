@@ -101,6 +101,7 @@ installation, validation, or repository layout. Also inspect:
 ```sh
 git status --short
 git diff --check
+git diff --cached --check
 ```
 
 Report checks that could not run. Publication requires an explicit request as
