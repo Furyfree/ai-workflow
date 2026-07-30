@@ -1,6 +1,6 @@
 # ai-workflow
 
-Portable coding-agent instructions and five reusable workflows for Codex and
+Portable coding-agent instructions and six reusable workflows for Codex and
 Claude Code.
 
 ## What each part is
@@ -35,7 +35,8 @@ Markdown.
 
 This is a Codex-only allowlist for low-risk commands that should not need
 repeated approval. It covers filesystem metadata, read-only Git metadata,
-shell syntax checks, ShellCheck, and local version checks.
+read-only branch and pull-request inspection, shell syntax checks, ShellCheck,
+and local version checks.
 
 It deliberately excludes generic shell execution, file-content readers,
 network clients, Git mutations, package installation, privilege escalation,
@@ -54,9 +55,14 @@ These are reusable workflows loaded only when a task needs them:
 - `ai-project-manager` inspects or reconciles project documents and defines one
   bounded phase. It stops before implementation.
 - `pr-readiness` checks the complete change, validation, manual evidence, CI,
-  and review state without publishing or merging. Actionable findings from an
-  available local CodeRabbit review block publication and are listed with
+  review state, and a coherent commit plan without publishing or merging. For
+  an existing pull request it uses `local-pr-review`. Actionable findings from
+  an available local CodeRabbit review block publication and are listed with
   proposed fixes for user approval.
+- `local-pr-review` reviews a GitHub pull request from the authenticated local
+  checkout. Review stays local unless the user explicitly asks to post one
+  comment, which appears as the authenticated GitHub user rather than the
+  official Codex bot.
 - `html-plan` creates a self-contained HTML explanation when a broad roadmap,
   explanation, analysis, architecture, dependency map, or comparison is
   materially easier to understand visually. It has no template or house style;
@@ -64,11 +70,12 @@ These are reusable workflows loaded only when a task needs them:
   summarizes relationships, and links back to them. The HTML is a derived view,
   not a second plan or source of truth. Simple questions and short plans should
   remain prose.
-- `subagent` delegates one bounded independent task through the current
-  provider or an explicitly selected Codex, Claude, or Grok CLI. External runs
-  resolve the latest stable flagship at high reasoning and use bounded
-  read-only tools. If access or model availability fails, it asks before
-  substituting another model.
+- `subagent` proposes delegation when a request contains multiple independent
+  outcomes, then waits for the user's choice. It groups coupled work, keeps
+  dependency chains with the main agent, and uses the current native model when
+  no provider is requested. Approved implementation subagents may edit only
+  their non-overlapping assignments; the main agent reviews, refines, and
+  validates the combined result.
 - `passthrough` audits and tightens a complete repository for coherence, stale
   material, validation gaps, and generated bloat. It supports a main-agent
   pass, one optional provider-selected subagent pass before or after the main
@@ -86,6 +93,10 @@ These maintain this repository:
 - `SPEC.md` owns accepted behavior and boundaries.
 - `ROADMAP.md` owns phase order and exit criteria.
 - `TASKS.md` owns current work and validation status.
+
+Research-heavy future phases may link one focused file under `roadmap/`.
+`ROADMAP.md` still owns order and status; the linked file holds supporting
+research, options, and unresolved decisions without becoming a second roadmap.
 
 ### `.github/`
 
@@ -108,17 +119,38 @@ Set this up manually:
 5. Comment `@codex review` on a pull request when you want a review.
 
 `@codex` with another instruction starts a Codex task; use the exact
-`@codex review` trigger for review.
+`@codex review` trigger for review. Private repositories are supported when
+the connector has access and Codex Cloud is configured for the repository. If
+hosted review is unavailable, `local-pr-review` provides an authenticated local
+fallback without changing connector settings.
 
 ### `.codex/`
 
-This contains trusted project-local Codex rules for read-only branch and
-pull-request inspection. It does not select a permission profile or modify live
-Codex configuration. Mutation commands remain unmatched because prefix rules
-cannot safely reject trailing flags. Repository instructions define the
-authorized workflow. Requested-hunk staging and staged-diff review happen only
-after the user explicitly authorizes the associated commit or pull-request
-mutation.
+This temporarily contains a bootstrap copy of the read-only branch and
+pull-request inspection rules now included in `codex/rules/ai-workflow.rules`.
+It is useful before the global symlink has been installed and proven. After
+controlled discovery confirms the global policy is loaded, remove the local
+copy and its validation references so the installed global policy is the only
+rules source.
+
+Neither rules file selects a permission profile or changes live Codex
+configuration. Mutation commands remain unmatched. Rules reduce approval
+prompts; they do not authorize commit, push, pull-request updates, or other
+external changes.
+
+### Useful Codex controls
+
+Codex slash commands are user interface controls rather than steps a skill can
+silently run. The most useful general controls for this workflow are:
+
+- `/skills` to confirm skill discovery
+- `/status` to inspect the active model, permissions, workspace, and context
+- `/debug-config` to inspect loaded configuration and rule layers
+
+The relevant skills also point to `/plan`, `/review`, `/diff`, `/usage`,
+`/agent`, `/subagents`, `/worktree`, and `/compact` where those controls help.
+See the official [Codex slash command reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli)
+for client availability and current behavior.
 
 ## Installation
 
@@ -185,11 +217,29 @@ global instructions and skill inventory. Codex also loads rules at startup.
 The installer does not run CodeRabbit's interactive setup. At the end it prints
 these optional commands:
 
+The first command downloads and immediately executes CodeRabbit's remote
+installer. Run it only if you trust that source, or download and inspect the
+script first.
+
 ```sh
 curl -fsSL https://cli.coderabbit.ai/install.sh | sh
 coderabbit auth login
 coderabbit auth status --agent
 ```
+
+This workflow uses CodeRabbit locally, not as a GitHub pull-request bot. Run a
+manual review with:
+
+```sh
+coderabbit review --agent --uncommitted
+```
+
+If CodeRabbit's GitHub App was installed during onboarding, remove its
+repository access in GitHub under **Settings > Applications > Installed GitHub
+Apps > CodeRabbit > Configure > Uninstall**. Keep the local CLI and its account
+authentication. After the app is removed, `@coderabbitai review` no longer
+works; use the local command instead. A `.coderabbit.yaml` file is not required
+for this local-only mode.
 
 When `pr-readiness` cannot run an authenticated CodeRabbit review, it reports
 that state as unavailable evidence and continues all other checks without
@@ -203,7 +253,7 @@ higher limits and broader PR features. See
 ### Verify discovery
 
 In a disposable repository, confirm each agent reports the shared global
-instructions and can discover and invoke all five skills. For Codex, also
+instructions and can discover and invoke all six skills. For Codex, also
 confirm the installed policy loads:
 
 ```sh
@@ -268,8 +318,8 @@ notice; CI requires both and installs its pinned Codex CLI version first.
 The installer never manages credentials, sessions, plugins, models, MCP
 servers, trust, permission profiles, `config.toml`, hooks, deployment, or
 infrastructure. It only creates managed symlinks and manifests. The global
-Codex rules authorize low-risk local commands; this repository's trusted local
-rules reduce prompts for read-only branch and pull-request inspection. Mutation
-commands remain unmatched. Commit, push, opening or updating a pull request,
-installation, deployment, and infrastructure actions require an explicit user
-request.
+Codex rules authorize low-risk local commands and read-only branch and
+pull-request inspection. The project-local copy is temporary until that
+installed policy is proven. Mutation commands remain unmatched. Commit, push,
+opening or updating a pull request, installation, deployment, and
+infrastructure actions require an explicit user request.

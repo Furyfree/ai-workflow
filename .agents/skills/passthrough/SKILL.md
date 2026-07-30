@@ -32,6 +32,12 @@ another pass. Subagents must never spawn subagents.
 If the chosen provider is unavailable, report it. Do not change live
 configuration or silently substitute another provider.
 
+Before an explicitly requested token-heavy subagent loop, the user may inspect
+Codex usage with `/usage`. For a long-running conversation, the user may run
+`/compact` before the pass when preserving enough context is otherwise a
+concern. These are optional user controls; do not invoke or require them
+automatically.
+
 In subagent-first mode, use the returned findings as leads, not as the scope of
 the main pass. Complete every inspection step below independently.
 

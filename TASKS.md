@@ -20,6 +20,8 @@
 - [x] Add and validate current-agent and one-subagent passthrough modes.
 - [x] Add a subagent-first mode followed by an independent main-agent pass.
 - [x] Add provider selection through a separate reusable subagent skill.
+- [x] Add a multi-task delegation checkpoint, dependency grouping, editable
+      assignments, and main-agent review.
 - [x] Add latest stable flagship selection at high reasoning with bounded
       no-prompt read-only execution.
 - [x] Add an explicit passthrough loop capped at three sequential passes.
@@ -29,7 +31,22 @@
 - [x] Block pull-request publication on local CodeRabbit findings and report
       unavailable CodeRabbit as skipped evidence.
 - [x] Add manual Codex review setup with automatic reviews disabled.
+- [x] Add local pull-request review with an explicit GitHub comment boundary.
+- [x] Use local pull-request review from `pr-readiness` and add coherent
+      multi-commit planning.
+- [x] Add useful Codex slash-command handoffs without treating them as
+      automatic skill actions.
+- [x] Move read-only branch and pull-request inspection into the canonical
+      global Codex rules.
+- [x] Document CodeRabbit as a local-only reviewer and explain GitHub App
+      removal.
+- [x] Add linked research and a future Forgejo pull-request workflow phase.
 - [x] Complete a full repository passthrough and resolve verified findings.
+- [ ] After installing and proving the global Codex rules, remove
+      `.codex/rules/repository-pr.rules` and its validation and documentation
+      references.
+- [ ] Remove the CodeRabbit GitHub App after its current pull-request feedback
+      is no longer needed; keep the authenticated local CLI.
 - [ ] Commit, push, open a pull request, or update an existing pull request
       only after an explicit user request.
 

@@ -67,7 +67,14 @@ for private_name in auth.json history.jsonl installation_id \
   fi
 done
 
-expected_skills=(ai-project-manager html-plan passthrough pr-readiness subagent)
+expected_skills=(
+  ai-project-manager
+  html-plan
+  local-pr-review
+  passthrough
+  pr-readiness
+  subagent
+)
 actual_skills="$(
   find "$repo_root/.agents/skills" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' |
     LC_ALL=C sort
@@ -132,9 +139,15 @@ if command -v codex >/dev/null 2>&1; then
   check_allowed_rule "$rules_file" ls -la
   check_allowed_rule "$rules_file" git status --short
   check_allowed_rule "$rules_file" git ls-files
+  check_allowed_rule "$rules_file" git ls-remote --exit-code --heads \
+    origin chore/repository-foundation
+  check_allowed_rule "$rules_file" gh pr view --json number,url
+  check_allowed_rule "$rules_file" gh pr checks
   check_allowed_rule "$rules_file" bash -n scripts/install.sh
   check_allowed_rule "$rules_file" shellcheck scripts/install.sh
   check_unmatched_rule "$rules_file" git push
+  check_unmatched_rule "$rules_file" gh pr create --fill --draft
+  check_unmatched_rule "$rules_file" gh pr merge
   check_unmatched_rule "$rules_file" git diff --stat --output=/tmp/example
   check_unmatched_rule "$rules_file" git log --oneline --output=/tmp/example
   check_unmatched_rule "$rules_file" file -C -m example.magic

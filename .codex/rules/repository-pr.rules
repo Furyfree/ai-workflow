@@ -1,3 +1,4 @@
+# Temporary bootstrap until the installed global policy is proven.
 # Reduce approval prompts for read-only branch and pull-request inspection.
 # Mutation commands remain unmatched because prefix rules cannot reject risky
 # trailing arguments. These rules do not grant authorization.

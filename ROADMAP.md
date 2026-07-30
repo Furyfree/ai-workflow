@@ -8,7 +8,7 @@ Current phase: **small portable core**.
 ## 1. Small portable core
 
 - [x] Keep one shared instruction body for Codex and Claude Code.
-- [x] Link instructions and five skills without managing private runtime state.
+- [x] Link instructions and six skills without managing private runtime state.
 - [x] Support preview, conflict backups, repeated installation, drift refusal,
       and uninstall.
 - [x] Reduce validation and CI to one deterministic Linux gate.
@@ -18,16 +18,27 @@ Current phase: **small portable core**.
 - [x] Add current-agent and one-subagent repository passthrough modes.
 - [x] Support one subagent audit before the independent main-agent pass.
 - [x] Add a provider-aware subagent skill for Codex, Claude, and Grok.
+- [x] Add user-approved multi-task delegation with dependency grouping,
+      current-model defaults, bounded edits, and main-agent integration.
 - [x] Resolve the latest stable flagship subagent at high reasoning and fail
       closed when provider access or model availability is missing.
 - [x] Limit normal subagent passthrough to one pass and explicit loop mode to
       three sequential passes with early stopping.
 - [x] Keep repository inspection rules independent of live permission profiles
       and leave mutation commands unmatched.
-- [x] Document optional CodeRabbit installation and unauthenticated fallback.
+- [x] Document local-only CodeRabbit installation, GitHub App removal, and
+      unavailable-review fallback.
 - [x] Block pull-request publication on local CodeRabbit findings without
       blocking when CodeRabbit is unavailable.
 - [x] Document manual Codex review with automatic reviews disabled.
+- [x] Add an authenticated local pull-request review fallback with explicit
+      authorization before posting a GitHub comment.
+- [x] Use local pull-request review in readiness checks and propose coherent
+      commit groups when one large commit would mix independent outcomes.
+- [x] Document useful Codex slash-command handoffs without making skills depend
+      on user interface controls.
+- [x] Move read-only branch and pull-request inspection into the canonical
+      global Codex policy.
 - [x] Review the complete tracked and untracked change.
 - [ ] Commit, push, open a pull request, or update an existing pull request
       only after an explicit user request.
@@ -37,7 +48,11 @@ Current phase: **small portable core**.
 Start after the portable core passes locally and installation is authorized.
 
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
-- [ ] Confirm both agents discover and invoke all five skills.
+- [ ] Confirm both agents discover and invoke all six skills.
+- [ ] Confirm the installed global Codex policy handles required read-only
+      branch and pull-request inspection.
+- [ ] Remove `.codex/rules/repository-pr.rules` and its documentation and
+      validation references after the global policy is proven.
 - [ ] Handle discovery differences through paths or repository routing without
       duplicating shared instructions.
 - [ ] Record recovery steps and any behavior that could not be verified.
@@ -65,7 +80,20 @@ should become their source of truth instead of maintaining parallel plans.
 - [ ] Prove discovery without tracking credentials, sessions, or runtime state.
 - [ ] Remove the migrated copies from `~/git/docs/pi/` only after review.
 
-## 5. Evidence-led refinements
+## 5. [Forgejo pull-request workflow](roadmap/forgejo-pr-review.md)
+
+Start after a local Forgejo instance and one representative repository exist.
+
+- [ ] Confirm the installed Forgejo version and evaluate `tea` against it.
+- [ ] Choose `tea` or the Forgejo REST API for pull requests, reviews, comments,
+      and unresolved threads.
+- [ ] Extend local pull-request review without duplicating the review workflow.
+- [ ] Prove branch, pull-request, local Codex review, comment, and human-merge
+      behavior with a repository-scoped token.
+- [ ] Consider Actions automation only after the manual workflow is safe and
+      useful.
+
+## 6. Evidence-led refinements
 
 - [ ] Add instructions or automation only after repeated friction demonstrates
       a need.

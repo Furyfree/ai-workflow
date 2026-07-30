@@ -8,6 +8,8 @@ Current phase: **{{CURRENT_PHASE}}**.
 ## Principles
 
 - List only constraints that affect more than one phase.
+- Link one `roadmap/<topic>.md` detail file only when a research-heavy phase
+  would otherwise make this roadmap long.
 - Remove this section when no cross-phase constraints are needed.
 
 ## 1. {{CURRENT_PHASE}}

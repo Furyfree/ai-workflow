@@ -76,9 +76,14 @@ instruction says otherwise.
   repository instructions.
 - Use `ai-project-manager` for repository planning and document reconciliation.
 - Use `pr-readiness` for local and pull-request evidence.
+- Use `local-pr-review` for an authenticated local pull-request review. Post
+  its findings to GitHub only when the user explicitly requests the comment.
 - Use `html-plan` only when a visual materially improves a broad plan.
-- Use `subagent` for one bounded independent delegation, including a specific
-  provider when requested.
+- Before starting multiple substantive independent outcomes, use `subagent` to
+  propose dependency-aware assignments and ask whether the user wants
+  delegation. Use the current native model when none is selected. Keep ordered
+  dependency chains with the main agent, and review and refine every delegated
+  edit before final validation.
 - Use `passthrough` for a current-agent repository-wide coherence pass.
 - Use passthrough subagent or loop modes only when the user explicitly requests
   them.

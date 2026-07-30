@@ -38,6 +38,14 @@ only constraints that affect sequencing, and retain compact completed
 milestones when useful. Put current implementation detail in `TASKS.md` or the
 phase plan.
 
+When a roadmap phase needs substantial research, alternatives, or
+version-sensitive notes, keep the phase summary in `ROADMAP.md` and link one
+focused detail file such as `roadmap/<topic>.md`. Reuse an established planning
+detail directory when the repository already has one. The detail file may own
+research, sources, constraints, options, and unresolved decisions; it must not
+duplicate the specification, roadmap order, or current task checklist. Do not
+create a detail file for an ordinary phase that fits clearly in the roadmap.
+
 When their shared contract changes, update `SPEC.md`, `ROADMAP.md`, and
 `TASKS.md` together without mixing their ownership.
 
@@ -51,6 +59,10 @@ Define:
 - recovery for stateful changes
 - unresolved decisions and required permissions
 - the explicit stop point
+
+In an interactive Codex session, the user may enter `/plan` to switch the
+conversation into planning mode. That interface control does not replace this
+skill's document reconciliation or its stop-before-implementation boundary.
 
 Stop after the plan. Implementation requires a separate user request. Do not
 infer permission to commit, push, publish, merge, install, deploy, or apply.

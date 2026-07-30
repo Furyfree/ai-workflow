@@ -1,23 +1,46 @@
 ---
 name: subagent
-description: Delegate one bounded independent task to a Codex, Claude, or Grok subagent and return its findings to the main agent. Use when the user asks for a subagent, fresh-context audit, independent second opinion, provider-specific delegation, or when another skill explicitly calls for one subagent pass.
+description: Delegate bounded independent work to Codex, Claude, or Grok subagents and return control to the main agent for review and integration. Use when the user asks for a subagent, fresh-context audit, provider-specific delegation, or lists multiple substantive tasks that may be independent enough to delegate.
 ---
 
 # Subagent
 
-Delegate one independent task without creating an agent tree.
+Delegate independent work without creating an agent tree.
 
-## Select the provider
+## Check multi-task delegation
 
-- With no provider request, use the current client's native subagent tool.
+When the user lists two or more substantive outcomes and has not already chosen
+whether to delegate:
+
+1. Inspect enough context to identify dependencies and likely file overlap.
+2. Group tightly coupled tasks into one assignment.
+3. Keep ordered dependency chains with the main agent.
+4. Before editing or executing the tasks, show the proposed independent
+   assignments and ask whether the user wants subagents for them and, if so,
+   which provider or model to use.
+
+Do not treat ordinary implementation steps such as edit, test, and report as
+separate tasks. Do not ask again when the user already requested or declined
+subagents, or when another skill defines the delegation.
+
+If the user declines, the main agent completes the full flow. If the user
+accepts without naming a provider or model, use native subagents with the
+current model and reasoning settings. For example, six tasks that form two
+independent three-task groups should normally become two assignments, not six.
+
+## Select provider and model
+
+- With no provider or model request, use the current client's native subagent
+  tool and inherit the current model and reasoning settings.
 - For `subagent codex`, `subagent claude`, or `subagent grok`, use that provider
   when its native tool or CLI is available and authenticated.
+- When the user names a model, use that exact model if available.
 - If the requested provider is unavailable, report that. Do not silently
   substitute another provider.
 
-Use the latest stable flagship from the requested provider at `high`
-reasoning. Prefer a provider-maintained flagship alias when one is documented.
-The current verified command values are:
+When the user selects a provider but no model, use its latest stable flagship
+at `high` reasoning. Prefer a provider-maintained flagship alias when one is
+documented. The current verified command values are:
 
 - Codex: `gpt-5.6-sol`
 - Claude: `opus`, Anthropic's maintained alias for the latest Opus model
@@ -35,7 +58,7 @@ its current help, authentication, and available models where the CLI exposes
 them. Suitable bounded read-only starting points are:
 
 ```sh
-codex -a never exec --ignore-user-config --ignore-rules \
+codex -a never exec --ignore-user-config \
   --sandbox read-only --ephemeral -m gpt-5.6-sol \
   -c 'model_reasoning_effort="high"' -C REPOSITORY PROMPT
 (cd REPOSITORY && claude --print --model opus --effort high \
@@ -47,9 +70,17 @@ grok --cwd REPOSITORY --single PROMPT --model grok-4.5 --effort high \
 ```
 
 The Codex approval override prevents interactive prompts while its read-only
-sandbox remains enforced. Claude receives only file-reading tools. Grok
-auto-approves tool calls inside its read-only sandbox; the sandbox, disabled
-web search, and disabled auto-update remain the safety boundary.
+sandbox and command rules remain enforced. Claude receives only file-reading
+tools. Grok auto-approves tool calls inside its read-only sandbox; the sandbox,
+disabled web search, and disabled auto-update remain the safety boundary.
+
+These commands are for audits. For user-approved implementation delegation,
+prefer native subagent tools. Give each subagent write access only to its
+assigned repository or worktree and the tools needed for focused checks. When
+an external CLI is required, inspect its current help and use its bounded
+workspace-write or edit-accepting mode; never bypass its sandbox. Prefer a
+separate worktree when supported. If isolation is unavailable, run editing
+subagents concurrently only when their assigned paths cannot overlap.
 
 Do not change authentication, configuration, or permissions to make a provider
 work.
@@ -58,6 +89,19 @@ If authentication, subscription, entitlement, rate limits, or model
 availability block the requested provider, report the exact state and ask
 whether to use a currently available stable model. Do not silently select a
 preview, labs, experimental, cheaper, or different-provider model.
+
+## Use Codex operator controls
+
+In Codex, the user may use:
+
+- `/status` to inspect the active model, reasoning, permissions, workspace, and
+  context
+- `/usage` before a costly fan-out
+- `/agent` or `/subagents` to inspect and switch between agent threads
+- `/worktree` in supported clients to isolate an editing thread
+
+These are user interface controls, not steps the skill should claim to perform.
+The assignment boundaries and main-agent review below still apply.
 
 ## Refresh model defaults
 
@@ -69,25 +113,36 @@ A model refresh authorizes local repository edits only. Commit, push, and
 pull-request creation or update still require an explicit request naming that
 publication action.
 
-## Define one bounded task
+## Define each bounded assignment
 
 Give the subagent:
 
 - the repository or artifact path
-- a narrow scope and read-only constraint
+- one outcome, its dependencies, and an exact path or component boundary
 - the expected output
 - the stop condition
 
 Do not give it the main agent's diagnosis or expected findings. Tell it not to
-spawn subagents, edit files, publish, install, or change external state.
+spawn subagents, commit, push, publish, merge, install, deploy, change live
+configuration, or change other external state.
+
+For an audit, require read-only work. For approved implementation delegation,
+allow edits and focused validation only inside the assignment. Never give two
+concurrent editing subagents overlapping ownership.
 
 ## Return control
 
-Run one subagent and wait for its result. The main agent verifies every finding
-against the source before acting and owns all edits and validation.
+Wait for every assignment. The main agent then:
 
-Compare the worktree before and after an external subagent. Stop if it changed
+- verifies findings and claimed checks against source evidence
+- reviews each subagent diff for scope, correctness, style, and overlap
+- reconciles or refines the edits instead of accepting them blindly
+- completes integration work that spans assignments
+- runs the final focused checks and repository gate
+
+Compare the worktree before and after every audit subagent. Stop if it changed
 anything despite the read-only request.
 
-Do not start another subagent unless the calling workflow explicitly defines a
-bounded loop.
+Do not replace a completed assignment with another subagent merely to review
+it; the main agent is the reviewer. Do not start a delegation loop unless the
+user or calling workflow explicitly defines a bounded loop.

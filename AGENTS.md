@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository owns portable coding-agent instructions, five reusable skills,
+This repository owns portable coding-agent instructions, six reusable skills,
 project templates, a small Codex command policy, and a Linux installer for
 Codex and Claude Code.
 
@@ -48,15 +48,17 @@ Edit only requested paths and preserve unrelated worktree changes.
 
 When the user explicitly requests a commit, stage only the intended hunks
 within requested paths. Inspect both the staged path list and staged diff
-before committing, and preserve unrelated worktree changes. A commit request
-does not authorize a push. Before a requested push or pull-request action, run
-focused checks, `./scripts/validate.sh`, and the `pr-readiness` workflow. Do
-not create or update a pull request when a completed local CodeRabbit review
-has actionable findings. List each problem and proposed fix, then wait for
-explicit user direction. If CodeRabbit is unavailable, continue the other
-checks and report it as unavailable evidence; its absence does not block
-publication. Push only when explicitly requested, and create or update a pull
-request only when that exact action is explicitly requested. Do not merge,
+before committing, and preserve unrelated worktree changes. If the change
+contains independent reviewable outcomes, show an ordered coherent commit plan
+before committing; do not split mechanically by file or line count. A commit
+request does not authorize a push. Before a requested push or pull-request
+action, run focused checks, `./scripts/validate.sh`, and the `pr-readiness`
+workflow. Do not create or update a pull request when a completed local
+CodeRabbit review has actionable findings. List each problem and proposed fix,
+then wait for explicit user direction. If CodeRabbit is unavailable, continue
+the other checks and report it as unavailable evidence; its absence does not
+block publication. Push only when explicitly requested, and create or update a
+pull request only when that exact action is explicitly requested. Do not merge,
 install repository content, or automatically request Codex review without
 separate explicit authorization.
 
@@ -72,12 +74,14 @@ After a requested publication, report completion as a short list:
 
 - `SPEC.md`: requirements and boundaries
 - `ROADMAP.md`: phase order and exit criteria
+- `roadmap/<topic>.md`: research and decisions for one linked complex phase
 - `TASKS.md`: current work and validation status
 - `README.md`: installation, recovery, validation, and the public overview
 - A skill's `SKILL.md`: that reusable workflow
 
 Do not create additional planning or implementation documents when one of these
-files already owns the information.
+files already owns the information. A roadmap detail file is an exception only
+when `ROADMAP.md` links it and the phase cannot stay concise without it.
 
 ## Editing
 

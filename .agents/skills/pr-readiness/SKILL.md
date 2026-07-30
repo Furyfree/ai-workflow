@@ -12,6 +12,18 @@ description: Determine whether a local change or pull request has complete curre
 3. Identify unrelated, accidental, generated, secret, or oversized changes.
 4. Confirm the change matches one coherent outcome.
 
+## Plan coherent commits
+
+When the intended change contains independent reviewable outcomes, propose an
+ordered multi-commit plan before any requested commit. Keep implementation,
+tests, and contract documentation together when separating them would make a
+commit incomplete. Do not split mechanically by file, directory, or line
+count.
+
+Each proposed commit should have one clear purpose, a fitting message, and an
+independently understandable diff. A single coherent outcome should remain one
+commit. This skill proposes the plan but does not stage or commit it.
+
 ## Validate
 
 1. Run focused checks.
@@ -32,12 +44,27 @@ continue every other readiness check. Record it as unavailable or skipped
 evidence in the final bullet summary; it does not block publication by itself.
 Do not install it or start login implicitly.
 
-When authenticated and permitted, run one review of the exact tracked change
-intended for publication:
+If CodeRabbit reports free-tier exhaustion or a usage rate limit, treat the
+review as unavailable immediately. Do not wait for the allowance to reset,
+enable usage billing, or consume paid credits implicitly. Continue the other
+checks and report the limit as unavailable evidence.
+
+When authenticated and permitted, choose the review scope that exactly matches
+the tracked change being evaluated:
+
+- For a branch or pull request, resolve its current base branch and review the
+  complete branch change:
 
 ```sh
-coderabbit review --agent --uncommitted
+coderabbit review --agent --base <base-branch>
 ```
+
+- Use `--committed` only when the intended scope is committed changes alone.
+- Use `--uncommitted` only when the intended scope is staged and tracked
+  working-tree changes alone.
+
+Do not use a narrower mode as publication evidence. Record the selected base
+or mode in the readiness report.
 
 CodeRabbit can take several minutes and may be quiet between status updates.
 Wait for the review process to complete before deciding readiness or
@@ -70,21 +97,35 @@ only when that review completed without actionable findings.
 
 When a pull request exists:
 
-1. Identify its latest commit.
-2. Verify required CI belongs to that commit and has completed.
-3. Inspect review decisions, actionable comments, and unresolved threads.
-4. Confirm required screenshots, logs, rollout, or target-environment evidence.
-5. Confirm any repository-required independent review is current.
+1. Use `local-pr-review` against the exact current remote head. Keep its report
+   local unless the user separately asks to post it.
+2. Identify the pull request's latest commit and current body.
+3. Read conversation comments, submitted reviews, inline review comments, and
+   unresolved threads, including requests from the user and other reviewers.
+   Do not rely only on check summaries or the latest review decision.
+4. Verify each apparent request against the current head and distinguish
+   actionable feedback from informational, stale, duplicated, or invalid
+   comments.
+5. Verify required CI belongs to the latest commit and has completed.
+6. Confirm required screenshots, logs, rollout, or target-environment evidence.
+7. Confirm any repository-required independent review is current.
 
-Failed, pending, missing, or stale required evidence blocks readiness.
+Unresolved actionable feedback and failed, pending, missing, or stale required
+evidence block readiness. Report each actionable request and its proposed
+disposition before editing or updating the pull request.
+
+In Codex, `/review` is a useful user-run independent local review and `/diff`
+shows the exact working-tree change. Neither replaces the pull-request
+conversation, remote-head, or CI inspection above.
 
 ## Report
 
 Return the reviewed scope, local checks, manual evidence, review state, current
-CI, unresolved feedback, residual risk, and one verdict: `ready`, `not ready`,
-or `ready except for explicit human action`. When a pull request exists,
-include its number and URL. Describe the problem and disposition for each
-actionable review finding; do not report only a finding count.
+CI, proposed commit plan, unresolved feedback, residual risk, and one verdict:
+`ready`, `not ready`, or `ready except for explicit human action`. When a pull
+request exists, include its number and URL. Describe the problem and
+disposition for each actionable review finding; do not report only a finding
+count.
 
 Do not commit, push, create a pull request, resolve threads, merge, deploy, or
 apply unless the user separately authorizes that action.

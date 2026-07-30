@@ -57,6 +57,33 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["git", "ls-remote", "--exit-code", "--heads", "origin"],
+    decision = "allow",
+    justification = "Confirm the current branch still exists upstream",
+    match = [
+        "git ls-remote --exit-code --heads origin chore/tighten-workflow",
+    ],
+    not_match = [
+        "git fetch origin main",
+        "git push",
+    ],
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", ["view", "checks"]],
+    decision = "allow",
+    justification = "Inspect the current pull request and its checks",
+    match = [
+        "gh pr view --json number,url",
+        "gh pr checks",
+    ],
+    not_match = [
+        "gh pr merge",
+        "gh pr close",
+    ],
+)
+
+prefix_rule(
     pattern = [["bash", "sh"], "-n"],
     decision = "allow",
     justification = "Parse shell scripts without executing them",
