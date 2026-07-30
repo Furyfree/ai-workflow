@@ -25,12 +25,11 @@
 - [x] Add optional CodeRabbit installation and unauthenticated fallback.
 - [x] Add manual Codex review setup with automatic reviews disabled.
 - [x] Complete a full repository passthrough and resolve verified findings.
-- [ ] Commit, push, or open a pull request only after separate authorization,
-      except for this repository's standing draft pull-request workflow.
+- [ ] Commit, push, open a pull request, or update an existing pull request
+      only after an explicit user request.
 
 ## Completion rule
 
 Mark tasks complete only after their evidence exists. Controlled agent
 discovery, publication, installation into real agent homes, GitHub settings,
-and Homelab adoption remain separate phases. This repository's draft
-pull-request exception is limited to the workflow in `AGENTS.md`.
+and Homelab adoption remain separate phases.

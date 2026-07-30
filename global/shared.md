@@ -54,6 +54,10 @@ instruction says otherwise.
 - Resolve destructive targets exactly and prefer reversible operations.
 - Keep commit, push, pull-request creation, merge, installation, deployment,
   privileged commands, and infrastructure apply behind explicit authorization.
+- Treat edit requests, implementation requests, and "go ahead" as authorization
+  for local work only. Require an explicit request before committing, pushing,
+  opening a pull request, or adding commits to an existing pull request, even
+  when tools are authenticated or approval rules allow the commands.
 - Do not weaken trust, sandbox, approval, or permission settings implicitly.
 
 ## Validate and report honestly

@@ -76,8 +76,10 @@ limited to three sequential subagent passes with early stopping.
 - Codex rules allow only documented low-risk inspection and validation
   prefixes. They do not allow generic shells, privilege escalation, publishing,
   remote administration, package installation, or infrastructure changes.
-- Trusted project-local Codex rules allow the branch, commit, push, and draft
-  pull-request commands required for this repository. They never allow merge.
+- Trusted project-local Codex rules reduce prompts for narrow branch, commit,
+  push, and draft pull-request commands. They do not grant authorization;
+  commit, push, opening a pull request, and updating an existing pull request
+  each require an explicit user request. They never allow merge.
 - Installation never modifies credentials, sessions, plugins, trust, sandbox
   or approval settings, permission profiles, `config.toml`, models, hooks, or
   connector state.

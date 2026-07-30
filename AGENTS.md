@@ -24,14 +24,15 @@ scoped files, and never use it to bypass explicit authorization boundaries.
   repository. Change repository sources only. Installation is a separate
   user-run action.
 - Keep commit, push, pull-request creation, merge, installation, deployment,
-  privileged action, and infrastructure apply behind explicit authorization,
-  except for the repository pull-request workflow below.
+  privileged action, and infrastructure apply behind explicit authorization.
 
-## Repository pull requests
+## Git and pull requests
 
-A request to change this repository is standing authorization to create a
-fitting branch, commit the requested repository changes, push, and open a draft
-pull request. It is not authorization to merge or install anything.
+A request to change this repository authorizes local edits and validation only.
+Commit, push, pull-request creation, and adding commits to an existing pull
+request each require an explicit user request. Do not infer publication
+authorization from an implementation request, "go ahead", authenticated tools,
+or rules that reduce approval prompts.
 
 Before editing:
 
@@ -43,15 +44,18 @@ Before editing:
 - If unrelated or uncommitted work prevents a safe branch change, preserve it
   and ask before moving it.
 
-Edit and stage only requested paths. Preserve and exclude unrelated worktree
-changes, then inspect the staged path list before committing.
+Edit only requested paths and preserve unrelated worktree changes.
 
-Run focused checks and `./scripts/validate.sh`, push with
-`git push -u origin HEAD`, and create a draft pull request with
-`gh pr create --fill --draft`. Do not merge it, install repository content, or
-automatically request Codex review.
+When the user explicitly requests a commit, stage only the intended hunks
+within requested paths. Inspect both the staged path list and staged diff
+before committing, and preserve unrelated worktree changes. A commit request
+does not authorize a push. Before a requested push or pull-request action, run
+focused checks and `./scripts/validate.sh`. Push only when explicitly
+requested, and create or update a pull request only when that exact action is
+explicitly requested. Do not merge, install repository content, or
+automatically request Codex review without separate explicit authorization.
 
-Report completion as a short list:
+After a requested publication, report completion as a short list:
 
 - pull request number and URL
 - branch and commit
@@ -89,6 +93,6 @@ git status --short
 git diff --check
 ```
 
-Report checks that could not run. Draft publication follows the standing
-repository workflow above. Installation into real agent homes remains a
-separate user-run action.
+Report checks that could not run. Publication requires an explicit request as
+described above. Installation into real agent homes remains a separate
+user-run action.

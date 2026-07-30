@@ -23,8 +23,8 @@ Current phase: **small portable core**.
 - [x] Document optional CodeRabbit installation and unauthenticated fallback.
 - [x] Document manual Codex review with automatic reviews disabled.
 - [x] Review the complete tracked and untracked change.
-- [ ] Commit, push, or open a pull request only after separate authorization,
-      except for this repository's standing draft pull-request workflow.
+- [ ] Commit, push, open a pull request, or update an existing pull request
+      only after an explicit user request.
 
 ## 2. Controlled discovery
 

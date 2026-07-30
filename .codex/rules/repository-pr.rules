@@ -1,5 +1,5 @@
-# Allow this repository's branch and draft pull-request workflow.
-# Repository instructions require requested-path staging and staged-path review.
+# Reduce approval prompts only after the user explicitly requests the matching
+# Git or pull-request action. These rules do not grant authorization.
 
 prefix_rule(
     pattern = ["git", "ls-remote", "--exit-code", "--heads", "origin"],

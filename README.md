@@ -260,6 +260,7 @@ The installer never manages credentials, sessions, plugins, models, MCP
 servers, trust, permission profiles, `config.toml`, hooks, deployment, or
 infrastructure. It only creates managed symlinks and manifests. The global
 Codex rules authorize low-risk local commands; this repository's trusted local
-rules cover its branch and draft pull-request workflow but never merge.
-Installation, deployment, and infrastructure actions require separate user
-authorization.
+rules reduce prompts for narrow Git and draft pull-request commands. Those
+rules do not authorize the commands: commit, push, opening or updating a pull
+request, installation, deployment, and infrastructure actions still require an
+explicit user request.
