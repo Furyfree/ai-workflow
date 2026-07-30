@@ -1,0 +1,4 @@
+interface:
+  display_name: "HTML Plan"
+  short_description: "Turn broad plans into visual HTML"
+  default_prompt: "Use $html-plan to create a self-contained visual explanation of this plan."
