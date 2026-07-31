@@ -1,38 +1,54 @@
 # {{PROJECT_NAME}} roadmap
 
-This file tracks status and work order. Keep entries short, ordered, and
-observable.
+This file owns the detailed phase plan and work order. Current task checkboxes
+and evidence live in [TASKS.md](TASKS.md).
 
 Current phase: **{{CURRENT_PHASE}}**.
 
 ## Principles
 
 - List only constraints that affect more than one phase.
-- Link one `roadmap/<topic>.md` detail file only when a research-heavy phase
-  would otherwise make this roadmap long.
+- Link supporting research or operator guidance without moving phase ownership
+  or task status out of this file and `TASKS.md`.
 - Remove this section when no cross-phase constraints are needed.
 
-## 1. {{CURRENT_PHASE}}
+## 1. Current phase
 
-State the intended result and important dependency in one or two sentences.
+Phase: **{{CURRENT_PHASE}}**.
 
-- [ ] List observable work in dependency order.
-- [ ] Include the validation or manual proof needed to finish the phase.
+### Outcome
 
-Exit criteria:
+Describe the intended result.
 
-- [ ] State the observable condition that completes this phase.
+### Context and decisions
 
-## 2. {{NEXT_PHASE}}
+Explain the current state, dependencies, boundaries, and accepted decisions.
 
-Start only after the current phase is complete.
+### Risks and recovery
 
-- [ ] List the next ordered outcome.
+Describe material risks, rollback, and the required stop points.
+
+### Validation
+
+List automated checks and required manual evidence without task checkboxes.
+
+### Exit criteria
+
+State the observable conditions that complete this phase.
+
+## 2. Next phase
+
+Phase: **{{NEXT_PHASE}}**.
+
+Describe why it follows the current phase and what it should prove.
+
+Use the same outcome, context, risk, validation, and exit-criteria structure
+when the additional detail is useful.
 
 ## Later
 
-- [ ] Keep genuinely deferred work brief.
+Keep genuinely deferred outcomes brief and explain their sequencing constraint.
 
 ## Done
 
-- [x] Keep useful completed milestones without detailed history.
+Keep useful completed milestones without detailed implementation history.

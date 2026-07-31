@@ -18,8 +18,8 @@ across multiple repositories.
 - Provide adaptable project templates without overwriting existing documents.
 - Assess repository foundations, including optional cloud execution and hosted
   Codex review, without changing external configuration.
-- Keep roadmap order concise while allowing one linked detail file for a
-  research-heavy phase.
+- Keep detailed phase context and ordering in `ROADMAP.md`, and keep current
+  linked task checkboxes, evidence, blockers, and residual risk in `TASKS.md`.
 - Preview installation without changing agent homes.
 - Back up conflicting targets before replacing them.
 - Support safe repeated symlink installation and uninstall.

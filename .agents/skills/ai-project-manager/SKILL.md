@@ -59,29 +59,35 @@ When the user requests this planning structure, adapt the templates under
 
 - `AGENTS.md`: durable working rules
 - `SPEC.md`: accepted requirements and boundaries
-- `ROADMAP.md`: ordered outcomes and exit criteria
-- `TASKS.md`: current phase and validation state
+- `ROADMAP.md`: detailed phase context, order, decisions, risks, recovery,
+  validation, and exit criteria
+- `TASKS.md`: current actionable checkboxes, links to the relevant roadmap
+  sections, evidence, blockers, and residual risk
 
 Use the optional `CLAUDE.md` template only when the repository supports Claude
 Code. Inspect and reuse an existing `README.md`; this skill does not provide a
 generic README template. Remove unused sections and never overwrite existing
 requirements silently.
 
-Keep `ROADMAP.md` short. Order phases, use checkboxes for observable work, add
-only constraints that affect sequencing, and retain compact completed
-milestones when useful. Put current implementation detail in `TASKS.md` or the
-phase plan.
+Keep `ROADMAP.md` focused and proportional, but detailed enough to replace
+separate phase-plan files. Describe why each phase exists, its dependencies,
+decisions, risks, recovery, validation, and exit criteria. Keep task checkboxes
+out of the roadmap when `TASKS.md` exists.
 
-When a roadmap phase needs substantial research, alternatives, or
-version-sensitive notes, keep the phase summary in `ROADMAP.md` and link one
-focused detail file such as `roadmap/<topic>.md`. Reuse an established planning
-detail directory when the repository already has one. The detail file may own
-research, sources, constraints, options, and unresolved decisions; it must not
-duplicate the specification, roadmap order, or current task checklist. Do not
-create a detail file for an ordinary phase that fits clearly in the roadmap.
+Keep all current task checkboxes in `TASKS.md`. Make each task concise and link
+the checklist or its task groups to the roadmap sections that supply context.
+Record current evidence, blockers, and residual risk there without copying the
+roadmap explanation.
+
+Supporting documents may hold research, decision evidence, operator guidance,
+or historical archives. They may inform a roadmap section, but must not become
+an alternative owner for phase order, task status, or the current checklist.
+Reuse an established documentation layout when it already has clear ownership.
 
 When their shared contract changes, update `SPEC.md`, `ROADMAP.md`, and
-`TASKS.md` together without mixing their ownership.
+`TASKS.md` together without mixing their ownership. Preserve useful supporting
+material by moving it to its correct owner or archive instead of silently
+dropping it.
 
 ## Plan one phase
 

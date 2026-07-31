@@ -2,12 +2,22 @@
 
 ## Current phase: {{PHASE_NAME}}
 
-- [ ] Confirm scope and unresolved decisions.
-- [ ] Implement one bounded outcome.
-- [ ] Run focused validation.
+Plan: [current phase context](ROADMAP.md#1-current-phase).
+
+- [ ] Confirm scope and unresolved decisions from the roadmap.
+- [ ] Implement one bounded outcome described in the roadmap.
+- [ ] Run the focused validation defined for the phase.
 - [ ] Run the complete local gate.
 - [ ] Inspect the final diff and untracked files.
 - [ ] Record manual evidence and residual risk.
+
+## Evidence
+
+- None recorded yet.
+
+## Blockers and residual risk
+
+- None recorded yet.
 
 ## Completion rule
 

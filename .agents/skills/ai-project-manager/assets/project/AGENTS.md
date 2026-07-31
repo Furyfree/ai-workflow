@@ -46,8 +46,12 @@ and actions that require explicit authorization.
 ## Documentation
 
 - `SPEC.md` owns accepted requirements and boundaries.
-- `ROADMAP.md` owns phase order and exit criteria.
-- `TASKS.md` owns current work and validation state.
+- `ROADMAP.md` owns detailed phase context, order, decisions, risks, recovery,
+  validation, and exit criteria.
+- `TASKS.md` owns current task checkboxes, links to roadmap context, evidence,
+  blockers, and residual risk.
+- Supporting documents may hold research, operator guidance, or historical
+  archives, but not phase order or task status.
 
 ## Code Review Rules
 
