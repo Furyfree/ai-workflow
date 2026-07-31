@@ -18,8 +18,9 @@ across multiple repositories.
 - Provide adaptable project templates without overwriting existing documents.
 - Assess repository foundations, including optional cloud execution and hosted
   Codex review, without changing external configuration.
-- Keep detailed phase context and ordering in `ROADMAP.md`, and keep current
-  linked task checkboxes, evidence, blockers, and residual risk in `TASKS.md`.
+- Have the `ai-project-manager` project templates keep detailed phase context
+  and ordering in `ROADMAP.md`, and current linked task checkboxes, evidence,
+  blockers, and residual risk in `TASKS.md`.
 - Preview installation without changing agent homes.
 - Back up conflicting targets before replacing them.
 - Support safe repeated symlink installation and uninstall.
