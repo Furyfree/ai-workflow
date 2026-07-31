@@ -88,6 +88,13 @@ After an authorized hosted-review trigger is accepted, the workflow returns
 control without waiting or polling. The user starts the review-inspection step
 with a later prompt after hosted review completes.
 
+When final CI is current, the review budget is complete, and only the user's
+merge remains, the workflow includes user-run post-merge commands that switch
+to and fast-forward the resolved base branch, safely delete the local topic
+branch, then prune remote references. It does not present the commands as
+pre-merge cleanup, force-delete a refused branch, delete a remote branch, or
+run cleanup without explicit authorization and confirmed merge state.
+
 ### `local-pr-review`
 
 Reviews the exact remote pull-request head through the authenticated local

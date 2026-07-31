@@ -193,6 +193,21 @@ When the final head is clean, ask before marking the draft ready for review or
 merging. GitHub may trigger hosted Codex review when a draft becomes ready, so
 do not post another manual review invocation at that transition.
 
+When final CI passes and no review budget remains, the readiness handoff also
+provides commands for the user to run after GitHub reports the pull request
+merged:
+
+```sh
+git switch <base-branch>
+git pull --ff-only origin <base-branch>
+git branch -d <head-branch>
+git fetch --prune origin
+```
+
+The branch is deleted before pruning so its remote-tracking reference can still
+support safe deletion after a squash merge. A refused `-d` requires inspection,
+not an automatic force deletion.
+
 ### Optional Codex Cloud review
 
 Hosted Codex review requires repository access, a per-repository Codex Cloud

@@ -186,6 +186,30 @@ Ask before either action. If the repository may automatically start hosted
 review when a draft becomes ready, tell the user and do not add another manual
 review invocation at that transition.
 
+## Hand off post-merge cleanup
+
+When the final head has current CI, the review budget is complete, and only the
+user's merge remains, include an `After GitHub reports merged` command block
+using the pull request's resolved base and head branches:
+
+```sh
+git switch <base-branch>
+git pull --ff-only origin <base-branch>
+git branch -d <head-branch>
+git fetch --prune origin
+```
+
+Do not present these commands as safe to run before the merge. Keep branch
+deletion before pruning so the remote-tracking branch can still prove the
+topic branch safe to delete after a squash merge. If `git branch -d` refuses,
+stop and inspect the merge and branch state; do not substitute `-D`
+automatically. Deleting a surviving remote branch requires separate explicit
+authorization.
+
+Run the cleanup only when the user explicitly asks the agent to do it. Before
+running, confirm the pull request is merged, the worktree is clean, and the
+resolved branches match the current repository.
+
 In Codex, `/review` is a useful user-run independent local review and `/diff`
 shows the exact working-tree change. Neither replaces the pull-request
 conversation, remote-head, or CI inspection above.

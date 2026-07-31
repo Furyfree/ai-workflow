@@ -36,6 +36,8 @@ Current phase: **controlled discovery**.
       CI before readiness.
 - [x] Bound each pull-request cycle to one hosted review, at most two
       CodeRabbit runs, and one full local fallback.
+- [x] Include a safe post-merge checkout cleanup handoff after final CI and
+      review completion.
 - [x] Add an authenticated local pull-request review fallback with explicit
       authorization before posting a GitHub comment.
 - [x] Use local pull-request review in readiness checks and propose coherent
