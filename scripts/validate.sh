@@ -127,25 +127,66 @@ review_contract_phrases=(
   "local Codex review"
 )
 
-authorizes_coderabbit_github() {
+forbidden_coderabbit_comment="@coderabbit""ai review"
+
+authorizes_coderabbit_github_clause() {
   local action_pattern
+  local action_to_provider
   local action_words
-  local negative_action_pattern
-  local review_sentence="${1,,}"
+  local negative_after_action
+  local negative_before_action
+  local negative_marker
+  local provider_to_action
+  local review_clause="${1,,}"
   local use_pattern
 
   action_words='allow(ed|ing|s)?|enable(d|ing|s)?|invoke(d|ing|s)?|permit(s|ted|ting)?|post(ed|ing|s)?|request(ed|ing|s)?|trigger(ed|ing|s)?'
   action_pattern="(^|[^[:alnum:]_])($action_words)([^[:alnum:]_]|$)"
   use_pattern='(^|[^[:alnum:]_])use(d|s|ing)?[[:space:]]+(the[[:space:]]+)?coderabbit'
-  negative_action_pattern="(do[[:space:]]+not|must[[:space:]]+not|never|forbid|prohibit)[^,;.]*($action_words|use(d|s|ing)?)"
+  action_to_provider="(($action_words)[^,;.]*coderabbit|use(d|s|ing)?[[:space:]]+(the[[:space:]]+)?coderabbit)"
+  provider_to_action="coderabbit[^,;.]*($action_words|use(d|s|ing)?)"
+  negative_marker='do[[:space:]]+not|must[[:space:]]+not|never|forbid|prohibit'
+  negative_before_action="(($negative_marker)[[:space:]]+(be[[:space:]]+)?$action_to_provider|coderabbit[^,;.]*($negative_marker)[[:space:]]+(be[[:space:]]+)?($action_words|use(d|s|ing)?))"
+  negative_after_action="($action_to_provider|$provider_to_action)[^,;.]*(forbidden|not[[:space:]]+allowed|not[[:space:]]+permitted|prohibited)"
 
-  [[ "$review_sentence" == *coderabbit* ]] || return 1
-  [[ "$review_sentence" =~ (github|bot[[:space:]]+mention) ]] || return 1
-  if [[ ! "$review_sentence" =~ $action_pattern ]] &&
-    [[ ! "$review_sentence" =~ $use_pattern ]]; then
+  [[ "$review_clause" == *coderabbit* ]] || return 1
+  [[ "$review_clause" =~ (github|bot[[:space:]]+mention) ]] || return 1
+  if [[ ! "$review_clause" =~ $action_pattern ]] &&
+    [[ ! "$review_clause" =~ $use_pattern ]]; then
     return 1
   fi
-  [[ ! "$review_sentence" =~ $negative_action_pattern ]]
+  [[ ! "$review_clause" =~ $negative_before_action ]] &&
+    [[ ! "$review_clause" =~ $negative_after_action ]]
+}
+
+contains_coderabbit_github_authorization() {
+  local review_clause
+
+  while IFS= read -r review_clause; do
+    if authorizes_coderabbit_github_clause "$review_clause"; then
+      return 0
+    fi
+  done < <(
+    tr '.;,' '\n' <<<"$1" |
+      sed -E 's/[[:space:]]+(and|but|however|then|yet)[[:space:]]+/\n/g'
+  )
+  return 1
+}
+
+contains_nonexact_codex_invocation() {
+  local review_text="$1"
+
+  review_text="${review_text//\`@codex review\`/}"
+  grep -Fqi '@codex' <<<"$review_text"
+}
+
+contains_unapproved_coderabbit_comment() {
+  local allowed_prohibition
+  local review_text="${1,,}"
+
+  allowed_prohibition="never post \`$forbidden_coderabbit_comment\`"
+  review_text="${review_text//$allowed_prohibition/}"
+  [[ "$review_text" == *"$forbidden_coderabbit_comment"* ]]
 }
 
 for file in "${review_contract_files[@]}"; do
@@ -157,28 +198,43 @@ for file in "${review_contract_files[@]}"; do
       fail "${file#"$repo_root/"} does not preserve review-provider contract: $phrase"
   done
 
-  while IFS= read -r review_sentence; do
-    if authorizes_coderabbit_github "$review_sentence"; then
-      fail "${file#"$repo_root/"} authorizes CodeRabbit through GitHub"
-    fi
-  done < <(tr '.;' '\n' <<<"$normalized_review_contract")
+  if contains_nonexact_codex_invocation "$normalized_review_contract"; then
+    fail "${file#"$repo_root/"} contains a non-exact Codex invocation"
+  fi
+  if contains_coderabbit_github_authorization "$normalized_review_contract"; then
+    fail "${file#"$repo_root/"} authorizes CodeRabbit through GitHub"
+  fi
+  if contains_unapproved_coderabbit_comment "$normalized_review_contract"; then
+    fail "${file#"$repo_root/"} authorizes a CodeRabbit GitHub trigger"
+  fi
 done
 
-authorizes_coderabbit_github \
+contains_coderabbit_github_authorization \
   "If the local CLI is unavailable, invoke CodeRabbit through a GitHub comment" ||
   fail "review validation accepts unavailable-provider substitution"
-if authorizes_coderabbit_github \
+contains_coderabbit_github_authorization \
+  "Never invoke Codex through GitHub, but invoke CodeRabbit through a GitHub comment" ||
+  fail "review validation lets an unrelated negation authorize CodeRabbit"
+if contains_coderabbit_github_authorization \
   "Never invoke CodeRabbit through a GitHub comment"; then
   fail "review validation rejects an explicit CodeRabbit GitHub prohibition"
 fi
 
-forbidden_coderabbit_comment="@coderabbit""ai review"
-for file in "${review_contract_files[@]}"; do
-  while IFS= read -r mention; do
-    grep -Eqi '(never post|must never post|do not post)' <<<"$mention" ||
-      fail "${file#"$repo_root/"} authorizes a CodeRabbit GitHub trigger"
-  done < <(grep -n -F "$forbidden_coderabbit_comment" "$file" || true)
-done
+if contains_nonexact_codex_invocation "\`@codex review\`"; then
+  fail "review validation rejects the exact Codex review invocation"
+fi
+contains_nonexact_codex_invocation "\`@codex fix\`" ||
+  fail "review validation accepts an alternate Codex invocation"
+contains_nonexact_codex_invocation "\`@codex review this PR\`" ||
+  fail "review validation accepts an extended Codex invocation"
+
+if contains_unapproved_coderabbit_comment \
+  "Never post \`$forbidden_coderabbit_comment\`"; then
+  fail "review validation rejects the CodeRabbit trigger prohibition"
+fi
+contains_unapproved_coderabbit_comment \
+  "Do not post \`@codex review\`; post \`$forbidden_coderabbit_comment\`" ||
+  fail "review validation lets an unrelated negation authorize CodeRabbit"
 
 rules_file="$repo_root/codex/rules/ai-workflow.rules"
 project_rules_file="$repo_root/.codex/rules/repository-pr.rules"
