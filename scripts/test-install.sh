@@ -238,7 +238,8 @@ grep -Fq "original claude instructions" "$claude_backup" ||
   fail "Claude backup content changed"
 
 manifest_hash="$(sha256sum "$codex_manifest" | awk '{print $1}')"
-"$repo_root/scripts/install.sh" --source "$fixture" >/dev/null
+PATH="$isolated_bin" \
+  "$repo_root/scripts/install.sh" --source "$fixture" >/dev/null
 [[ "$(sha256sum "$codex_manifest" | awk '{print $1}')" == "$manifest_hash" ]] ||
   fail "repeated installation rewrote an unchanged manifest"
 
@@ -321,7 +322,7 @@ fi
 claude_only="$test_root/claude only"
 HOME="$claude_only/home" CODEX_HOME="$claude_only/codex" \
   AGENTS_HOME="$claude_only/agents" CLAUDE_CONFIG_DIR="$claude_only/claude" \
-  AI_WORKFLOW_STATE_DIR="$claude_only/state" \
+  AI_WORKFLOW_STATE_DIR="$claude_only/state" PATH="$isolated_bin" \
   "$repo_root/scripts/install.sh" --source "$fixture" --agent claude >/dev/null
 [[ ! -e "$claude_only/codex" ]] ||
   fail "Claude-only install changed Codex home"
@@ -335,7 +336,7 @@ mkdir -p "$partial_codex"
 printf 'partial original\n' >"$partial_codex/AGENTS.md"
 HOME="$partial_root/home" CODEX_HOME="$partial_codex" \
   AGENTS_HOME="$partial_agents" CLAUDE_CONFIG_DIR="$partial_root/claude" \
-  AI_WORKFLOW_STATE_DIR="$partial_state" \
+  AI_WORKFLOW_STATE_DIR="$partial_state" PATH="$isolated_bin" \
   "$repo_root/scripts/install.sh" --source "$fixture" --agent codex >/dev/null
 partial_manifest="$partial_state/codex.tsv"
 partial_backup="$(awk -F '\t' -v target="$partial_codex/AGENTS.md" \
