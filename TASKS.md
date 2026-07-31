@@ -16,9 +16,9 @@
 - [ ] Confirm a pull-request cycle stops after one hosted review, at most two
       CodeRabbit runs, and one full local fallback, then uses targeted
       verification for approved local findings.
-- [ ] Confirm the final readiness handoff gives resolved post-merge commands in
-      switch, fast-forward pull, safe local delete, and prune order without
-      running them before merge.
+- [ ] Confirm the final readiness handoff appears when only explicit human
+      actions remain and gives the resolved remote and branch commands in
+      switch, fast-forward pull, safe local delete, and prune order.
 - [ ] Confirm an explicit pull-request creation request includes the one hosted
       review while commits, pushes, and existing pull-request updates leave any
       additional review trigger to the user.

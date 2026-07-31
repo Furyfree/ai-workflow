@@ -26,6 +26,8 @@ For a full pull-request workflow, prefer this sequence:
    another hosted review by default.
 6. Wait for CI on the exact final head, verify every finding is resolved, and
    report whether the draft is ready to mark ready for review and merge.
+7. When only explicit human actions remain, include the resolved post-merge
+   cleanup handoff.
 
 Treat one deliberate hosted review as sufficient for a pull-request cycle.
 Never infer a review trigger from a commit, push, or update to an existing pull
@@ -188,23 +190,26 @@ review invocation at that transition.
 
 ## Hand off post-merge cleanup
 
-When the final head has current CI, the review budget is complete, and only the
-user's merge remains, include an `After GitHub reports merged` command block
-using the pull request's resolved base and head branches:
+When the final head has current CI, the review budget is complete, and only
+explicit human actions such as marking ready or merging remain, include an
+`After GitHub reports merged` command block using the pull request's resolved
+base remote, base branch, and head branch:
 
 ```sh
 git switch <base-branch>
-git pull --ff-only origin <base-branch>
+git pull --ff-only <base-remote> <base-branch>
 git branch -d <head-branch>
-git fetch --prune origin
+git fetch --prune <base-remote>
 ```
 
-Do not present these commands as safe to run before the merge. Keep branch
-deletion before pruning so the remote-tracking branch can still prove the
-topic branch safe to delete after a squash merge. If `git branch -d` refuses,
-stop and inspect the merge and branch state; do not substitute `-D`
-automatically. Deleting a surviving remote branch requires separate explicit
-authorization.
+Resolve the base remote from the base branch's upstream or pull-request
+repository. Use `origin` only after confirming it is correct. Do not present
+these commands as safe to run before the merge. Keep branch deletion before
+pruning because, after merge is independently confirmed, its upstream
+remote-tracking reference can let `-d` remove a squash-merged topic that is not
+an ancestor of the base. If `git branch -d` refuses, stop and inspect the merge
+and branch state; do not substitute `-D` automatically. Deleting a surviving
+remote branch requires separate explicit authorization.
 
 Run the cleanup only when the user explicitly asks the agent to do it. Before
 running, confirm the pull request is merged, the worktree is clean, and the
@@ -221,7 +226,8 @@ CI, proposed commit plan, unresolved feedback, residual risk, and one verdict:
 `ready`, `not ready`, or `ready except for explicit human action`. When a pull
 request exists, include its number and URL. Describe the problem and
 disposition for each actionable review finding; do not report only a finding
-count.
+count. When the post-merge handoff condition holds, include its resolved command
+block.
 
 Do not commit, push, create a pull request, resolve threads, merge, deploy, or
 apply unless the user separately authorizes that action.

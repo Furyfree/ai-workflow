@@ -102,11 +102,12 @@ instruction says otherwise.
 - After an authorized hosted-review trigger is accepted, return control to the
   user. Do not wait for completion or poll; inspect the result when the user
   returns after review.
-- When final CI passes, the review budget is complete, and only the user's
-  merge remains, include commands to run after merge: switch to the resolved
-  base, pull it with `--ff-only`, delete the local topic branch with `-d`, then
-  fetch with `--prune`. Do not run cleanup without an explicit request or
-  before confirming the pull request is merged.
+- When final CI passes, the review budget is complete, and only explicit human
+  actions remain, include commands labelled for after merge that use the
+  resolved base remote, base branch, and topic branch. Switch to and
+  fast-forward the base, delete the local topic with `-d`, then prune. Do not
+  run cleanup without an explicit request and confirmed merge, substitute
+  `-D`, or delete a remote branch without separate authorization.
 - Use `html-plan` when the user asks for HTML or a visual materially improves a
   broad plan or explanation.
 - Before starting multiple substantive independent outcomes, use `subagent` to
