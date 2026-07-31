@@ -127,6 +127,27 @@ review_contract_phrases=(
   "local Codex review"
 )
 
+authorizes_coderabbit_github() {
+  local action_pattern
+  local action_words
+  local negative_action_pattern
+  local review_sentence="${1,,}"
+  local use_pattern
+
+  action_words='allow(ed|ing|s)?|enable(d|ing|s)?|invoke(d|ing|s)?|permit(s|ted|ting)?|post(ed|ing|s)?|request(ed|ing|s)?|trigger(ed|ing|s)?'
+  action_pattern="(^|[^[:alnum:]_])($action_words)([^[:alnum:]_]|$)"
+  use_pattern='(^|[^[:alnum:]_])use(d|s|ing)?[[:space:]]+(the[[:space:]]+)?coderabbit'
+  negative_action_pattern="(do[[:space:]]+not|must[[:space:]]+not|never|forbid|prohibit)[^,;.]*($action_words|use(d|s|ing)?)"
+
+  [[ "$review_sentence" == *coderabbit* ]] || return 1
+  [[ "$review_sentence" =~ (github|bot[[:space:]]+mention) ]] || return 1
+  if [[ ! "$review_sentence" =~ $action_pattern ]] &&
+    [[ ! "$review_sentence" =~ $use_pattern ]]; then
+    return 1
+  fi
+  [[ ! "$review_sentence" =~ $negative_action_pattern ]]
+}
+
 for file in "${review_contract_files[@]}"; do
   normalized_review_contract="$(
     awk '{$1 = $1; printf "%s ", $0}' "$file"
@@ -137,15 +158,19 @@ for file in "${review_contract_files[@]}"; do
   done
 
   while IFS= read -r review_sentence; do
-    review_sentence="${review_sentence,,}"
-    if [[ "$review_sentence" == *coderabbit* ]] &&
-      [[ "$review_sentence" =~ (github|bot[[:space:]]+mention) ]] &&
-      [[ "$review_sentence" =~ (allow|app|check|comment|enable|invoke|mention|permit|post|request|trigger|use) ]] &&
-      [[ ! "$review_sentence" =~ (disabled|do[[:space:]]+not|forbid|local-only|must[[:space:]]+not|never|prohibit|removed|unavailable|without[[:space:]]+substitut) ]]; then
+    if authorizes_coderabbit_github "$review_sentence"; then
       fail "${file#"$repo_root/"} authorizes CodeRabbit through GitHub"
     fi
-  done < <(tr '.' '\n' <<<"$normalized_review_contract")
+  done < <(tr '.;' '\n' <<<"$normalized_review_contract")
 done
+
+authorizes_coderabbit_github \
+  "If the local CLI is unavailable, invoke CodeRabbit through a GitHub comment" ||
+  fail "review validation accepts unavailable-provider substitution"
+if authorizes_coderabbit_github \
+  "Never invoke CodeRabbit through a GitHub comment"; then
+  fail "review validation rejects an explicit CodeRabbit GitHub prohibition"
+fi
 
 forbidden_coderabbit_comment="@coderabbit""ai review"
 for file in "${review_contract_files[@]}"; do
