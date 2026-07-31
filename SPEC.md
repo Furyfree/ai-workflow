@@ -17,7 +17,7 @@ across multiple repositories.
 - Install the six canonical skills for either or both agents.
 - Provide adaptable project templates without overwriting existing documents.
 - Assess repository foundations, including optional cloud execution and hosted
-  review, without changing external configuration.
+  Codex review, without changing external configuration.
 - Keep roadmap order concise while allowing one linked detail file for a
   research-heavy phase.
 - Preview installation without changing agent homes.
@@ -50,8 +50,8 @@ across multiple repositories.
 Inspects repository foundations and planning documents, then produces one
 bounded phase with acceptance criteria, validation, recovery, and a clear stop
 point. For new or existing repository onboarding, it assesses optional cloud
-execution and hosted review without configuring external state. It plans;
-implementation requires a separate user request.
+execution and hosted Codex review without configuring external state. It
+plans; implementation requires a separate user request.
 
 ### `pr-readiness`
 
@@ -59,34 +59,44 @@ Inspects the complete change and reports whether local validation, manual
 evidence, CI, review state, and a coherent commit plan are current before
 creating or updating a pull request, committing further work to an existing
 pull request, or assessing merge readiness. For an existing pull request it
-uses hosted review as severity-limited evidence and `local-pr-review` as an
-explicit fallback or when no current full-severity review is available. When a
-local CodeRabbit review runs, actionable findings block pull-request creation
-or update. Missing or unavailable CodeRabbit is reported as unavailable
-evidence but does not block publication by itself. The workflow does not
-commit, publish, mark ready, or merge without the authorization described
-below.
+uses hosted Codex review as severity-limited evidence and `local-pr-review` as
+an explicit fallback or when no current full-severity review is available.
+When a local CodeRabbit CLI review runs, actionable findings block pull-request
+creation or update. Missing or unavailable CodeRabbit is reported as
+unavailable evidence but does not block publication by itself. The workflow
+does not commit, publish, mark ready, or merge without the authorization
+described below.
 
 The normal pull-request lifecycle is draft-first. An explicit pull-request
-creation request includes one standard hosted review unless the user opts out.
-A commit, push, or update to an existing pull request does not authorize another
-trigger, and the user owns any additional hosted review requests. After
-user-approved findings are fixed, the reviewed commit plus the verified fix
-diff remains sufficient evidence unless substantive scope was added. Final
-readiness requires validation and CI on the exact final head. Marking ready and
-merging remain separate user-approved actions, and the agent does not duplicate
-hosted review that the ready transition may trigger.
+creation request includes one hosted Codex review unless the user opts out. The
+only permitted manual hosted-review comment is exactly `@codex review`, posted
+only when Codex GitHub review is configured and available. If it is unavailable,
+disabled, or not configured, the workflow reports it without substituting
+another provider or GitHub comment. A commit, push, or update to an existing
+pull request does not authorize another trigger, and the user owns any
+additional hosted Codex review requests. After user-approved findings are
+fixed, the reviewed commit plus the verified fix diff remains sufficient
+evidence unless substantive scope was added. Final readiness requires
+validation and CI on the exact final head. Marking ready and merging remain
+separate user-approved actions, and the agent does not duplicate hosted Codex
+review that the ready transition may trigger.
 
-One pull-request cycle permits one hosted review, one complete CodeRabbit
-review plus at most one rerun after approved fixes, and at most one full local
-fallback. Findings from that fallback are followed by approved fixes, targeted
-verification, and the complete local gate rather than another full local
-review. Substantive new scope may start a new cycle only after the evidence gap
-is explained and the user directs it.
+CodeRabbit is local-only and may run only through its authenticated local CLI.
+It must never be invoked through a GitHub comment, GitHub App, review request,
+check, or bot mention. Agents must never post `@coderabbitai review`. Local
+CodeRabbit CLI review and local Codex review remain separate local evidence;
+neither consumes or impersonates hosted Codex review.
 
-After an authorized hosted-review trigger is accepted, the workflow returns
-control without waiting or polling. The user starts the review-inspection step
-with a later prompt after hosted review completes.
+One pull-request cycle permits one hosted Codex review, one complete local
+CodeRabbit CLI review plus at most one rerun after approved fixes, and at most
+one full local fallback. Findings from that fallback are followed by approved
+fixes, targeted verification, and the complete local gate rather than another
+full local review. Substantive new scope may start a new cycle only after the
+evidence gap is explained and the user directs it.
+
+After an authorized hosted Codex review trigger is accepted, the workflow
+returns control without waiting or polling. The user starts the
+review-inspection step with a later prompt after hosted Codex review completes.
 
 When final CI is current, the review budget is complete, and only explicit
 human actions such as marking ready or merging remain, the workflow includes
@@ -174,6 +184,9 @@ with early stopping.
 - Global policy checks allow documented read-only branch and pull-request
   inspection and leave Git and pull-request mutations unmatched. The temporary
   project policy passes the same checks until controlled discovery removes it.
+- Deterministic validation preserves hosted Codex review, the exact
+  `@codex review` comment, local-only CodeRabbit CLI use, and the prohibition on
+  CodeRabbit GitHub invocation in workflow and template sources.
 - The six skills have valid metadata and all referenced templates exist.
 - Controlled user-level tests confirm Codex and Claude discover installed
   instructions and skills.

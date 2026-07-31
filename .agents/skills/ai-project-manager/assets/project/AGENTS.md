@@ -17,9 +17,18 @@ Describe what `{{PROJECT_NAME}}` owns and the user outcome it supports.
 - Require an explicit user request for each commit, push, pull-request
   creation or update, merge, installation, deployment, privileged action, and
   infrastructure apply.
-- When hosted review is configured, treat an explicit pull-request creation
-  request as authorization for one standard review trigger unless the user opts
-  out. Do not infer another trigger from later commits, pushes, or updates.
+- Hosted review means hosted Codex review only. The only permitted manual
+  hosted-review comment is exactly `@codex review`. When Codex GitHub review is
+  configured and available, treat an explicit pull-request creation request as
+  authorization for that comment unless the user opts out. If it is
+  unavailable, report that state and do not substitute another provider. Do not
+  infer another trigger from later commits, pushes, or updates, and never put
+  the invocation in a pull-request title or body.
+- CodeRabbit is local-only and may run only through its authenticated local CLI.
+  Never invoke CodeRabbit through a GitHub comment, GitHub App, review request,
+  check, or bot mention. Never post `@coderabbitai review`. Local CodeRabbit and
+  local Codex review are separate local evidence; neither consumes or
+  impersonates hosted Codex review.
 
 ## Repository map
 

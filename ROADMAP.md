@@ -28,14 +28,16 @@ Current phase: **controlled discovery**.
       and leave mutation commands unmatched.
 - [x] Document local-only CodeRabbit installation, GitHub App removal, and
       unavailable-review fallback.
+- [x] Reserve hosted review for Codex using exactly `@codex review`, prohibit
+      every CodeRabbit GitHub invocation, and validate the distinction.
 - [x] Block pull-request publication on local CodeRabbit findings without
       blocking when CodeRabbit is unavailable.
 - [x] Document manual Codex review with automatic reviews disabled.
-- [x] Use a draft-first pull-request lifecycle with one deliberate hosted
+- [x] Use a draft-first pull-request lifecycle with one deliberate hosted Codex
       review, a user-driven completion handoff, approved fixes, and final-head
       CI before readiness.
-- [x] Bound each pull-request cycle to one hosted review, at most two
-      CodeRabbit runs, and one full local fallback.
+- [x] Bound each pull-request cycle to one hosted Codex review, at most two
+      local CodeRabbit CLI runs, and one full local fallback.
 - [x] Include a safe post-merge checkout cleanup handoff after final CI and
       review completion.
 - [x] Add an authenticated local pull-request review fallback with explicit
@@ -57,7 +59,7 @@ Start after the portable core passes locally and installation is authorized.
 - [ ] Confirm fresh requests select only matching skills and do not inherit a
       workflow from earlier unrelated work.
 - [ ] Confirm repository-foundation planning assesses optional Codex Cloud and
-      hosted review without changing external state.
+      hosted Codex review without changing external state.
 - [ ] Confirm the installed global Codex policy handles required read-only
       branch and pull-request inspection.
 - [ ] Remove `.codex/rules/repository-pr.rules` and its documentation and

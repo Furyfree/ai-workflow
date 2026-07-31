@@ -144,7 +144,7 @@ installed global policy.
 ## Review workflow
 
 `pr-readiness` runs local validation and, when available, an authenticated
-CodeRabbit review. Actionable findings block publication; unavailable
+local CodeRabbit CLI review. Actionable findings block publication; unavailable
 CodeRabbit is reported but does not block the remaining checks.
 
 CodeRabbit setup is optional and is never run automatically:
@@ -161,33 +161,40 @@ authenticated. It prints no CodeRabbit guidance when authentication is current.
 If the status check fails, it reports that failure without recommending login.
 
 The first command downloads and executes remote code. Inspect it first unless
-you trust the source. This repository uses the local CLI rather than the
-CodeRabbit GitHub App. The app's repository access has been removed; local CLI
-authentication remains available for readiness checks.
+you trust the source. CodeRabbit is local-only in this workflow and may run only
+through its authenticated local CLI. Its GitHub App and repository access have
+been removed. Never invoke CodeRabbit through a GitHub comment, GitHub App,
+review request, check, or bot mention. Never post `@coderabbitai review`.
 
-For an existing GitHub pull request, `pr-readiness` uses hosted review as
-severity-limited evidence. It uses `local-pr-review` when explicitly requested
-or when CodeRabbit or another current full-severity review is unavailable.
-Posting local findings requires a separate explicit request and uses the
-account reported by `gh auth status`.
+Hosted review means hosted Codex review only. For an existing GitHub pull
+request, `pr-readiness` uses hosted Codex review as severity-limited evidence.
+It uses `local-pr-review` when explicitly requested or when CodeRabbit or
+another current full-severity review is unavailable. Local CodeRabbit CLI
+review and local Codex review remain separate local evidence; neither consumes
+or impersonates hosted Codex review. Posting local findings requires a separate
+explicit request and uses the account reported by `gh auth status`.
 
 The default publication flow is draft-first. An explicit request to create a
-pull request includes one standard hosted review after the draft is published,
-unless the user opts out. Actionable findings are reported for approval before
-editing. After approved fixes, rerun local validation and CodeRabbit. When
-commit and push are separately authorized, create one coherent fix commit,
-update the branch, and wait for CI on the final head. Do not request another
-hosted review merely because the approved fixes changed the commit.
+pull request includes one hosted Codex review after the draft is published,
+unless the user opts out. The only permitted manual hosted-review comment is
+exactly `@codex review`, and it may be posted only when Codex GitHub review is
+configured and available. If it is unavailable, report that state without
+substituting CodeRabbit, another bot, or another GitHub comment. Actionable
+findings are reported for approval before editing. After approved fixes, rerun
+local validation and the local CodeRabbit CLI review. When commit and push are
+separately authorized, create one coherent fix commit, update the branch, and
+wait for CI on the final head. Do not request another hosted Codex review
+merely because the approved fixes changed the commit.
 
-Each pull-request cycle is limited to one hosted review, at most two
-CodeRabbit runs, and at most one full local fallback. Approved findings from
-that fallback receive targeted verification and the complete local gate rather
-than another full review. Substantive new scope requires an explained,
+Each pull-request cycle is limited to one hosted Codex review, at most two local
+CodeRabbit CLI runs, and at most one full local fallback. Approved findings
+from that fallback receive targeted verification and the complete local gate
+rather than another full review. Substantive new scope requires an explained,
 user-approved new review cycle.
 
-After GitHub accepts the review trigger, the agent reports the pending review
-and stops. It does not wait or poll. Resume the workflow with a new prompt after
-GitHub reports that Codex has finished.
+After GitHub accepts the hosted Codex review trigger, the agent reports the
+pending review and stops. It does not wait or poll. Resume the workflow with a
+new prompt after GitHub reports that Codex has finished.
 
 When the final head is clean, ask before marking the draft ready for review or
 merging. GitHub may trigger hosted Codex review when a draft becomes ready, so
@@ -214,8 +221,8 @@ requires separate authorization.
 
 Hosted Codex review requires repository access, a per-repository Codex Cloud
 environment, and Code review enabled for that repository. Configure it for
-actively maintained repositories where cloud tasks or hosted review are useful;
-archived, local-only, or sensitive repositories may not need it.
+actively maintained repositories where cloud tasks or hosted Codex review are
+useful; archived, local-only, or sensitive repositories may not need it.
 
 Start with the universal image, no secrets, caching on, automatic setup, and
 agent internet access off. Use the interactive terminal to run the repository's
@@ -245,10 +252,11 @@ Run the same deterministic gate used by CI:
 ./scripts/validate.sh
 ```
 
-It checks required files, skill metadata and templates, private runtime state,
-shell syntax, ShellCheck, Codex policy behavior, installer behavior, and
-working-tree and staged whitespace. ShellCheck and Codex are optional locally
-with a notice; CI requires both.
+It checks required files, skill metadata and templates, the hosted Codex and
+local CodeRabbit provider contract, private runtime state, shell syntax,
+ShellCheck, Codex policy behavior, installer behavior, and working-tree and
+staged whitespace. ShellCheck and Codex are optional locally with a notice; CI
+requires both.
 
 ## Boundaries
 

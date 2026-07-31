@@ -27,8 +27,8 @@ repository, include only the foundations relevant to that repository:
   evidence
 - supported coding agents, skill discovery, and project-specific review rules
 - dependency updates, generated files, secrets, permissions, and recovery
-- optional cloud execution and hosted review for providers the user intends to
-  use
+- optional cloud execution and hosted Codex review when the user intends to use
+  them
 
 For Codex Cloud, determine whether the repository needs cloud tasks or hosted
 GitHub review before recommending an environment. Treat connector access, the
@@ -40,12 +40,13 @@ is needed. Include a user-run check that the complete local gate also works in
 the cloud environment.
 
 Do not recommend cloud setup for every repository by default. Active
-repositories that will use cloud tasks or hosted review are good candidates;
-archived, local-only, or sensitive repositories may not be. Planning or
-describing an external setting does not authorize creating an environment,
-granting connector access, changing review settings, or adding secrets.
+repositories that will use cloud tasks or hosted Codex review are good
+candidates; archived, local-only, or sensitive repositories may not be.
+Planning or describing an external setting does not authorize creating an
+environment, granting connector access, changing review settings, or adding
+secrets.
 
-When hosted review is selected, keep durable repository-specific review
+When hosted Codex review is selected, keep durable repository-specific review
 expectations in a concise `## Code Review Rules` section in `AGENTS.md`. Treat
 operational documentation as behavior when inaccurate commands, paths,
 permissions, or recovery guidance could mislead users. Leave mechanical style

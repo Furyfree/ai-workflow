@@ -15,42 +15,62 @@ For a full pull-request workflow, prefer this sequence:
 1. Prepare and validate the change locally.
 2. Create a draft pull request when publication is authorized.
 3. Treat that explicit pull-request creation request as authorization for one
-   standard hosted review trigger unless the user opts out or hosted review is
-   unavailable. Confirm that the trigger was accepted, report the pending
-   handoff, and end the turn. Do not wait for completion or poll the pull
-   request.
+   hosted Codex review unless the user opts out. When Codex GitHub review is
+   configured and available, post exactly `@codex review` as its own comment.
+   Confirm that the trigger was accepted, report the pending handoff, and end
+   the turn. Do not wait for completion or poll the pull request. If hosted
+   Codex review is unavailable, disabled, or not configured, report it as
+   unavailable and do not substitute another provider or GitHub comment.
 4. When the user returns after that review completes, inspect and report every
    actionable finding, then wait for approval before editing.
 5. After approved fixes, rerun validation, create one coherent fix commit, and
    update the branch only when those actions are authorized. Do not request
-   another hosted review by default.
+   another hosted Codex review by default.
 6. Wait for CI on the exact final head, verify every finding is resolved, and
    report whether the draft is ready to mark ready for review and merge.
 7. When only explicit human actions remain, include the resolved post-merge
    cleanup handoff.
 
-Treat one deliberate hosted review as sufficient for a pull-request cycle.
-Never infer a review trigger from a commit, push, or update to an existing pull
-request. After the pull-request creation trigger, leave any additional hosted
-review requests to the user. If the first review failed or became insufficient
-because substantive new scope was added, report that evidence gap and use the
-local-review fallback when appropriate.
+Treat one deliberate hosted Codex review as sufficient for a pull-request
+cycle. Never infer a review trigger from a commit, push, or update to an
+existing pull request. After the pull-request creation trigger, leave any
+additional hosted Codex review requests to the user. If the first review failed
+or became insufficient because substantive new scope was added, report that
+evidence gap and use the local-review fallback when appropriate.
 
-Do not monitor hosted review in the background. The user owns the handoff back
-to this workflow after GitHub reports that review is complete.
+Do not monitor hosted Codex review in the background. The user owns the handoff
+back to this workflow after GitHub reports that review is complete.
+
+## Keep review providers separate
+
+Hosted review means hosted Codex review only. The only permitted manual
+hosted-review comment is exactly `@codex review`, posted only under the
+authorization and availability rules above. Never place it in a pull-request
+title or body.
+
+CodeRabbit is local-only and may run only through its authenticated local CLI.
+Never invoke CodeRabbit through a GitHub comment, GitHub App, review request,
+check, or bot mention. Never post `@coderabbitai review`.
+
+Local CodeRabbit CLI review and local Codex review remain separate local
+evidence. Neither consumes or impersonates hosted Codex review. If hosted Codex
+review is unavailable, report it; do not replace it with CodeRabbit, another
+bot, or another GitHub comment.
 
 ## Bound the review cycle
 
 Use this review budget for one pull-request cycle:
 
-- one hosted review
-- one complete CodeRabbit review, plus at most one rerun after approved fixes
+- one hosted Codex review
+- one complete local CodeRabbit CLI review, plus at most one rerun after
+  approved fixes
 - at most one full `local-pr-review`, used only when explicitly requested or
   when no current full-severity review is available
 
-Hosted review may remain useful evidence without covering ordinary-priority
-findings. When CodeRabbit is unavailable or does not cover the current scope,
-run the one local fallback even if hosted review is current.
+Hosted Codex review may remain useful evidence without covering
+ordinary-priority findings. When CodeRabbit is unavailable or does not cover
+the current scope, run the one local fallback even if hosted Codex review is
+current.
 
 If the local fallback reports actionable findings, wait for approval, apply the
 approved fixes, rerun affected checks and the complete local gate, and inspect
@@ -130,7 +150,7 @@ they were excluded. Include them only after the user explicitly approves the
 exact path list and inspection confirms it contains no secrets, credentials,
 private runtime state, or unrelated files.
 
-If the review reports an actionable finding:
+If the local CodeRabbit CLI review reports an actionable finding:
 
 1. Mark the change `not ready`.
 2. Do not fix it, commit, push, create a pull request, or update an existing
@@ -140,10 +160,11 @@ If the review reports an actionable finding:
 4. Wait for the user to approve the fixes and explicitly request any
    publication action.
 
-After approved fixes from the first CodeRabbit review, rerun affected checks
-and at most one new local CodeRabbit CLI review. If it still reports an
+After approved fixes from the first local CodeRabbit CLI review, rerun affected
+checks and at most one new local CodeRabbit CLI review. If it still reports an
 actionable finding, stop and report it again. After those findings are approved
-and fixed, use targeted verification rather than a third CodeRabbit review.
+and fixed, use targeted verification rather than a third local CodeRabbit CLI
+review.
 
 When a local CodeRabbit CLI review runs, a pull request may be created or
 updated only when that review completed without actionable findings.
@@ -159,16 +180,17 @@ When a pull request exists:
 3. Verify each apparent request against the current head and distinguish
    actionable feedback from informational, stale, duplicated, or invalid
    comments.
-4. Identify the latest hosted review and the commit it reviewed. Use it as
-   severity-limited independent review evidence when it covers the current
+4. Identify the latest hosted Codex review and the commit it reviewed. Use it
+   as severity-limited independent review evidence when it covers the current
    scope.
 5. If later commits contain only user-approved fixes for that review, verify
    the fix diff and each finding directly. Do not require or request another
-   hosted review merely because those fixes changed the head.
+   hosted Codex review merely because those fixes changed the head.
 6. If no current full-severity review is available, use the one
    `local-pr-review` fallback against the exact remote head even when hosted
-   review is current. Keep its report local unless the user separately asks to
-   post it. Do not duplicate a current CodeRabbit or other full-severity review.
+   Codex review is current. Keep its report local unless the user separately
+   asks to post it. Do not duplicate a current local CodeRabbit CLI or other
+   full-severity review.
 7. Verify required CI belongs to the latest commit and has completed.
 8. Confirm required screenshots, logs, rollout, or target-environment evidence.
 9. Confirm any repository-required independent review is sufficient.
@@ -177,16 +199,17 @@ Unresolved actionable feedback and failed, pending, missing, or stale required
 evidence block readiness. Report each actionable request and its proposed
 disposition before editing or updating the pull request.
 
-An explicit request to create a pull request includes one standard hosted-review
-trigger unless the user opts out. A commit, push, or request to update an
-existing pull request does not authorize another trigger. Never put a live
-agent invocation in the pull-request title or body; post the one trigger as its
-own comment and leave any later triggers to the user.
+An explicit request to create a pull request includes one hosted Codex review
+unless the user opts out. Post exactly `@codex review` as its own comment only
+when Codex GitHub review is configured and available. A commit, push, or request
+to update an existing pull request does not authorize another trigger. Never
+put the invocation in the pull-request title or body, and leave any later
+triggers to the user.
 
 Marking a draft ready for review and merging are separate external actions.
 Ask before either action. If the repository may automatically start hosted
-review when a draft becomes ready, tell the user and do not add another manual
-review invocation at that transition.
+Codex review when a draft becomes ready, tell the user and do not add another
+manual review invocation at that transition.
 
 ## Hand off post-merge cleanup
 

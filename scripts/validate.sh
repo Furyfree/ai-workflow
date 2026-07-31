@@ -109,6 +109,52 @@ for skill in "${expected_skills[@]}"; do
     fail "$skill default prompt does not invoke the skill"
 done
 
+review_contract_files=(
+  "$repo_root/global/shared.md"
+  "$repo_root/.agents/skills/pr-readiness/SKILL.md"
+  "$repo_root/.agents/skills/ai-project-manager/assets/project/AGENTS.md"
+  "$repo_root/README.md"
+  "$repo_root/SPEC.md"
+)
+review_contract_phrases=(
+  "hosted Codex review"
+  "The only permitted manual hosted-review comment is exactly"
+  "\`@codex review\`"
+  "CodeRabbit is local-only"
+  "authenticated local CLI"
+  "through a GitHub comment, GitHub App, review request, check, or bot mention"
+  "substitut"
+  "local Codex review"
+)
+
+for file in "${review_contract_files[@]}"; do
+  normalized_review_contract="$(
+    awk '{$1 = $1; printf "%s ", $0}' "$file"
+  )"
+  for phrase in "${review_contract_phrases[@]}"; do
+    grep -Fqi "$phrase" <<<"$normalized_review_contract" ||
+      fail "${file#"$repo_root/"} does not preserve review-provider contract: $phrase"
+  done
+
+  while IFS= read -r review_sentence; do
+    review_sentence="${review_sentence,,}"
+    if [[ "$review_sentence" == *coderabbit* ]] &&
+      [[ "$review_sentence" =~ (github|bot[[:space:]]+mention) ]] &&
+      [[ "$review_sentence" =~ (allow|app|check|comment|enable|invoke|mention|permit|post|request|trigger|use) ]] &&
+      [[ ! "$review_sentence" =~ (disabled|do[[:space:]]+not|forbid|local-only|must[[:space:]]+not|never|prohibit|removed|unavailable|without[[:space:]]+substitut) ]]; then
+      fail "${file#"$repo_root/"} authorizes CodeRabbit through GitHub"
+    fi
+  done < <(tr '.' '\n' <<<"$normalized_review_contract")
+done
+
+forbidden_coderabbit_comment="@coderabbit""ai review"
+for file in "${review_contract_files[@]}"; do
+  while IFS= read -r mention; do
+    grep -Eqi '(never post|must never post|do not post)' <<<"$mention" ||
+      fail "${file#"$repo_root/"} authorizes a CodeRabbit GitHub trigger"
+  done < <(grep -n -F "$forbidden_coderabbit_comment" "$file" || true)
+done
+
 rules_file="$repo_root/codex/rules/ai-workflow.rules"
 project_rules_file="$repo_root/.codex/rules/repository-pr.rules"
 if command -v codex >/dev/null 2>&1; then

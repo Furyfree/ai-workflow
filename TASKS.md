@@ -9,21 +9,25 @@
 - [ ] Confirm a request to create a pull request or commit further work to an
       existing pull request activates `pr-readiness`.
 - [ ] Confirm a local-review request activates `local-pr-review`, while a
-      current hosted review does not cause a redundant local review.
-- [ ] Confirm a draft pull request uses one deliberate hosted review, approved
-      fix commits do not trigger another manual review, and final-head CI gates
-      the ready-for-review decision.
-- [ ] Confirm a pull-request cycle stops after one hosted review, at most two
-      CodeRabbit runs, and one full local fallback, then uses targeted
-      verification for approved local findings.
+      current hosted Codex review does not cause a redundant local review.
+- [ ] Confirm a draft pull request uses exactly one `@codex review` comment,
+      approved fix commits do not trigger another manual review, and final-head
+      CI gates the ready-for-review decision.
+- [ ] Confirm unavailable hosted Codex review is reported without substituting
+      CodeRabbit or another provider.
+- [ ] Confirm CodeRabbit runs only through its authenticated local CLI and no
+      GitHub comment, App, review request, check, or bot mention is used.
+- [ ] Confirm a pull-request cycle stops after one hosted Codex review, at most
+      two local CodeRabbit CLI runs, and one full local fallback, then uses
+      targeted verification for approved local findings.
 - [ ] Confirm the final readiness handoff appears when only explicit human
       actions remain and gives the resolved remote and branch commands in
       switch, fast-forward pull, safe local delete, and prune order.
 - [ ] Confirm an explicit pull-request creation request includes the one hosted
-      review while commits, pushes, and existing pull-request updates leave any
-      additional review trigger to the user.
-- [ ] Confirm an accepted hosted-review trigger returns control immediately and
-      review inspection starts only after a later user prompt.
+      Codex review while commits, pushes, and existing pull-request updates
+      leave any additional review trigger to the user.
+- [ ] Confirm an accepted hosted Codex review trigger returns control
+      immediately and review inspection starts only after a later user prompt.
 - [ ] Confirm passthrough, visual-plan, delegation, and repository-foundation
       requests activate only their matching workflows.
 - [ ] Run `ai-project-manager` against one representative new or existing

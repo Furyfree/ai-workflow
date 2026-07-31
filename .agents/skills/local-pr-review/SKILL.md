@@ -5,13 +5,13 @@ description: Review a GitHub pull request from an authenticated local checkout. 
 
 # Local pull-request review
 
-Use the local checkout and `gh` authentication. Do not depend on Codex Cloud,
-CodeRabbit, or another hosted reviewer.
+Use the local checkout and `gh` authentication. Do not depend on Codex Cloud, a
+local CodeRabbit CLI review, or another review provider.
 
 Do not run this workflow merely to duplicate a current full-severity review.
-Hosted severity-limited review does not replace this fallback. When invoked by
-`pr-readiness`, run it at most once per pull-request cycle. An explicit request
-for another local review overrides that limit.
+Hosted Codex severity-limited review does not replace this fallback. When
+invoked by `pr-readiness`, run it at most once per pull-request cycle. An
+explicit request for another local review overrides that limit.
 
 ## Keep review and publication separate
 

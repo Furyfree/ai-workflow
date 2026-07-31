@@ -85,23 +85,30 @@ instruction says otherwise.
   `pr-readiness` needs one full-severity fallback. Do not duplicate a current
   full-severity review. Post local findings to GitHub only when the user
   explicitly requests the comment.
-- Treat an explicit request to create a pull request as authorization for one
-  standard hosted-review trigger unless the user opts out. Never infer another
-  trigger from a commit, push, or update to an existing pull request, and leave
-  any additional hosted review requests to the user. Never put a live agent
-  invocation in a pull-request title or body.
+- Treat hosted review as hosted Codex review only. The only permitted manual
+  hosted-review comment is exactly `@codex review`. An explicit request to
+  create a pull request authorizes that comment only when Codex GitHub review is
+  configured and available, unless the user opts out. If it is unavailable,
+  report that state and do not substitute another provider. Never infer another
+  trigger from a commit, push, or update to an existing pull request, and never
+  put the invocation in a pull-request title or body.
+- CodeRabbit is local-only and may run only through its authenticated local CLI.
+  Never invoke CodeRabbit through a GitHub comment, GitHub App, review request,
+  check, or bot mention. Never post `@coderabbitai review`. Local CodeRabbit and
+  local Codex review are separate local evidence; neither consumes or
+  impersonates hosted Codex review.
 - Prefer a draft-first pull-request flow. After approved findings are fixed,
   validate the final head and wait for CI without requesting another hosted
-  review. Ask before marking the draft ready or merging, and do not duplicate
-  review automation that the ready transition may trigger.
-- Bound each pull-request cycle to one hosted review, at most two CodeRabbit
-  runs, and at most one full local fallback. After approved local findings,
-  verify the exact fix diff and complete local gate instead of starting another
-  full review. Start a new cycle only for substantive new scope and after user
-  direction.
-- After an authorized hosted-review trigger is accepted, return control to the
-  user. Do not wait for completion or poll; inspect the result when the user
-  returns after review.
+  Codex review. Ask before marking the draft ready or merging, and do not
+  duplicate review automation that the ready transition may trigger.
+- Bound each pull-request cycle to one hosted Codex review, at most two local
+  CodeRabbit CLI runs, and at most one full local fallback. After approved local
+  findings, verify the exact fix diff and complete local gate instead of
+  starting another full review. Start a new cycle only for substantive new
+  scope and after user direction.
+- After an authorized hosted Codex review trigger is accepted, return control
+  to the user. Do not wait for completion or poll; inspect the result when the
+  user returns after review.
 - When final CI passes, the review budget is complete, and only explicit human
   actions remain, include commands labelled for after merge that use the
   resolved base remote, base branch, and topic branch. Switch to and
