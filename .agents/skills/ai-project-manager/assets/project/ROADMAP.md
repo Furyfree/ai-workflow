@@ -30,7 +30,8 @@ Describe material risks, rollback, and the required stop points.
 
 ### Validation
 
-List automated checks and required manual evidence without task checkboxes.
+Define the required automated checks and manual validation without task
+checkboxes. Record the collected evidence in [TASKS.md](TASKS.md).
 
 ### Exit criteria
 

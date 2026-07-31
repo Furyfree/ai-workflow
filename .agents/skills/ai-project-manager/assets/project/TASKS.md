@@ -13,15 +13,16 @@ Plan: [current phase context](ROADMAP.md#1-current-phase).
 
 ## Evidence
 
-- None recorded yet.
+- Pending. Replace this with recorded evidence or `None required`.
 
 ## Blockers and residual risk
 
-- None recorded yet.
+- Pending. Replace this with assessed risks or `None`.
 
 ## Completion rule
 
-Mark a task complete only after its required validation passes. Keep commit,
-push, pull-request creation or update, merge, installation, deployment,
-privileged action, and infrastructure apply separate; each requires an
-explicit user request.
+Mark a task complete only after its required validation passes, required manual
+evidence is recorded or marked `None required`, and residual risk is recorded
+or marked `None`. Keep commit, push, pull-request creation or update, merge,
+installation, deployment, privileged action, and infrastructure apply
+separate; each requires an explicit user request.
