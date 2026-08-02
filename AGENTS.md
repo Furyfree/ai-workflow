@@ -2,7 +2,7 @@
 
 ## Scope
 
-This repository owns portable coding-agent instructions, six reusable skills,
+This repository owns portable coding-agent instructions, seven reusable skills,
 project templates, a small Codex command policy, and a Linux installer for
 Codex and Claude Code.
 
