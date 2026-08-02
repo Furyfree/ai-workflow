@@ -208,7 +208,7 @@ assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
 assert_link "$CODEX_HOME/rules/ai-workflow.rules" \
   "$fixture/codex/rules/ai-workflow.rules"
 assert_link "$CLAUDE_CONFIG_DIR/CLAUDE.md" "$fixture/global/shared.md"
-for skill in ai-project-manager html-plan local-pr-review pr-readiness subagent; do
+for skill in ai-project-manager html-plan liteparse local-pr-review pr-readiness subagent; do
   assert_link "$AGENTS_HOME/skills/$skill" "$fixture/.agents/skills/$skill"
   assert_link "$CLAUDE_CONFIG_DIR/skills/$skill" "$fixture/.agents/skills/$skill"
 done
@@ -282,7 +282,7 @@ grep -Fq "original codex rules" "$CODEX_HOME/rules/ai-workflow.rules" ||
   fail "uninstall did not restore Codex rules"
 grep -Fq "original claude instructions" "$CLAUDE_CONFIG_DIR/CLAUDE.md" ||
   fail "uninstall did not restore Claude instructions"
-for skill in ai-project-manager html-plan local-pr-review passthrough pr-readiness subagent; do
+for skill in ai-project-manager html-plan liteparse local-pr-review passthrough pr-readiness subagent; do
   [[ ! -e "$AGENTS_HOME/skills/$skill" &&
     ! -L "$AGENTS_HOME/skills/$skill" ]] ||
     fail "uninstall did not remove Codex skill: $skill"

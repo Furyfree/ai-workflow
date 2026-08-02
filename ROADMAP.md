@@ -8,7 +8,7 @@ Current phase: **controlled discovery**.
 ## 1. Small portable core
 
 - [x] Keep one shared instruction body for Codex and Claude Code.
-- [x] Link instructions and six skills without managing private runtime state.
+- [x] Link instructions and seven skills without managing private runtime state.
 - [x] Support preview, conflict backups, repeated installation, drift refusal,
       and uninstall.
 - [x] Reduce validation and CI to one deterministic Linux gate.
@@ -42,6 +42,8 @@ Current phase: **controlled discovery**.
       review completion.
 - [x] Add an authenticated local pull-request review fallback with explicit
       authorization before posting a GitHub comment.
+- [x] Add a local-first LiteParse document-reading skill without managing its
+      runtime or optional converters.
 - [x] Use local pull-request review in readiness checks and propose coherent
       commit groups when one large commit would mix independent outcomes.
 - [x] Document useful Codex slash-command handoffs without making skills depend
@@ -55,7 +57,9 @@ Current phase: **controlled discovery**.
 Start after the portable core passes locally and installation is authorized.
 
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
-- [ ] Confirm both agents discover and invoke all six skills.
+- [ ] Confirm both agents discover and invoke all seven skills.
+- [ ] Confirm LiteParse routes born-digital, table-heavy, and scanned documents
+      after its separately managed runtime is available.
 - [ ] Confirm fresh requests select only matching skills and do not inherit a
       workflow from earlier unrelated work.
 - [ ] Confirm repository-foundation planning assesses optional Codex Cloud and

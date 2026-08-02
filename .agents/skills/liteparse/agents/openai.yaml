@@ -1,0 +1,4 @@
+interface:
+  display_name: "LiteParse"
+  short_description: "Read and extract structured document content"
+  default_prompt: "Use $liteparse to read this document and extract the requested information."

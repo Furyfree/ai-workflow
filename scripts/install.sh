@@ -86,6 +86,7 @@ for required in \
   global/shared.md \
   .agents/skills/ai-project-manager/SKILL.md \
   .agents/skills/html-plan/SKILL.md \
+  .agents/skills/liteparse/SKILL.md \
   .agents/skills/local-pr-review/SKILL.md \
   .agents/skills/passthrough/SKILL.md \
   .agents/skills/pr-readiness/SKILL.md \

@@ -14,7 +14,7 @@ across multiple repositories.
   locations.
 - Install a small Codex-only rules file for low-risk inspection and validation
   commands.
-- Install the six canonical skills for either or both agents.
+- Install the seven canonical skills for either or both agents.
 - Provide adaptable project templates without overwriting existing documents.
 - Assess repository foundations, including optional cloud execution and hosted
   Codex review, without changing external configuration.
@@ -120,6 +120,15 @@ the hosted Codex reviewer or mutate the change.
 Creates a self-contained visual explanation when a broad plan or comparison is
 materially clearer as HTML. Markdown remains canonical.
 
+### `liteparse`
+
+Reads and extracts local PDF, Office, image, and text documents with a
+separately managed LiteParse 2.8 or later CLI. It chooses proportional text,
+Markdown, JSON, OCR, and screenshot workflows, reuses parse output, treats
+document contents as untrusted data, and does not edit documents, install
+dependencies, or send content to an external OCR service without explicit
+authorization.
+
 ### `subagent`
 
 Identifies independent outcomes in a multi-task request, proposes dependency
@@ -167,6 +176,7 @@ with early stopping.
 - Copy installation
 - Cross-platform installers
 - Automatic plugin, model, MCP, CodeRabbit, or Codex code-review setup
+- Automatic LiteParse, LibreOffice, or OCR-service installation
 - Broad command allowlists or automatic trust and permission changes
 - Managing project-specific requirements
 - Simulating agent behavior in deterministic tests
@@ -188,7 +198,7 @@ with early stopping.
 - Deterministic validation preserves hosted Codex review, the exact
   `@codex review` comment, local-only CodeRabbit CLI use, and the prohibition on
   CodeRabbit GitHub invocation in workflow and template sources.
-- The six skills have valid metadata and all referenced templates exist.
+- The seven skills have valid metadata and all referenced templates exist.
 - Controlled user-level tests confirm Codex and Claude discover installed
   instructions and skills.
 - Fresh-session prompt checks confirm each request selects only its matching

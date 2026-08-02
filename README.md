@@ -1,6 +1,6 @@
 # Portable Coding-Agent Workflow
 
-`ai-workflow` provides shared development instructions, six reusable workflows,
+`ai-workflow` provides shared development instructions, seven reusable workflows,
 a narrow Codex command policy, and a tested Linux installer for Codex and
 Claude Code.
 
@@ -48,6 +48,7 @@ they are not installed globally.
 
 - `ai-project-manager`: assess repository foundations and define one bounded phase
 - `html-plan`: derive a self-contained visual explanation from canonical sources
+- `liteparse`: read and extract local documents with proportional parsing and OCR
 - `local-pr-review`: provide an explicit or fallback review from a local checkout
 - `passthrough`: audit and tighten a repository as a whole
 - `pr-readiness`: prepare pull-request creation, updates, and merge-readiness checks
@@ -57,6 +58,20 @@ Each workflow's `SKILL.md` is its source of truth. The project-manager skill
 also provides optional `AGENTS.md`, `CLAUDE.md`, `SPEC.md`, `ROADMAP.md`, and
 `TASKS.md` templates. Skills are selected from the current request; using one
 does not keep it active for later unrelated work.
+
+The `liteparse` workflow requires Node.js 18 or later and a separately managed
+LiteParse 2.8 or later CLI. The repository installer links the skill but does
+not install or update the runtime. Install it only as an explicit user action:
+
+```sh
+npm install -g '@llamaindex/liteparse@^2.8'
+liteparse --version
+```
+
+PDFs and images need no additional converter. Office documents require
+LibreOffice. Remove the separately managed runtime with
+`npm uninstall -g @llamaindex/liteparse`; repository uninstall removes only
+the managed skill links.
 
 ## Installation
 
@@ -125,7 +140,7 @@ Both commands accept `--agent codex` or `--agent claude`.
 ## Verify discovery
 
 In a disposable repository, confirm that Codex and Claude Code report the
-shared instructions and can discover all six workflows. For Codex, verify the
+shared instructions and can discover all seven workflows. For Codex, verify the
 installed policy directly:
 
 ```sh

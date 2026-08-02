@@ -2,8 +2,14 @@
 
 ## Current phase: Controlled discovery
 
+- [x] Add the shared LiteParse skill and its UI metadata.
+- [x] Extend isolated install, uninstall, and inventory validation to all seven
+      skills.
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
-- [ ] Confirm both agents discover and invoke all six skills.
+- [ ] Confirm both agents discover and invoke all seven skills, including
+      LiteParse document routing without implicit runtime installation.
+- [ ] After separately installing the LiteParse runtime, verify born-digital,
+      table-heavy, and scanned document paths in fresh sessions.
 - [ ] In fresh sessions, confirm ordinary edits do not activate planning,
       passthrough, or pull-request workflows.
 - [ ] Confirm a request to create a pull request or commit further work to an

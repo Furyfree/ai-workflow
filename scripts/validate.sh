@@ -71,6 +71,7 @@ done
 expected_skills=(
   ai-project-manager
   html-plan
+  liteparse
   local-pr-review
   passthrough
   pr-readiness
