@@ -24,6 +24,10 @@ across multiple repositories.
 - Preview installation without changing agent homes.
 - Back up conflicting targets before replacing them.
 - Support safe repeated symlink installation and uninstall.
+- Provide an explicit, idempotent user-level installer for the LiteParse,
+  PaddleOCR, and Chandra runtimes that preflights all selected tools, installs
+  missing uv tools concurrently in separate environments, and does not download
+  model weights.
 - Run one deterministic local validation command in CI.
 - Keep external state changes behind explicit user intent.
 - Select reusable workflows from each current request without carrying an
@@ -40,7 +44,7 @@ across multiple repositories.
 - `.codex/`: temporary bootstrap rules pending controlled global discovery
 - `.agents/skills/`: canonical skills and project templates
 - `roadmap/`: optional research and decisions for linked complex phases
-- `scripts/`: symlink installation, uninstall, tests, and validation
+- `scripts/`: symlink and runtime installation, uninstall, tests, and validation
 - `.github/`: pull-request evidence and CI
 - `README.md`: installation, recovery, validation, and public usage
 
@@ -120,14 +124,17 @@ the hosted Codex reviewer or mutate the change.
 Creates a self-contained visual explanation when a broad plan or comparison is
 materially clearer as HTML. Markdown remains canonical.
 
-### `liteparse`
+### `document-analysis`
 
-Reads and extracts local PDF, Office, image, and text documents with a
-separately managed LiteParse 2.8 or later CLI. It chooses proportional text,
-Markdown, JSON, OCR, and screenshot workflows, reuses parse output, treats
-document contents as untrusted data, and does not edit documents, install
-dependencies, or send content to an external OCR service without explicit
-authorization.
+Routes local PDF, Office, image, and text documents among separately managed
+LiteParse, PaddleOCR, and Chandra runtimes. It uses LiteParse for embedded
+document content and proportional screenshots or metadata, PaddleOCR-VL for
+structured document images, and Chandra for difficult handwriting, forms, old
+scans, complex tables, math, or a second reading. It preserves Markdown with
+LaTeX math, converts requested LaTeX or Typst through Pandoc, verifies important
+content against the source, and does not edit documents, install dependencies,
+download model weights, start a model server, or send content to a hosted
+service implicitly.
 
 ### `subagent`
 
@@ -169,6 +176,18 @@ with early stopping.
 - Installation never modifies credentials, sessions, plugins, trust, sandbox
   or approval settings, permission profiles, `config.toml`, models, hooks, or
   connector state.
+- Runtime installation is a separate explicit action. It preserves working
+  commands and customized inference engines, diagnoses unsupported versions and
+  installed packages missing from `PATH`, checks Node.js, uv's executable path,
+  and PaddlePaddle engine imports before mutation, keeps the two Python OCR
+  stacks isolated, bounds concurrent uv installs, and does not install package
+  managers, model weights, GPU drivers, Pandoc, or model servers.
+- Re-running skill installation discovers newly added canonical skill
+  directories. The known `liteparse` to `document-analysis` rename migrates
+  both agent links, restores any backup owned by the old target, and updates the
+  manifest atomically. `--prune` removes other obsolete manifest-owned skill
+  links and restores their backups; it never removes unrecorded user skills.
+  Without `--prune`, unrecognized removals remain refused.
 
 ## Non-goals
 
@@ -176,7 +195,7 @@ with early stopping.
 - Copy installation
 - Cross-platform installers
 - Automatic plugin, model, MCP, CodeRabbit, or Codex code-review setup
-- Automatic LiteParse, LibreOffice, or OCR-service installation
+- Implicit LiteParse, LibreOffice, OCR-runtime, model, or service installation
 - Broad command allowlists or automatic trust and permission changes
 - Managing project-specific requirements
 - Simulating agent behavior in deterministic tests
@@ -190,6 +209,14 @@ with early stopping.
 - Isolated tests prove dry-run, symlink installation, conflict backup, repeated
   installation, drift refusal, and uninstall for both agents and the Codex
   rules file.
+- Isolated tests prove the runtime installer skips usable commands, previews
+  without installation, uses the intended package specifications, installs
+  missing uv tools concurrently, repairs incomplete PaddleOCR and Chandra
+  environments without replacing custom engines, and diagnoses unsupported
+  Node.js or LiteParse versions, broken commands, missing PaddlePaddle engines,
+  and package-to-`PATH` mismatches.
+- Isolated tests prove pruning removes only obsolete manifest-owned skills,
+  leaves unrelated user skills unchanged, and remains inert during dry runs.
 - Codex policy checks allow the documented low-risk examples and leave
   mutation, network, publication, and generic shell commands unmatched.
 - Global policy checks allow documented read-only branch and pull-request

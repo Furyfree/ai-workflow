@@ -19,6 +19,7 @@ required_files=(
   ".agents/skills/ai-project-manager/assets/project/ROADMAP.md"
   ".agents/skills/ai-project-manager/assets/project/SPEC.md"
   ".agents/skills/ai-project-manager/assets/project/TASKS.md"
+  ".agents/skills/document-analysis/references/runtime-and-selection.md"
   "AGENTS.md"
   "CLAUDE.md"
   "README.md"
@@ -29,7 +30,9 @@ required_files=(
   "global/shared.md"
   "roadmap/forgejo-pr-review.md"
   "scripts/install.sh"
+  "scripts/install-tools.sh"
   "scripts/test-install.sh"
+  "scripts/test-install-tools.sh"
   "scripts/uninstall.sh"
   "scripts/validate.sh"
 )
@@ -70,8 +73,8 @@ done
 
 expected_skills=(
   ai-project-manager
+  document-analysis
   html-plan
-  liteparse
   local-pr-review
   passthrough
   pr-readiness
@@ -321,6 +324,7 @@ else
 fi
 
 "$repo_root/scripts/test-install.sh" || fail "installer tests failed"
+"$repo_root/scripts/test-install-tools.sh" || fail "tool installer tests failed"
 
 if git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git -C "$repo_root" status --short ||

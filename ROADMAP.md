@@ -42,8 +42,14 @@ Current phase: **controlled discovery**.
       review completion.
 - [x] Add an authenticated local pull-request review fallback with explicit
       authorization before posting a GitHub comment.
-- [x] Add a local-first LiteParse document-reading skill without managing its
-      runtime or optional converters.
+- [x] Consolidate LiteParse, PaddleOCR-VL, and Chandra OCR into one document
+      analysis skill that preserves Markdown and converts through Pandoc.
+- [x] Add a separate idempotent installer for LiteParse, PaddleOCR, and Chandra
+      runtimes without installing model weights.
+- [x] Preflight runtime versions and paths, install missing uv tools concurrently
+      in isolated environments, verify PaddlePaddle engine imports, preserve
+      custom accelerator engines during repair, and prune only obsolete
+      manifest-owned skills.
 - [x] Use local pull-request review in readiness checks and propose coherent
       commit groups when one large commit would mix independent outcomes.
 - [x] Document useful Codex slash-command handoffs without making skills depend
@@ -58,8 +64,9 @@ Start after the portable core passes locally and installation is authorized.
 
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
 - [ ] Confirm both agents discover and invoke all seven skills.
-- [ ] Confirm LiteParse routes born-digital, table-heavy, and scanned documents
-      after its separately managed runtime is available.
+- [ ] Confirm the unified document skill routes born-digital, printed,
+      handwritten, formula-heavy, and complex-layout inputs without implicit
+      runtime or model installation.
 - [ ] Confirm fresh requests select only matching skills and do not inherit a
       workflow from earlier unrelated work.
 - [ ] Confirm repository-foundation planning assesses optional Codex Cloud and

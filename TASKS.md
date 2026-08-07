@@ -2,14 +2,22 @@
 
 ## Current phase: Controlled discovery
 
-- [x] Add the shared LiteParse skill and its UI metadata.
+- [x] Add the unified document-analysis skill, engine-selection research, and
+      UI metadata.
 - [x] Extend isolated install, uninstall, and inventory validation to all seven
       skills.
+- [x] Add and isolate-test the idempotent LiteParse, PaddleOCR, and Chandra
+      runtime installer.
+- [x] Preflight runtime tools, versions, and paths as one plan; install missing
+      uv tools concurrently; reject missing PaddlePaddle engines; repair extras
+      without replacing custom accelerator engines; and add manifest-scoped
+      skill pruning.
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
-- [ ] Confirm both agents discover and invoke all seven skills, including
-      LiteParse document routing without implicit runtime installation.
-- [ ] After separately installing the LiteParse runtime, verify born-digital,
-      table-heavy, and scanned document paths in fresh sessions.
+- [ ] Confirm both agents discover and invoke all seven skills, including the
+      unified document routing without implicit runtime installation.
+- [ ] After separately installing the selected document runtimes, verify
+      born-digital, printed, handwritten, formula-heavy, table-heavy, Markdown,
+      LaTeX, and Typst paths in fresh sessions.
 - [ ] In fresh sessions, confirm ordinary edits do not activate planning,
       passthrough, or pull-request workflows.
 - [ ] Confirm a request to create a pull request or commit further work to an

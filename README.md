@@ -34,7 +34,8 @@ and skills.
 - `.agents/skills/`: canonical reusable workflows and project templates
 - `codex/rules/ai-workflow.rules`: Codex-only low-risk command allowlist
 - `.codex/rules/repository-pr.rules`: temporary project bootstrap policy
-- `scripts/`: installation, uninstall, isolated tests, and validation
+- `scripts/`: skill and runtime installation, uninstall, isolated tests, and
+  validation
 - `SPEC.md`: accepted behavior and boundaries
 - `ROADMAP.md`: phase order and exit criteria
 - `TASKS.md`: current work and validation status
@@ -48,7 +49,8 @@ they are not installed globally.
 
 - `ai-project-manager`: assess repository foundations and define one bounded phase
 - `html-plan`: derive a self-contained visual explanation from canonical sources
-- `liteparse`: read and extract local documents with proportional parsing and OCR
+- `document-analysis`: route documents through LiteParse, PaddleOCR, or Chandra
+  OCR
 - `local-pr-review`: provide an explicit or fallback review from a local checkout
 - `passthrough`: audit and tighten a repository as a whole
 - `pr-readiness`: prepare pull-request creation, updates, and merge-readiness checks
@@ -59,19 +61,105 @@ also provides optional `AGENTS.md`, `CLAUDE.md`, `SPEC.md`, `ROADMAP.md`, and
 `TASKS.md` templates. Skills are selected from the current request; using one
 does not keep it active for later unrelated work.
 
-The `liteparse` workflow requires Node.js 18 or later and a separately managed
-LiteParse 2.8 or later CLI. The repository installer links the skill but does
-not install or update the runtime. Install it only as an explicit user action:
+The unified `document-analysis` workflow routes born-digital documents and
+ordinary extraction through LiteParse, structured document images through
+PaddleOCR-VL, and difficult handwriting, forms, old scans, tables, and math
+through Chandra OCR. It preserves Markdown with LaTeX math and converts verified
+output to LaTeX or Typst through Pandoc. Its
+[runtime and selection reference](.agents/skills/document-analysis/references/runtime-and-selection.md)
+contains the research, current versions, hardware guidance, licenses, and
+direct setup commands.
+
+LiteParse requires Node.js 18 or later and package version 2.8 or later.
+`scripts/install.sh` links the unified skill but does not install or update any
+runtime.
+
+Use the separate runtime installer only as an explicit user action. It checks
+that each target command runs, checks the package-manager inventory when a
+command is missing, validates Node.js and uv's executable path before changing
+package state, repairs missing OCR extras in place, and skips complete working
+installations:
 
 ```sh
-npm install -g '@llamaindex/liteparse@^2.8'
-liteparse --version
+./scripts/install-tools.sh --dry-run
+./scripts/install-tools.sh
 ```
 
-PDFs and images need no additional converter. Office documents require
-LibreOffice. Remove the separately managed runtime with
-`npm uninstall -g @llamaindex/liteparse`; repository uninstall removes only
-the managed skill links.
+Install or inspect one runtime with `--tool liteparse`, `--tool paddleocr`, or
+`--tool chandra`. The script requires an existing `npm` for LiteParse and an
+existing `uv` for PaddleOCR and Chandra; it does not bootstrap package managers.
+PDFs and images need no additional LiteParse converter. Office documents
+require LibreOffice.
+
+The runtime installer puts PaddleOCR and Chandra in separate `uv` tool
+environments so their Python dependencies do not conflict. After inspecting all
+selected tools, it installs only missing uv tools and runs up to two independent
+tool installations concurrently. Set another positive limit with `--jobs`.
+One `uv tool install` accepts one root package, so the script uses parallel
+commands rather than combining unrelated OCR stacks into one environment. It
+installs the local Hugging Face dependencies for Chandra but does not download
+OCR model weights; the first inference remains a separate network and disk
+change.
+
+In-place repair uses `uv pip install --python` inside the existing tool
+environment. It adds `python-docx` to PaddleOCR or the Hugging Face dependencies
+to Chandra without recreating the environment, so an existing CUDA or other
+accelerator-specific PaddlePaddle build is preserved. A later `uv tool upgrade`
+may reconstruct the environment from its original receipt; rerun this installer
+after deliberate tool upgrades to recheck the extras.
+
+Before skipping or repairing a uv-managed PaddleOCR environment, the installer
+also verifies that its PaddlePaddle engine imports successfully. If the engine
+is absent or broken, it stops with hardware-specific setup guidance instead of
+guessing a CPU or accelerator package.
+
+"Global" here means available from every repository through the user's
+`PATH`, not installed into each project or the system Python. LiteParse uses the
+active npm global prefix; the OCR packages use uv's user-level tool directory
+and executable directory. Inspect those locations with:
+
+```sh
+npm prefix --global
+uv tool dir
+uv tool dir --bin
+```
+
+The equivalent direct commands are:
+
+```sh
+npm install --global '@llamaindex/liteparse@^2.8'
+uv tool install --python 3.12 \
+  --with 'paddlepaddle>=3.3,<4' \
+  --with 'python-docx>=1.1,<2' \
+  'paddleocr[doc-parser]>=3.7,<4'
+uv tool install --python 3.12 'chandra-ocr[hf]==0.2.0'
+liteparse --help
+paddleocr doc_parser --help
+chandra --help
+pandoc --version
+```
+
+Chandra's Hugging Face path installs a large PyTorch stack and later downloads
+4B model weights. Accelerator-specific PaddleOCR and Chandra setup depends on
+the host driver and is documented in the skill reference. The tool installer
+uses PaddleOCR's portable CPU package; use the documented direct setup instead
+when an accelerator-specific PaddlePaddle build is required.
+
+Remove the independently managed runtimes separately from the skill links:
+
+```sh
+npm uninstall -g @llamaindex/liteparse
+uv tool uninstall paddleocr
+uv tool uninstall chandra-ocr
+```
+
+The installer accepts a supported LiteParse 2.8 or later installation without
+contacting npm for upgrades. To deliberately update within the supported 2.x
+line, run:
+
+```sh
+npm install --global '@llamaindex/liteparse@^2.8'
+```
 
 ## Installation
 
@@ -104,9 +192,34 @@ The links point into this checkout. Edits and branch changes therefore affect
 new agent sessions immediately, and moving or deleting the checkout breaks the
 installation.
 
+Editing files inside an already linked skill needs no reinstall; the symlink
+still points to that directory. After adding, renaming, or removing a canonical
+skill, rerun the installer with pruning so each agent receives new links and
+obsolete links owned by this repository are removed:
+
+```sh
+./scripts/install.sh --prune --dry-run
+./scripts/install.sh --prune
+```
+
+The installer discovers every directory under `.agents/skills`. It includes an
+explicit migration from the old `liteparse` skill name to `document-analysis`:
+it creates the new link, removes the old managed link, and restores any file or
+link that had been backed up at the old target. Other removed skills require
+`--prune`; without it, installation stops and explains the stale managed link.
+
+Pruning is manifest-scoped. It removes or restores only skill targets previously
+recorded by this repository's installer. Skills installed independently in
+`~/.agents/skills` or `~/.claude/skills` are not in that manifest and remain
+untouched. Always inspect the dry run before pruning.
+
 `CODEX_HOME`, `AGENTS_HOME`, and `CLAUDE_CONFIG_DIR` override the default
 targets. Tests and controlled installations may also use
 `AI_WORKFLOW_STATE_DIR`, `--source`, or `--state-dir`.
+
+`scripts/install-tools.sh` is intentionally independent of this manifest. It
+manages user-level runtime packages, while `scripts/install.sh` and
+`scripts/uninstall.sh` manage only repository-owned links and backups.
 
 ### Backups and recovery
 

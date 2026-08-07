@@ -7,6 +7,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source_root="$repo_root"
 selected_agent="all"
 dry_run=0
+prune=0
 state_dir="${AI_WORKFLOW_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/ai-workflow}"
 codex_home="${CODEX_HOME:-$HOME/.codex}"
 agents_home="${AGENTS_HOME:-$HOME/.agents}"
@@ -19,6 +20,7 @@ Usage: scripts/install.sh [options]
   --agent codex|claude|all  Agent to install (default: all)
   --source PATH             Repository source root
   --state-dir PATH          Manifest and backup directory
+  --prune                   Remove obsolete skills managed by this installer
   --dry-run                 Preview without changing agent homes or state
   -h, --help                Show this help
 EOF
@@ -38,6 +40,7 @@ while (($#)); do
     --agent) require_value "$1" "$#"; selected_agent="$2"; shift 2 ;;
     --source) require_value "$1" "$#"; source_root="$2"; shift 2 ;;
     --state-dir) require_value "$1" "$#"; state_dir="$2"; shift 2 ;;
+    --prune) prune=1; shift ;;
     --dry-run) dry_run=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'error: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -85,8 +88,8 @@ for required in \
   codex/rules/ai-workflow.rules \
   global/shared.md \
   .agents/skills/ai-project-manager/SKILL.md \
+  .agents/skills/document-analysis/SKILL.md \
   .agents/skills/html-plan/SKILL.md \
-  .agents/skills/liteparse/SKILL.md \
   .agents/skills/local-pr-review/SKILL.md \
   .agents/skills/passthrough/SKILL.md \
   .agents/skills/pr-readiness/SKILL.md \
@@ -149,10 +152,30 @@ install_agent() (
   }
 
   local -a changed_targets=() restore_paths=() restore_kinds=()
+  local -a removed_targets=() removed_backups=() removed_sources=()
+  local -a removed_had_targets=() removed_restored_backups=()
   local complete=0
   rollback() {
-    local status=$? index target restore kind
+    local status=$? index target restore kind backup source
+    local had_target restored_backup
     if [[ $complete -eq 0 && $dry_run -eq 0 ]]; then
+      for ((index=${#removed_targets[@]} - 1; index >= 0; index--)); do
+        target="${removed_targets[$index]}"
+        backup="${removed_backups[$index]}"
+        source="${removed_sources[$index]}"
+        had_target="${removed_had_targets[$index]}"
+        restored_backup="${removed_restored_backups[$index]}"
+        if [[ "$restored_backup" -eq 1 &&
+          ( -e "$target" || -L "$target" ) ]]; then
+          mkdir -p "$(dirname "$backup")"
+          mv -- "$target" "$backup"
+        fi
+        if [[ "$had_target" -eq 1 ]]; then
+          [[ ! -e "$target" && ! -L "$target" ]] || rm -- "$target"
+          mkdir -p "$(dirname "$target")"
+          ln -s -- "$source" "$target"
+        fi
+      done
       for ((index=${#changed_targets[@]} - 1; index >= 0; index--)); do
         target="${changed_targets[$index]}"
         restore="${restore_paths[$index]}"
@@ -315,14 +338,79 @@ install_agent() (
       "${install_sources[$plan_index]}" "${install_targets[$plan_index]}"
   done
 
+  known_skill_rename() {
+    local target="$1" skill_root
+    if [[ "$agent" == "codex" ]]; then
+      skill_root="$agents_home/skills"
+    else
+      skill_root="$claude_home/skills"
+    fi
+    [[ "$target" == "$skill_root/liteparse" &&
+      -d "$source_root/.agents/skills/document-analysis" ]]
+  }
+
+  managed_skill_target() {
+    local target="$1" skill_root
+    if [[ "$agent" == "codex" ]]; then
+      skill_root="$agents_home/skills/"
+    else
+      skill_root="$claude_home/skills/"
+    fi
+    [[ "$target" == "$skill_root${target##*/}" ]]
+  }
+
+  remove_managed_target() {
+    local target="$1" backup="$2" installed_source="$3" label="$4"
+    local had_target=0 restored_backup=0
+    [[ ! -e "$target" && ! -L "$target" ]] || had_target=1
+    [[ "$backup" == "-" ]] || restored_backup=1
+
+    if [[ $dry_run -eq 1 ]]; then
+      if [[ $restored_backup -eq 1 ]]; then
+        printf 'restore %s target: %s <- %s\n' "$label" "$target" "$backup"
+      else
+        printf 'remove %s link: %s\n' "$label" "$target"
+      fi
+      return
+    fi
+
+    removed_targets+=("$target")
+    removed_backups+=("$backup")
+    removed_sources+=("$installed_source")
+    removed_had_targets+=("$had_target")
+    removed_restored_backups+=("$restored_backup")
+
+    [[ $had_target -eq 0 ]] || rm -- "$target"
+    if [[ $restored_backup -eq 1 ]]; then
+      mkdir -p "$(dirname "$target")"
+      mv -- "$backup" "$target"
+      printf 'restored %s target: %s\n' "$label" "$target"
+    else
+      printf 'removed %s link: %s\n' "$label" "$target"
+    fi
+  }
+
   if [[ -f "$manifest" ]]; then
-    while IFS=$'\t' read -r record target _; do
+    while IFS=$'\t' read -r record target backup installed_source; do
       [[ "$record" == "entry" ]] || continue
-      grep -Fqx -- "$target" "$processed" || {
+      if grep -Fqx -- "$target" "$processed"; then
+        continue
+      fi
+      if known_skill_rename "$target"; then
+        remove_managed_target \
+          "$target" "$backup" "$installed_source" "renamed"
+      elif [[ $prune -eq 1 ]] && managed_skill_target "$target"; then
+        remove_managed_target \
+          "$target" "$backup" "$installed_source" "pruned"
+      elif managed_skill_target "$target"; then
+        printf 'error: managed skill was removed; rerun with --prune: %s\n' \
+          "$target" >&2
+        return 1
+      else
         printf 'error: managed component was removed; uninstall %s first: %s\n' \
           "$agent" "$target" >&2
         return 1
-      }
+      fi
     done <"$manifest"
   fi
 

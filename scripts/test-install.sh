@@ -75,6 +75,102 @@ for option in --agent --state-dir; do
     fail "uninstall did not explain the missing value for $option"
 done
 
+rename_root="$test_root/skill rename"
+rename_agents="$rename_root/agents"
+rename_state="$rename_root/state"
+rename_old_target="$rename_agents/skills/liteparse"
+rename_new_target="$rename_agents/skills/document-analysis"
+rename_prior_source="$rename_root/prior checkout/.agents/skills/liteparse"
+rename_backup="$rename_state/backups/codex-legacy/0"
+rename_manifest="$rename_state/codex.tsv"
+mkdir -p "$(dirname "$rename_old_target")" "$(dirname "$rename_backup")"
+ln -s "$rename_prior_source" "$rename_old_target"
+printf 'original liteparse target\n' >"$rename_backup"
+printf '# ai-workflow-manifest-v1\nentry\t%s\t%s\t%s\n' \
+  "$rename_old_target" "$rename_backup" \
+  "$rename_prior_source" >"$rename_manifest"
+
+rename_dry_output="$(
+  HOME="$rename_root/home" CODEX_HOME="$rename_root/codex" \
+    AGENTS_HOME="$rename_agents" CLAUDE_CONFIG_DIR="$rename_root/claude" \
+    AI_WORKFLOW_STATE_DIR="$rename_state" \
+    "$repo_root/scripts/install.sh" --source "$fixture" \
+      --agent codex --dry-run
+)"
+assert_link "$rename_old_target" "$rename_prior_source"
+[[ ! -e "$rename_new_target" && ! -L "$rename_new_target" ]] ||
+  fail "rename dry-run created the new skill link"
+grep -Fqx "restore renamed target: $rename_old_target <- $rename_backup" \
+  <<<"$rename_dry_output" || fail "rename dry-run did not explain migration"
+
+HOME="$rename_root/home" CODEX_HOME="$rename_root/codex" \
+  AGENTS_HOME="$rename_agents" CLAUDE_CONFIG_DIR="$rename_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$rename_state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" \
+    --agent codex >/dev/null
+[[ -f "$rename_old_target" && ! -L "$rename_old_target" ]] ||
+  fail "skill rename did not restore the original target"
+grep -Fqx "original liteparse target" "$rename_old_target" ||
+  fail "skill rename changed the restored original target"
+assert_link "$rename_new_target" \
+  "$fixture/.agents/skills/document-analysis"
+if grep -Fq "$rename_old_target" "$rename_manifest"; then
+  fail "skill rename kept the obsolete managed target"
+fi
+grep -Fq "$rename_new_target" "$rename_manifest" ||
+  fail "skill rename did not record the new target"
+
+prune_root="$test_root/skill prune"
+prune_agents="$prune_root/agents"
+prune_state="$prune_root/state"
+prune_target="$prune_agents/skills/obsolete-managed"
+unmanaged_target="$prune_agents/skills/unrelated-user-skill"
+prune_manifest="$prune_state/codex.tsv"
+mkdir -p "$(dirname "$prune_target")" "$prune_state"
+ln -s "$fixture/.agents/skills/obsolete-managed" "$prune_target"
+ln -s "$test_root/unrelated-user-source" "$unmanaged_target"
+printf '# ai-workflow-manifest-v1\nentry\t%s\t-\t%s\n' \
+  "$prune_target" "$fixture/.agents/skills/obsolete-managed" \
+  >"$prune_manifest"
+
+prune_error="$prune_root/without-prune.log"
+if HOME="$prune_root/home" CODEX_HOME="$prune_root/codex" \
+  AGENTS_HOME="$prune_agents" CLAUDE_CONFIG_DIR="$prune_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$prune_state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" \
+    --agent codex --dry-run >"$prune_error" 2>&1; then
+  fail "installer removed an obsolete skill without --prune"
+fi
+grep -Fq "managed skill was removed; rerun with --prune" "$prune_error" ||
+  fail "installer did not explain the required --prune"
+[[ -L "$prune_target" && -L "$unmanaged_target" ]] ||
+  fail "failed prune preview changed a skill link"
+
+prune_dry_output="$(
+  HOME="$prune_root/home" CODEX_HOME="$prune_root/codex" \
+    AGENTS_HOME="$prune_agents" CLAUDE_CONFIG_DIR="$prune_root/claude" \
+    AI_WORKFLOW_STATE_DIR="$prune_state" \
+    "$repo_root/scripts/install.sh" --source "$fixture" \
+      --agent codex --prune --dry-run
+)"
+grep -Fqx "remove pruned link: $prune_target" <<<"$prune_dry_output" ||
+  fail "prune dry-run did not report the obsolete managed skill"
+[[ -L "$prune_target" && -L "$unmanaged_target" ]] ||
+  fail "prune dry-run changed a skill link"
+
+HOME="$prune_root/home" CODEX_HOME="$prune_root/codex" \
+  AGENTS_HOME="$prune_agents" CLAUDE_CONFIG_DIR="$prune_root/claude" \
+  AI_WORKFLOW_STATE_DIR="$prune_state" \
+  "$repo_root/scripts/install.sh" --source "$fixture" \
+    --agent codex --prune >/dev/null
+[[ ! -e "$prune_target" && ! -L "$prune_target" ]] ||
+  fail "--prune kept an obsolete managed skill"
+[[ -L "$unmanaged_target" ]] ||
+  fail "--prune removed an unmanaged user skill"
+if grep -Fq "$prune_target" "$prune_manifest"; then
+  fail "--prune kept the obsolete skill in the manifest"
+fi
+
 alias_root="$test_root/source-target alias"
 alias_source="$alias_root/source"
 alias_error="$alias_root/error.log"
@@ -208,7 +304,7 @@ assert_link "$CODEX_HOME/AGENTS.md" "$fixture/global/shared.md"
 assert_link "$CODEX_HOME/rules/ai-workflow.rules" \
   "$fixture/codex/rules/ai-workflow.rules"
 assert_link "$CLAUDE_CONFIG_DIR/CLAUDE.md" "$fixture/global/shared.md"
-for skill in ai-project-manager html-plan liteparse local-pr-review pr-readiness subagent; do
+for skill in ai-project-manager document-analysis html-plan local-pr-review pr-readiness subagent; do
   assert_link "$AGENTS_HOME/skills/$skill" "$fixture/.agents/skills/$skill"
   assert_link "$CLAUDE_CONFIG_DIR/skills/$skill" "$fixture/.agents/skills/$skill"
 done
@@ -282,7 +378,7 @@ grep -Fq "original codex rules" "$CODEX_HOME/rules/ai-workflow.rules" ||
   fail "uninstall did not restore Codex rules"
 grep -Fq "original claude instructions" "$CLAUDE_CONFIG_DIR/CLAUDE.md" ||
   fail "uninstall did not restore Claude instructions"
-for skill in ai-project-manager html-plan liteparse local-pr-review passthrough pr-readiness subagent; do
+for skill in ai-project-manager document-analysis html-plan local-pr-review passthrough pr-readiness subagent; do
   [[ ! -e "$AGENTS_HOME/skills/$skill" &&
     ! -L "$AGENTS_HOME/skills/$skill" ]] ||
     fail "uninstall did not remove Codex skill: $skill"
