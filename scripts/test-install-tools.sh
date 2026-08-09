@@ -327,6 +327,69 @@ grep -Fqx \
   "uv pip install --python $chandra_tools/python chandra-ocr[hf]==0.2.0" \
   "$chandra_repair_log" || fail "Chandra repair did not add the HF extra"
 
+gpu_bin="$test_root/gpu-bin"
+gpu_tools_root="$test_root/gpu-tools"
+gpu_tools="$gpu_tools_root/chandra-ocr/bin"
+gpu_probe_log="$test_root/gpu-probe.log"
+mkdir -p "$gpu_bin" "$gpu_tools"
+make_fake_command "$gpu_tools/chandra" \
+  '[[ "$1" == "--help" ]] || exit 2'
+make_fake_command "$gpu_tools/python" \
+  'if [[ "$1" == "-c" ]]; then' \
+  '  [[ "$2" == "import torch, torchvision, transformers, accelerate" ]]' \
+  '  exit' \
+  'fi' \
+  '[[ "$1" == */check_chandra_cuda.py ]] || exit 2' \
+  'if [[ "$FAKE_CUDA_READY" == "true" ]]; then' \
+  '  printf "1\t10240\tNVIDIA GeForce RTX 3080 (10240 MiB)\n"' \
+  '  exit 0' \
+  'fi' \
+  'exit 1'
+ln -s "$gpu_tools/chandra" "$gpu_bin/chandra"
+make_fake_command "$gpu_bin/uv" \
+  'case "$1:$2" in' \
+  '  tool:list) printf "chandra-ocr v0.2.0\n- chandra\n" ;;' \
+  '  tool:dir)' \
+  '    [[ "$*" != "tool dir --bin" ]] && printf "%s\n" "$FAKE_UV_TOOLS_DIR" || printf "%s\n" "$FAKE_UV_BIN_DIR"' \
+  '    ;;' \
+  '  *) exit 2 ;;' \
+  'esac'
+make_fake_command "$gpu_bin/nvidia-smi" \
+  '[[ "$1" == "-L" ]] || exit 2' \
+  'printf "probe\n" >>"$FAKE_GPU_PROBE_LOG"' \
+  'printf "GPU 0: NVIDIA GeForce RTX 3080\n"'
+make_fake_command "$gpu_bin/liteparse" \
+  '[[ "$1" == "--help" ]] || exit 2'
+
+gpu_missing_output="$(
+  PATH="$gpu_bin:$base_bin" FAKE_CUDA_READY=false \
+    FAKE_GPU_PROBE_LOG="$gpu_probe_log" \
+    FAKE_UV_BIN_DIR="$gpu_bin" FAKE_UV_TOOLS_DIR="$gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool chandra
+)"
+grep -Fq "NVIDIA GPU detected, but Chandra's PyTorch runtime cannot use CUDA" \
+  <<<"$gpu_missing_output" ||
+  fail "Chandra GPU check did not report an unusable CUDA runtime"
+
+gpu_ready_output="$(
+  PATH="$gpu_bin:$base_bin" FAKE_CUDA_READY=true \
+    FAKE_GPU_PROBE_LOG="$gpu_probe_log" \
+    FAKE_UV_BIN_DIR="$gpu_bin" FAKE_UV_TOOLS_DIR="$gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool chandra
+)"
+grep -Fq \
+  "notice: Chandra CUDA ready: NVIDIA GeForce RTX 3080 (10240 MiB)" \
+  <<<"$gpu_ready_output" ||
+  fail "Chandra GPU check did not report the CUDA device"
+grep -Fq "about 10.6 GB of BF16 weights" <<<"$gpu_ready_output" ||
+  fail "Chandra GPU check did not warn about limited VRAM"
+
+rm -f -- "$gpu_probe_log"
+PATH="$gpu_bin:$base_bin" "$repo_root/scripts/install-tools.sh" \
+  --tool liteparse >/dev/null
+[[ ! -e "$gpu_probe_log" ]] ||
+  fail "non-Chandra installation invoked the NVIDIA GPU check"
+
 old_liteparse_prefix="$test_root/old-liteparse-prefix"
 old_liteparse_package="$old_liteparse_prefix/lib/node_modules/@llamaindex/liteparse"
 old_liteparse_bin="$test_root/old-liteparse-bin"

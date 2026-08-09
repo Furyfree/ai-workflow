@@ -383,8 +383,9 @@ Run the same deterministic gate used by CI:
 It checks required files, skill metadata and templates, the hosted Codex and
 local CodeRabbit provider contract, private runtime state, shell syntax,
 ShellCheck, Codex policy behavior, installer behavior, and working-tree and
-staged whitespace. ShellCheck and Codex are optional locally with a notice; CI
-requires both.
+staged whitespace. It also runs the standard-library-only Python tests for the
+Chandra CUDA helper, so `python3` must be on `PATH`. ShellCheck and Codex are
+optional locally with a notice; CI requires both.
 
 ## Boundaries
 

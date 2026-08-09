@@ -136,7 +136,7 @@ chandra "$document_path" "$document_tmp_dir/chandra" \
 Add `--page-range "1-5,9"` for a partial PDF. Use `vllm` only when the user has
 already started or approved the server and its endpoint is confirmed local. Do
 not assume `VLLM_API_BASE` points to the current machine. Avoid starting a fresh
-4B Hugging Face download and full-page CPU inference unless the user knowingly
+5B Hugging Face download and full-page CPU inference unless the user knowingly
 accepts the likely time, memory, and disk cost.
 
 ## Reconstruct and search conservatively

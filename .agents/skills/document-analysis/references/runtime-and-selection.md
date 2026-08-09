@@ -14,7 +14,7 @@
 
 ## Current recommendation
 
-Research baseline: 2026-08-07.
+Research baseline: 2026-08-09.
 
 | Need | First choice | Reason |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ PaddleOCR's OmniDocBench score and Chandra's olmOCR score as a direct
 head-to-head comparison. Prefer LiteParse before OCR when a PDF already has
 usable embedded content. Prefer PaddleOCR as the practical structured-image
 default because it is smaller and supports more local hardware paths. Add
-Chandra where its specialties justify the 4B model and stricter weight license.
+Chandra where its specialties justify the 5B model and stricter weight license.
 
 A local representative check on 2026-08-07 reinforced two limits. LiteParse
 quickly recovered useful prose and headings from a born-digital mathematics
@@ -81,6 +81,13 @@ Chandra's local Hugging Face dependencies. It diagnoses an installed package
 whose command is missing from `PATH` and never downloads model weights. It
 requires an existing `npm` for LiteParse and `uv` for the OCR engines; it does
 not bootstrap package managers.
+
+When Chandra is selected and `nvidia-smi` can see an NVIDIA GPU, the installer
+also checks whether Chandra's isolated PyTorch runtime can use CUDA. It reports
+the visible GPU memory and warns when a single GPU has at most 12 GB. The check
+is advisory: CPU inference remains valid, and the installer does not replace
+PyTorch, configure CUDA, or install a driver. Other tool selections and hosts
+without a visible NVIDIA GPU skip this check.
 
 Install PaddleOCR and Chandra in separate `uv` tools to prevent their Python
 dependencies from contaminating each other. Use Python 3.12 because both
@@ -151,7 +158,7 @@ changed CLI and dependency contracts between minor releases. Remove it with
 
 ## Chandra OCR
 
-Current package: `chandra-ocr` 0.2.0. Current model: `chandra-ocr-2`, 4B
+Current package: `chandra-ocr` 0.2.0. Current model: `chandra-ocr-2`, 5B
 parameters. Python 3.10 or later is required.
 
 For local Hugging Face inference:
@@ -167,6 +174,49 @@ base package. The local path specifically requires `torch`, `torchvision`,
 `hf` extra in place when a uv-managed lightweight client is missing them. The
 first inference downloads model weights. Confirm adequate memory and disk
 first.
+
+### Limited-VRAM NVIDIA GPUs
+
+The Chandra OCR 2 model card lists a 5B BF16 model, and its published checkpoint
+weights total about 10.6 GB. A 10 GB RTX 3080 therefore cannot keep the complete
+BF16 checkpoint in VRAM, while a 12 GB GPU leaves little room for activations
+and other runtime allocations. Chandra's Hugging Face loader uses
+`device_map="auto"`, so Transformers and Accelerate may place layers on the CPU,
+but whether that succeeds and performs acceptably also depends on system RAM,
+the installed PyTorch and CUDA build, and the driver. Treat this as a sizing
+estimate from the published model, not an official RTX 3080 compatibility
+guarantee.
+
+On this class of GPU, start with Hugging Face inference, a batch size of 1, and
+one ambiguous page or crop. Batch size 1 is already the Hugging Face default;
+keeping it explicit makes the smoke test reproducible. Do not start with a new
+vLLM server on a memory-constrained card. This repository supports Linux; on a
+Windows GPU host, use WSL2 only after the NVIDIA GPU is visible inside WSL2.
+The installer does not configure GPU drivers or CUDA.
+
+From this repository, install or repair the isolated runtime. When
+`nvidia-smi` can see an NVIDIA GPU, the installer automatically verifies that
+Chandra's PyTorch build can use it and reports the visible GPU memory:
+
+```sh
+./scripts/install-tools.sh --tool chandra
+```
+
+After approval for the first model download, run a one-page smoke test before a
+larger job:
+
+```sh
+document_tmp_dir="$(mktemp -d)" || exit 1
+readonly document_tmp_dir
+document_path="/absolute/path/to/input.pdf"
+
+chandra "$document_path" "$document_tmp_dir/chandra-page" \
+  --method hf --page-range "0" --batch-size 1 --no-html --no-images
+```
+
+The first inference stores the weights in the global Hugging Face cache. Keep
+that cache outside repositories and confirm that both cache storage and system
+memory are adequate before approving the download.
 
 For an NVIDIA vLLM deployment, the lighter client package is:
 

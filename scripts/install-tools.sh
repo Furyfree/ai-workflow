@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dry_run=0
 selected_tool="all"
 parallel_jobs=2
@@ -287,6 +288,44 @@ inspect_chandra_hf_support() {
   detail[chandra]="add torch, torchvision, transformers, and accelerate for local Hugging Face inference"
 }
 
+report_chandra_gpu_status() {
+  local cuda_details cuda_status device_count max_memory_mib python_path
+  local gpu_summary
+  command -v nvidia-smi >/dev/null 2>&1 || return 0
+  nvidia-smi -L >/dev/null 2>&1 || return 0
+
+  if ! python_path="$(uv_tool_python_path chandra-ocr chandra)"; then
+    printf '%s\n' \
+      "notice: NVIDIA GPU detected; skipped the CUDA check because Chandra's runtime is not owned by uv"
+    return 0
+  fi
+
+  if cuda_details="$(
+    "$python_path" "$script_dir/check_chandra_cuda.py"
+  )"; then
+    :
+  else
+    cuda_status=$?
+    if [[ $cuda_status -eq 1 ]]; then
+      printf '%s\n' \
+        "warning: NVIDIA GPU detected, but Chandra's PyTorch runtime cannot use CUDA; verify the driver and PyTorch build"
+    else
+      printf '%s\n' \
+        'warning: NVIDIA GPU detected, but the Chandra CUDA check failed'
+    fi
+    return 0
+  fi
+
+  IFS=$'\t' read -r device_count max_memory_mib gpu_summary \
+    <<<"$cuda_details"
+  printf 'notice: Chandra CUDA ready: %s\n' "$gpu_summary"
+  if [[ "$device_count" == "1" && "$max_memory_mib" =~ ^[0-9]+$ &&
+    $max_memory_mib -le 12288 ]]; then
+    printf '%s\n' \
+      'warning: Chandra OCR 2 has about 10.6 GB of BF16 weights; use Hugging Face batch size 1 and test one page or crop first'
+  fi
+}
+
 for tool_name in "${tools[@]}"; do
   case "$tool_name" in
     liteparse) inspect_liteparse ;;
@@ -440,6 +479,10 @@ if ((${#uv_install_tools[@]})); then
         ;;
     esac
   done
+fi
+
+if [[ -v 'action[chandra]' ]]; then
+  report_chandra_gpu_status
 fi
 
 printf 'tool installation complete\n'

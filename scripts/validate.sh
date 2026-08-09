@@ -31,8 +31,10 @@ required_files=(
   "roadmap/forgejo-pr-review.md"
   "scripts/install.sh"
   "scripts/install-tools.sh"
+  "scripts/check_chandra_cuda.py"
   "scripts/test-install.sh"
   "scripts/test-install-tools.sh"
+  "scripts/test_check_chandra_cuda.py"
   "scripts/uninstall.sh"
   "scripts/validate.sh"
 )
@@ -325,6 +327,12 @@ fi
 
 "$repo_root/scripts/test-install.sh" || fail "installer tests failed"
 "$repo_root/scripts/test-install-tools.sh" || fail "tool installer tests failed"
+if command -v python3 >/dev/null 2>&1; then
+  python3 "$repo_root/scripts/test_check_chandra_cuda.py" ||
+    fail "Chandra CUDA helper tests failed"
+else
+  fail "Python 3 is required for validation; python3 is not installed or not on PATH"
+fi
 
 if git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git -C "$repo_root" status --short ||
