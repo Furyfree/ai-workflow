@@ -39,19 +39,29 @@ Inspect the input and requested output before choosing:
 | Born-digital PDF, Office, text, page lookup, screenshots, boxes, annotations, or forms | LiteParse |
 | Quick text extraction from an ordinary scan where perfect layout is unnecessary | LiteParse OCR |
 | Printed or photographed documents with multilingual text, formulas, tables, charts, or reading order | PaddleOCR-VL |
-| Difficult handwriting, forms, old scans, dense columns, complex tables, or uncertain math | Chandra OCR 2 |
+| Difficult handwriting, forms, old scans, dense columns, complex tables, or uncertain math, when its runtime fits the host | Chandra OCR 2 |
 | Plain line text with boxes and confidence | PaddleOCR plain OCR |
 | Objects, people, scenery, style, or other non-document meaning | General vision |
 
 Prefer a nearby canonical source when exact formulas or source structure are
-the goal, but compare it with the rendered document in case they differ.
+the goal. Treat a same-stem `.typ`, `.tex`, or `.md` file, or a source named by
+the local build configuration, as a candidate rather than an automatic match.
+Read a short distinctive opening passage, render the candidate when practical,
+and compare its heading, text, or first formula with the document before using
+it as canonical source. If the match succeeds, work from the source and consult
+document OCR only where the source is missing, ambiguous, or visibly differs.
 Prefer LiteParse for embedded PDF text; do not OCR clean digital prose merely
 because the output contains a few extraction errors. Embedded extraction can
 still omit math glyphs, so inspect formula-bearing output before accepting it.
+For an image-based PDF with an added OCR layer, use that layer and LiteParse as
+cheap navigation and prose evidence, not proof that the page is born-digital or
+that its mathematics and layout are accurate. Render representative pages and
+use PaddleOCR-VL when exact formulas, tables, figures, or reading order matter.
 Prefer PaddleOCR-VL as the structured-image default because it is smaller and
 more broadly deployable than Chandra. Use Chandra for its specialties or as an
-independent second reading. Apply a second engine only to the smallest
-ambiguous crop or page rather than reprocessing the whole document.
+independent second reading only when a viable runtime is available. Apply a
+second engine only to the smallest ambiguous crop or page rather than
+reprocessing the whole document.
 
 Read [runtime-and-selection.md](references/runtime-and-selection.md) when
 choosing between engines, checking supported versions and hardware, installing
@@ -114,8 +124,15 @@ For PaddleOCR-VL local inference, preserve Markdown and structured JSON:
 ```sh
 paddleocr doc_parser -i "$document_path" \
   --pipeline_version v1.6 \
+  --device cpu \
   --save_path "$document_tmp_dir/paddle"
 ```
+
+Replace `--device cpu` with `--device gpu:0` only after the PaddleOCR CUDA check
+passes. Before a large batch, run a representative 5-10 page pilot spanning
+prose, dense math, tables, figures, code, and weak scans. Compare PaddleOCR
+output, the embedded text, and the source image; the source image remains
+authoritative.
 
 Enable orientation classification or unwarping only for rotated, curved, or
 perspective-distorted photos. Use `paddleocr ocr` only when line text, boxes,
@@ -154,6 +171,10 @@ knowingly accepts the likely time, memory, and disk cost.
   values unchanged.
 - Reuse saved output instead of rerunning a parser merely to search or change
   formats.
+- When a vision-capable agent is available and the user permits the document
+  content to be processed by that service, use the rendered source page to
+  reconcile OCR sidecars and author the final structure. Neither model
+  confidence nor agreement between text extractors replaces visual checking.
 
 Search a saved result with bounded context:
 

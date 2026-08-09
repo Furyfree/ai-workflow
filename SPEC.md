@@ -128,13 +128,15 @@ materially clearer as HTML. Markdown remains canonical.
 
 Routes local PDF, Office, image, and text documents among separately managed
 LiteParse, PaddleOCR, and Chandra runtimes. It uses LiteParse for embedded
-document content and proportional screenshots or metadata, PaddleOCR-VL for
-structured document images, and Chandra for difficult handwriting, forms, old
-scans, complex tables, math, or a second reading. It preserves Markdown with
-LaTeX math, converts requested LaTeX or Typst through Pandoc, verifies important
-content against the source, and does not edit documents, install dependencies,
-download model weights, start a model server, or send content to a hosted
-service implicitly.
+document content and proportional screenshots or metadata, including navigation
+and prose hints from an OCR layer over a scanned PDF. It uses PaddleOCR-VL for
+structured document images and Chandra for difficult handwriting, forms, old
+scans, complex tables, math, or a second reading when the runtime fits the host.
+It prefers a verified nearby native source, keeps rendered source pages
+authoritative for image-based mathematics and layout, preserves Markdown with
+LaTeX math, converts requested LaTeX or Typst through Pandoc, and does not edit
+documents, install dependencies, download model weights, start a model server,
+or send content to a hosted service implicitly.
 
 ### `subagent`
 
@@ -180,10 +182,14 @@ with early stopping.
   commands and customized inference engines, diagnoses unsupported versions and
   installed packages missing from `PATH`, checks Node.js, uv's executable path,
   and PaddlePaddle engine imports before mutation, keeps the two Python OCR
-  stacks isolated, bounds concurrent uv installs, and runs an advisory Chandra
-  CUDA and VRAM check only when an NVIDIA GPU is visible. It does not replace
-  accelerator packages or install package managers, model weights, GPU drivers,
-  Pandoc, or model servers.
+  stacks isolated, and bounds concurrent uv installs. The default installs a
+  CPU PaddlePaddle engine only when absent and preserves working accelerator
+  environments. An explicit Linux x86_64 NVIDIA selection chooses a supported
+  CUDA 12.6 or 11.8 wheel from the detected driver, may rebuild only an
+  uv-managed PaddleOCR tool, and must verify CUDA and GPU 0 compute capability
+  7.0 or later afterward. Chandra retains its advisory CUDA and VRAM check.
+  Runtime installation does not install package managers, model weights, GPU
+  drivers, Pandoc, or model servers.
 - Re-running skill installation discovers newly added canonical skill
   directories. The known `liteparse` to `document-analysis` rename migrates
   both agent links, restores any backup owned by the old target, and updates the
@@ -216,8 +222,8 @@ with early stopping.
   missing uv tools concurrently, repairs incomplete PaddleOCR and Chandra
   environments without replacing custom engines, and diagnoses unsupported
   Node.js or LiteParse versions, broken commands, missing PaddlePaddle engines,
-  package-to-`PATH` mismatches, and Chandra CUDA and limited-VRAM states without
-  requiring a GPU.
+  package-to-`PATH` mismatches, PaddleOCR NVIDIA driver selection and CUDA
+  readiness, and Chandra CUDA and limited-VRAM states without requiring a GPU.
 - Isolated tests prove pruning removes only obsolete manifest-owned skills,
   leaves unrelated user skills unchanged, and remains inert during dry runs.
 - Codex policy checks allow the documented low-risk examples and leave

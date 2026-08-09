@@ -5,6 +5,10 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 dry_run=0
 selected_tool="all"
 parallel_jobs=2
+paddle_accelerator="cpu"
+paddle_cuda_index=""
+paddle_cuda_label=""
+paddle_driver_version=""
 install_tmp_dir=""
 
 usage() {
@@ -13,6 +17,7 @@ Usage: scripts/install-tools.sh [options]
 
   --tool liteparse|paddleocr|chandra|all
                             Runtime to install (default: all)
+  --accelerator cpu|nvidia PaddleOCR engine to install (default: cpu)
   --jobs NUMBER             Concurrent uv installs (default: 2)
   --dry-run                 Inspect and preview without installing anything
   -h, --help                Show this help
@@ -34,6 +39,7 @@ require_value() {
 while (($#)); do
   case "$1" in
     --tool) require_value "$1" "$#"; selected_tool="$2"; shift 2 ;;
+    --accelerator) require_value "$1" "$#"; paddle_accelerator="$2"; shift 2 ;;
     --jobs) require_value "$1" "$#"; parallel_jobs="$2"; shift 2 ;;
     --dry-run) dry_run=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -48,6 +54,21 @@ case "$selected_tool" in
     exit 2
     ;;
 esac
+
+case "$paddle_accelerator" in
+  cpu|nvidia) ;;
+  *)
+    printf 'error: unsupported accelerator: %s\n' "$paddle_accelerator" >&2
+    exit 2
+    ;;
+esac
+
+if [[ "$paddle_accelerator" != "cpu" &&
+  "$selected_tool" != "paddleocr" && "$selected_tool" != "all" ]]; then
+  printf '%s\n' \
+    'error: --accelerator applies only when PaddleOCR is selected' >&2
+  exit 2
+fi
 
 [[ "$parallel_jobs" =~ ^[1-9][0-9]*$ ]] || {
   printf 'error: --jobs must be a positive integer\n' >&2
@@ -80,6 +101,61 @@ working_command() {
   shift
   command -v "$command_name" >/dev/null 2>&1 || return 1
   "$command_name" "$@" >/dev/null 2>&1
+}
+
+version_at_least() {
+  local installed="$1" required="$2" index installed_part required_part
+  local -a installed_parts required_parts
+  IFS=. read -r -a installed_parts <<<"$installed"
+  IFS=. read -r -a required_parts <<<"$required"
+  for ((index=0; index<${#required_parts[@]}; index++)); do
+    installed_part="${installed_parts[$index]:-0}"
+    required_part="${required_parts[$index]}"
+    [[ "$installed_part" =~ ^[0-9]+$ && "$required_part" =~ ^[0-9]+$ ]] ||
+      return 2
+    if ((10#$installed_part > 10#$required_part)); then
+      return 0
+    fi
+    if ((10#$installed_part < 10#$required_part)); then
+      return 1
+    fi
+  done
+  return 0
+}
+
+inspect_paddle_nvidia_host() {
+  local driver_output driver_line detected_driver=""
+  [[ "$paddle_accelerator" == "nvidia" ]] || return 0
+  [[ "$(uname -s)" == "Linux" && "$(uname -m)" == "x86_64" ]] ||
+    fail "PaddleOCR NVIDIA installation currently supports Linux x86_64 only"
+  command -v nvidia-smi >/dev/null 2>&1 ||
+    fail "--accelerator nvidia requires nvidia-smi and a working NVIDIA driver"
+  driver_output="$(
+    nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null
+  )" || fail "nvidia-smi could not report the NVIDIA driver version"
+  while IFS= read -r driver_line; do
+    driver_line="${driver_line//[[:space:]]/}"
+    [[ -n "$driver_line" ]] || continue
+    [[ "$driver_line" =~ ^[0-9]+([.][0-9]+)*$ ]] ||
+      fail "nvidia-smi returned an invalid driver version: $driver_line"
+    if [[ -n "$detected_driver" && "$driver_line" != "$detected_driver" ]]; then
+      fail "nvidia-smi reported inconsistent driver versions"
+    fi
+    detected_driver="$driver_line"
+  done <<<"$driver_output"
+  [[ -n "$detected_driver" ]] ||
+    fail "nvidia-smi did not report an NVIDIA GPU driver version"
+
+  paddle_driver_version="$detected_driver"
+  if version_at_least "$detected_driver" "550.54.14"; then
+    paddle_cuda_index="https://www.paddlepaddle.org.cn/packages/stable/cu126/"
+    paddle_cuda_label="CUDA 12.6"
+  elif version_at_least "$detected_driver" "450.80.02"; then
+    paddle_cuda_index="https://www.paddlepaddle.org.cn/packages/stable/cu118/"
+    paddle_cuda_label="CUDA 11.8"
+  else
+    fail "NVIDIA driver $detected_driver is too old for PaddlePaddle GPU; version 450.80.02 or later is required"
+  fi
 }
 
 inspect_npm_prefix() {
@@ -241,11 +317,18 @@ uv_tool_python_path() {
 }
 
 inspect_paddleocr_export_support() {
-  local python_path
+  local cuda_details cuda_status device_count max_memory_mib python_path
+  local gpu_summary
   if [[ "${action[paddleocr]}" != "skip" ]]; then
+    if [[ "$paddle_accelerator" == "nvidia" ]]; then
+      detail[paddleocr]="$paddle_cuda_label NVIDIA engine for driver $paddle_driver_version in an isolated uv tool environment"
+    fi
     return 0
   fi
   if ! python_path="$(uv_tool_python_path paddleocr paddleocr)"; then
+    if [[ "$paddle_accelerator" == "nvidia" ]]; then
+      fail "--accelerator nvidia requires PaddleOCR to be managed by uv"
+    fi
     return 0
   fi
   uv_python[paddleocr]="$python_path"
@@ -253,15 +336,64 @@ inspect_paddleocr_export_support() {
     fail "PaddleOCR's uv environment has no usable Python interpreter"
   "$python_path" -c 'import paddle' >/dev/null 2>&1 ||
     fail "PaddleOCR's uv environment cannot import a PaddlePaddle engine; install the hardware-compatible engine explicitly"
+
+  if [[ "$paddle_accelerator" == "nvidia" ]]; then
+    if cuda_details="$(
+      "$python_path" "$script_dir/check_paddle_cuda.py" 2>/dev/null
+    )"; then
+      IFS=$'\t' read -r device_count max_memory_mib gpu_summary \
+        <<<"$cuda_details"
+      detail[paddleocr]="PaddleOCR CUDA is available: $gpu_summary"
+    else
+      cuda_status=$?
+      if [[ $cuda_status -eq 1 ]]; then
+        load_uv_inventory
+        uv_package_exists paddleocr ||
+          fail "PaddleOCR is not uv-managed and cannot be reconfigured safely"
+        action[paddleocr]="reconfigure"
+        detail[paddleocr]="replace its CPU engine with the $paddle_cuda_label NVIDIA engine for driver $paddle_driver_version"
+      elif [[ $cuda_status -eq 3 ]]; then
+        fail "PaddleOCR-VL requires NVIDIA GPU 0 compute capability 7.0 or later"
+      else
+        fail "PaddleOCR's CUDA runtime check failed"
+      fi
+    fi
+  fi
+
   if "$python_path" -c 'import docx' >/dev/null 2>&1; then
     return
   fi
-
   load_uv_inventory
   uv_package_exists paddleocr ||
     fail "PaddleOCR is missing python-docx, but its package ownership is unknown"
-  action[paddleocr]="repair"
-  detail[paddleocr]="add python-docx to the existing isolated uv tool environment"
+  if [[ "${action[paddleocr]}" != "reconfigure" ]]; then
+    action[paddleocr]="repair"
+    detail[paddleocr]="add python-docx to the existing isolated uv tool environment"
+  fi
+}
+
+report_paddle_gpu_status() {
+  local cuda_details cuda_status device_count max_memory_mib python_path
+  local gpu_summary
+  [[ "$paddle_accelerator" == "nvidia" ]] || return 0
+  python_path="$(uv_tool_python_path paddleocr paddleocr)" ||
+    fail "PaddleOCR installed, but its uv environment could not be verified"
+  if cuda_details="$(
+    "$python_path" "$script_dir/check_paddle_cuda.py" 2>/dev/null
+  )"; then
+    IFS=$'\t' read -r device_count max_memory_mib gpu_summary \
+      <<<"$cuda_details"
+    printf 'notice: PaddleOCR CUDA ready: %s\n' "$gpu_summary"
+    return 0
+  fi
+  cuda_status=$?
+  if [[ $cuda_status -eq 1 ]]; then
+    fail "PaddleOCR installed, but its PaddlePaddle runtime cannot use the NVIDIA GPU"
+  fi
+  if [[ $cuda_status -eq 3 ]]; then
+    fail "PaddleOCR installed, but NVIDIA GPU 0 has compute capability below 7.0"
+  fi
+  fail "PaddleOCR installed, but its CUDA check failed"
 }
 
 inspect_chandra_hf_support() {
@@ -325,6 +457,8 @@ report_chandra_gpu_status() {
       'warning: Chandra OCR 2 has about 10.6 GB of BF16 weights; use Hugging Face batch size 1 and test one page or crop first'
   fi
 }
+
+inspect_paddle_nvidia_host
 
 for tool_name in "${tools[@]}"; do
   case "$tool_name" in
@@ -399,6 +533,18 @@ install_uv_tool() {
       if [[ "${action[paddleocr]}" == "repair" ]]; then
         uv pip install --python "${uv_python[paddleocr]}" \
           'python-docx>=1.1,<2'
+      elif [[ "$paddle_accelerator" == "nvidia" ]]; then
+        declare -a paddle_install_args=(
+          tool install --python 3.12
+          --index "$paddle_cuda_index"
+          --with 'paddlepaddle-gpu>=3.3,<4'
+          --with 'python-docx>=1.1,<2'
+          'paddleocr[doc-parser]>=3.7,<4'
+        )
+        if [[ "${action[paddleocr]}" == "reconfigure" ]]; then
+          paddle_install_args=(tool install --force "${paddle_install_args[@]:2}")
+        fi
+        uv "${paddle_install_args[@]}"
       else
         uv tool install --python 3.12 \
           --with 'paddlepaddle>=3.3,<4' \
@@ -481,6 +627,9 @@ if ((${#uv_install_tools[@]})); then
   done
 fi
 
+if [[ -v 'action[paddleocr]' ]]; then
+  report_paddle_gpu_status
+fi
 if [[ -v 'action[chandra]' ]]; then
   report_chandra_gpu_status
 fi

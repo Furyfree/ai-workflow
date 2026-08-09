@@ -20,7 +20,7 @@ fail() {
 
 base_bin="$test_root/base-bin"
 mkdir -p "$base_bin"
-for command_name in bash cat chmod cp dirname env grep ln mkdir mktemp readlink rm sleep; do
+for command_name in bash cat chmod cp dirname env grep ln mkdir mktemp readlink rm sleep uname; do
   command_path="$(command -v "$command_name")" ||
     fail "test dependency missing: $command_name"
   ln -s "$command_path" "$base_bin/$command_name"
@@ -384,6 +384,149 @@ grep -Fq \
 grep -Fq "about 10.6 GB of BF16 weights" <<<"$gpu_ready_output" ||
   fail "Chandra GPU check did not warn about limited VRAM"
 
+paddle_gpu_bin="$test_root/paddle-gpu-bin"
+paddle_gpu_tools_root="$test_root/paddle-gpu-tools"
+paddle_gpu_tools="$paddle_gpu_tools_root/paddleocr/bin"
+paddle_gpu_log="$test_root/paddle-gpu.log"
+paddle_gpu_marker="$test_root/paddle-gpu-ready"
+mkdir -p "$paddle_gpu_bin" "$paddle_gpu_tools"
+make_fake_command "$paddle_gpu_tools/paddleocr" \
+  '[[ "${1:-}:${2:-}" == "doc_parser:--help" ]] || exit 2'
+make_fake_command "$paddle_gpu_tools/python" \
+  'if [[ "${1:-}" == "-c" ]]; then' \
+  '  case "${2:-}" in "import paddle"|"import docx") exit 0 ;; *) exit 2 ;; esac' \
+  'fi' \
+  '[[ "${1:-}" == */check_paddle_cuda.py ]] || exit 2' \
+  '[[ "${FAKE_PADDLE_UNSUPPORTED:-false}" != "true" ]] || exit 3' \
+  '[[ -e "$FAKE_PADDLE_GPU_MARKER" ]] || exit 1' \
+  'printf "1\t10240\tNVIDIA GeForce RTX 3080 (10240 MiB, compute 8.6)\n"'
+ln -s "$paddle_gpu_tools/paddleocr" "$paddle_gpu_bin/paddleocr"
+make_fake_command "$paddle_gpu_bin/uv" \
+  'case "${1:-}:${2:-}" in' \
+  '  tool:list) printf "paddleocr v3.7.0\n- paddleocr\n" ;;' \
+  '  tool:dir)' \
+  '    [[ "${3:-}" != "--bin" ]] && printf "%s\n" "$FAKE_UV_TOOLS_DIR" || printf "%s\n" "$FAKE_UV_BIN_DIR"' \
+  '    ;;' \
+  '  tool:install)' \
+  '    printf "uv %s\n" "$*" >>"$FAKE_MANAGER_LOG"' \
+  '    : >"$FAKE_PADDLE_GPU_MARKER"' \
+  '    ;;' \
+  '  *) exit 2 ;;' \
+  'esac'
+make_fake_command "$paddle_gpu_bin/nvidia-smi" \
+  '[[ "$*" == "--query-gpu=driver_version --format=csv,noheader" ]] || exit 2' \
+  'printf "%s\n" "${FAKE_NVIDIA_DRIVER:-610.43.03}"'
+
+paddle_gpu_dry_output="$(
+  PATH="$paddle_gpu_bin:$base_bin" \
+    FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+    FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+    FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+      --accelerator nvidia --dry-run
+)"
+grep -Fq \
+  "would reconfigure: paddleocr (replace its CPU engine with the CUDA 12.6 NVIDIA engine for driver 610.43.03)" \
+  <<<"$paddle_gpu_dry_output" ||
+  fail "PaddleOCR NVIDIA dry-run did not plan the CPU-engine replacement"
+[[ ! -e "$paddle_gpu_log" && ! -e "$paddle_gpu_marker" ]] ||
+  fail "PaddleOCR NVIDIA dry-run changed the tool environment"
+
+paddle_gpu_output="$(
+  PATH="$paddle_gpu_bin:$base_bin" \
+    FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+    FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+    FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+      --accelerator nvidia
+)"
+grep -Fqx \
+  "uv tool install --force --python 3.12 --index https://www.paddlepaddle.org.cn/packages/stable/cu126/ --with paddlepaddle-gpu>=3.3,<4 --with python-docx>=1.1,<2 paddleocr[doc-parser]>=3.7,<4" \
+  "$paddle_gpu_log" || fail "PaddleOCR NVIDIA reconfiguration command was not exact"
+grep -Fq \
+  "notice: PaddleOCR CUDA ready: NVIDIA GeForce RTX 3080 (10240 MiB, compute 8.6)" \
+  <<<"$paddle_gpu_output" ||
+  fail "PaddleOCR NVIDIA installation did not verify the CUDA device"
+
+paddle_gpu_first_log="$(<"$paddle_gpu_log")"
+paddle_gpu_second_output="$(
+  PATH="$paddle_gpu_bin:$base_bin" \
+    FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+    FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+    FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+      --accelerator nvidia
+)"
+[[ "$(<"$paddle_gpu_log")" == "$paddle_gpu_first_log" ]] ||
+  fail "repeated PaddleOCR NVIDIA installation invoked uv"
+grep -Fq "skip: PaddleOCR CUDA is available" <<<"$paddle_gpu_second_output" ||
+  fail "repeated PaddleOCR NVIDIA installation was not idempotent"
+
+rm -f -- "$paddle_gpu_marker"
+paddle_cu118_output="$(
+  PATH="$paddle_gpu_bin:$base_bin" \
+    FAKE_NVIDIA_DRIVER=535.54.03 \
+    FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+    FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+    FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+      --accelerator nvidia --dry-run
+)"
+grep -Fq "CUDA 11.8 NVIDIA engine for driver 535.54.03" \
+  <<<"$paddle_cu118_output" ||
+  fail "PaddleOCR NVIDIA selection did not fall back to the CUDA 11.8 wheel"
+
+paddle_old_driver_error="$test_root/paddle-old-driver.log"
+if PATH="$paddle_gpu_bin:$base_bin" FAKE_NVIDIA_DRIVER=440.100 \
+  FAKE_MANAGER_LOG="$paddle_gpu_log" \
+  FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+  FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+  FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+  "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+    --accelerator nvidia --dry-run >"$paddle_old_driver_error" 2>&1; then
+  fail "installer accepted an NVIDIA driver that is too old for PaddlePaddle"
+fi
+grep -Fq "version 450.80.02 or later is required" \
+  "$paddle_old_driver_error" ||
+  fail "old PaddleOCR NVIDIA driver was not explained"
+
+: >"$paddle_gpu_marker"
+paddle_old_gpu_error="$test_root/paddle-old-gpu.log"
+if PATH="$paddle_gpu_bin:$base_bin" FAKE_PADDLE_UNSUPPORTED=true \
+  FAKE_MANAGER_LOG="$paddle_gpu_log" \
+  FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+  FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+  FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+  "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+    --accelerator nvidia --dry-run >"$paddle_old_gpu_error" 2>&1; then
+  fail "installer accepted a GPU below PaddleOCR-VL's compute requirement"
+fi
+grep -Fq "requires NVIDIA GPU 0 compute capability 7.0 or later" \
+  "$paddle_old_gpu_error" ||
+  fail "unsupported PaddleOCR GPU capability was not explained"
+rm -f -- "$paddle_gpu_marker"
+
+paddle_no_gpu_bin="$test_root/paddle-no-gpu-bin"
+mkdir -p "$paddle_no_gpu_bin"
+cp "$paddle_gpu_bin/paddleocr" "$paddle_gpu_bin/uv" "$paddle_no_gpu_bin/"
+paddle_no_gpu_error="$test_root/paddle-no-gpu.log"
+if PATH="$paddle_no_gpu_bin:$base_bin" \
+  FAKE_MANAGER_LOG="$paddle_gpu_log" \
+  FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+  FAKE_UV_BIN_DIR="$paddle_no_gpu_bin" \
+  FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+  "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+    --accelerator nvidia --dry-run >"$paddle_no_gpu_error" 2>&1; then
+  fail "installer accepted NVIDIA acceleration without nvidia-smi"
+fi
+grep -Fq "requires nvidia-smi and a working NVIDIA driver" \
+  "$paddle_no_gpu_error" ||
+  fail "missing NVIDIA driver tooling was not explained"
+
 rm -f -- "$gpu_probe_log"
 PATH="$gpu_bin:$base_bin" "$repo_root/scripts/install-tools.sh" \
   --tool liteparse >/dev/null
@@ -482,5 +625,17 @@ if "$repo_root/scripts/install-tools.sh" --jobs 0 \
 fi
 grep -Fqx "error: --jobs must be a positive integer" "$argument_error" ||
   fail "invalid --jobs value was not explained"
+if "$repo_root/scripts/install-tools.sh" --tool chandra \
+  --accelerator nvidia >"$argument_error" 2>&1; then
+  fail "installer accepted a PaddleOCR accelerator for a Chandra-only run"
+fi
+grep -Fqx "error: --accelerator applies only when PaddleOCR is selected" \
+  "$argument_error" || fail "mis-scoped accelerator was not explained"
+if "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+  --accelerator rocm >"$argument_error" 2>&1; then
+  fail "installer accepted an unsupported accelerator"
+fi
+grep -Fqx "error: unsupported accelerator: rocm" "$argument_error" ||
+  fail "unsupported accelerator was not explained"
 
 printf 'tool installer tests passed\n'

@@ -64,8 +64,10 @@ does not keep it active for later unrelated work.
 The unified `document-analysis` workflow routes born-digital documents and
 ordinary extraction through LiteParse, structured document images through
 PaddleOCR-VL, and difficult handwriting, forms, old scans, tables, and math
-through Chandra OCR. It preserves Markdown with LaTeX math and converts verified
-output to LaTeX or Typst through Pandoc. Its
+through Chandra OCR when its runtime fits the host. For image-based PDFs with an
+added OCR layer, it uses embedded text for navigation and prose while keeping
+the rendered page authoritative for formulas and layout. It preserves Markdown
+with LaTeX math and converts verified output to LaTeX or Typst through Pandoc. Its
 [runtime and selection reference](.agents/skills/document-analysis/references/runtime-and-selection.md)
 contains the research, current versions, hardware guidance, licenses, and
 direct setup commands.
@@ -91,6 +93,22 @@ existing `uv` for PaddleOCR and Chandra; it does not bootstrap package managers.
 PDFs and images need no additional LiteParse converter. Office documents
 require LibreOffice.
 
+The default installs PaddleOCR's portable CPU engine when the tool is absent.
+On a Linux x86_64 NVIDIA host, explicitly select the GPU engine after checking
+the preview:
+
+```sh
+./scripts/install-tools.sh --tool paddleocr --accelerator nvidia --dry-run
+./scripts/install-tools.sh --tool paddleocr --accelerator nvidia
+```
+
+This requires a working `nvidia-smi`. It selects PaddlePaddle's CUDA 12.6 wheel
+for driver 550.54.14 or later and its CUDA 11.8 wheel for driver 450.80.02 or
+later, then verifies that the isolated runtime sees a CUDA device. An explicit
+NVIDIA selection also requires GPU 0 compute capability 7.0 or later and
+rebuilds an existing uv-managed CPU PaddleOCR environment. A normal run still
+preserves a working accelerator-specific environment.
+
 The runtime installer puts PaddleOCR and Chandra in separate `uv` tool
 environments so their Python dependencies do not conflict. After inspecting all
 selected tools, it installs only missing uv tools and runs up to two independent
@@ -110,8 +128,8 @@ after deliberate tool upgrades to recheck the extras.
 
 Before skipping or repairing a uv-managed PaddleOCR environment, the installer
 also verifies that its PaddlePaddle engine imports successfully. If the engine
-is absent or broken, it stops with hardware-specific setup guidance instead of
-guessing a CPU or accelerator package.
+is absent or broken, it stops before mutation. The NVIDIA route is explicit;
+the installer never infers it merely because a GPU happens to be visible.
 
 "Global" here means available from every repository through the user's
 `PATH`, not installed into each project or the system Python. LiteParse uses the
@@ -140,10 +158,9 @@ pandoc --version
 ```
 
 Chandra's Hugging Face path installs a large PyTorch stack and later downloads
-5B model weights. Accelerator-specific PaddleOCR and Chandra setup depends on
-the host driver and is documented in the skill reference. The tool installer
-uses PaddleOCR's portable CPU package; use the documented direct setup instead
-when an accelerator-specific PaddlePaddle build is required.
+5B model weights. The supported NVIDIA PaddleOCR path and other
+accelerator-specific guidance are documented in the skill reference. Neither
+runtime installation path downloads OCR model weights.
 
 Remove the independently managed runtimes separately from the skill links:
 
@@ -384,8 +401,8 @@ It checks required files, skill metadata and templates, the hosted Codex and
 local CodeRabbit provider contract, private runtime state, shell syntax,
 ShellCheck, Codex policy behavior, installer behavior, and working-tree and
 staged whitespace. It also runs the standard-library-only Python tests for the
-Chandra CUDA helper, so `python3` must be on `PATH`. ShellCheck and Codex are
-optional locally with a notice; CI requires both.
+PaddleOCR and Chandra CUDA helpers, so `python3` must be on `PATH`. ShellCheck
+and Codex are optional locally with a notice; CI requires both.
 
 ## Boundaries
 

@@ -32,9 +32,11 @@ required_files=(
   "scripts/install.sh"
   "scripts/install-tools.sh"
   "scripts/check_chandra_cuda.py"
+  "scripts/check_paddle_cuda.py"
   "scripts/test-install.sh"
   "scripts/test-install-tools.sh"
   "scripts/test_check_chandra_cuda.py"
+  "scripts/test_check_paddle_cuda.py"
   "scripts/uninstall.sh"
   "scripts/validate.sh"
 )
@@ -330,6 +332,8 @@ fi
 if command -v python3 >/dev/null 2>&1; then
   python3 "$repo_root/scripts/test_check_chandra_cuda.py" ||
     fail "Chandra CUDA helper tests failed"
+  python3 "$repo_root/scripts/test_check_paddle_cuda.py" ||
+    fail "PaddleOCR CUDA helper tests failed"
 else
   fail "Python 3 is required for validation; python3 is not installed or not on PATH"
 fi

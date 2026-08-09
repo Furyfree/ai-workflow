@@ -30,9 +30,12 @@ Research baseline: 2026-08-09.
 The vendors publish strong results on different benchmark suites. Do not treat
 PaddleOCR's OmniDocBench score and Chandra's olmOCR score as a direct
 head-to-head comparison. Prefer LiteParse before OCR when a PDF already has
-usable embedded content. Prefer PaddleOCR as the practical structured-image
+usable native content. For an image-only PDF with a later OCR layer, use the
+embedded text for navigation and prose hints but still judge formulas and
+layout from the page image. Prefer PaddleOCR as the practical structured-image
 default because it is smaller and supports more local hardware paths. Add
-Chandra where its specialties justify the 5B model and stricter weight license.
+Chandra where its specialties justify the 5B model, stricter weight license,
+and hardware cost.
 
 A local representative check on 2026-08-07 reinforced two limits. LiteParse
 quickly recovered useful prose and headings from a born-digital mathematics
@@ -82,6 +85,25 @@ whose command is missing from `PATH` and never downloads model weights. It
 requires an existing `npm` for LiteParse and `uv` for the OCR engines; it does
 not bootstrap package managers.
 
+The default installs PaddleOCR's CPU engine only when PaddleOCR is absent and
+preserves an existing working accelerator engine. On a Linux x86_64 NVIDIA
+host, preview and explicitly select the GPU engine instead:
+
+```sh
+./scripts/install-tools.sh --tool paddleocr --accelerator nvidia --dry-run
+./scripts/install-tools.sh --tool paddleocr --accelerator nvidia
+```
+
+This route requires `nvidia-smi` to report the driver. It selects the official
+CUDA 12.6 wheel for driver 550.54.14 or later, otherwise the CUDA 11.8 wheel for
+driver 450.80.02 or later. It rejects older drivers before package mutation.
+When a uv-managed PaddleOCR tool currently has the CPU engine, the explicit
+NVIDIA command rebuilds that one isolated tool with `paddlepaddle-gpu`; it does
+not alter Chandra, a project environment, the system Python, or the driver.
+After installation it verifies that PaddlePaddle sees at least one CUDA device.
+GPU 0 must also have compute capability 7.0 or later, matching PaddleOCR-VL's
+documented local inference requirement.
+
 When Chandra is selected and `nvidia-smi` can see an NVIDIA GPU, the installer
 also checks whether Chandra's isolated PyTorch runtime can use CUDA. It reports
 the visible GPU memory and warns when a single GPU has at most 12 GB. The check
@@ -94,9 +116,9 @@ dependencies from contaminating each other. Use Python 3.12 because both
 current stacks support it and newer system Python versions may not have
 compatible ML wheels.
 
-Use the direct commands below instead when selecting an accelerator-specific
-PaddlePaddle build or another Chandra inference mode. Ensure the tool bin
-directory reported by `uv tool dir --bin` is already on `PATH`.
+Use the direct commands below for the portable CPU engine or another Chandra
+inference mode. Ensure the tool bin directory reported by `uv tool dir --bin`
+is already on `PATH`.
 
 ## LiteParse
 
@@ -132,10 +154,18 @@ uv tool install --python 3.12 \
 paddleocr doc_parser --help
 ```
 
-For NVIDIA, Apple Silicon, AMD, Intel Arc, or another accelerator, follow the
-official hardware guide and install only one compatible inference engine in
-this environment. CUDA-specific wheels and indexes depend on the host driver;
-do not guess them from a generic skill.
+For supported NVIDIA Linux x86_64 hosts, prefer the explicit installer route
+above. It chooses between these current official package indexes:
+
+| Driver | PaddlePaddle wheel index |
+| --- | --- |
+| 550.54.14 or later | CUDA 12.6 |
+| 450.80.02 through 550.54.13 | CUDA 11.8 |
+
+PaddlePaddle states that the wheel choice depends on the driver compatibility,
+not whether a matching CUDA toolkit is installed system-wide. Apple Silicon,
+AMD, Intel Arc, and other accelerators still require their official hardware
+guide and exactly one compatible inference engine in the uv environment.
 
 `python-docx` is explicit because PaddleOCR 3.7's CLI calls its all-format save
 path even when Markdown and JSON are the desired outputs. Without it, a parse
@@ -144,11 +174,29 @@ Inspect an output directory after any late save failure before rerunning costly
 inference.
 
 The installer verifies that an existing uv-managed tool can import its
-PaddlePaddle engine before reporting it usable. If the import fails, install the
-host-compatible engine explicitly; the generic installer will not guess a CPU,
-CUDA, ROCm, XPU, or other build. When `python-docx` alone is missing, the
-installer injects that package into the existing environment without recreating
-it or replacing the engine.
+PaddlePaddle engine before reporting it usable. If the import fails, it stops
+before changing the environment. When `python-docx` alone is missing, the
+installer injects that package without recreating the tool or replacing its
+engine. Only `--accelerator nvidia` authorizes replacement of a CPU engine.
+
+An RTX 3080 has sufficient compute capability for PaddleOCR-VL's documented
+local NVIDIA path, and the 0.9B model is materially smaller than Chandra OCR 2.
+That is not a 10 GB VRAM guarantee: run one representative page with explicit
+GPU selection before a batch. The first run downloads model weights into the
+user cache:
+
+```sh
+document_tmp_dir="$(mktemp -d)" || exit 1
+readonly document_tmp_dir
+document_path="/absolute/path/to/representative-page.png"
+
+paddleocr doc_parser -i "$document_path" \
+  --pipeline_version v1.6 --device gpu:0 \
+  --save_path "$document_tmp_dir/paddle"
+```
+
+Inspect the saved Markdown and JSON against the source image. A successful CUDA
+import is runtime readiness, not an OCR quality result.
 
 The first `doc_parser` run downloads models and may download a rendering font.
 Keep those network and disk changes explicit. Upgrade deliberately with
@@ -187,6 +235,12 @@ acceptably also depends on system RAM, the installed PyTorch and CUDA build,
 and the driver. A host with 32 GB system RAM has a reasonable starting pool for
 limited CPU offload, but that is not an official minimum or a compatibility
 guarantee.
+
+In a local RTX 3080 10 GB test, the current Hugging Face route failed with CUDA
+out of memory while loading weights, before OCR began. CPU inference loaded but
+did not finish a 1241 by 900 handwritten-math crop after about 14.5 minutes.
+Treat Chandra as unavailable for the planned large reconstruction on that host
+unless its runtime changes materially; do not make it a readiness gate.
 
 On this class of GPU, start with Hugging Face inference, a batch size of 1, and
 one ambiguous page or crop. Batch size 1 is already the Hugging Face default;
@@ -266,6 +320,10 @@ LaTeX engine for `.tex`; do not introduce a TeX distribution implicitly.
 - Keep each OCR engine in its own `uv` environment.
 - Keep model caches global rather than inside repositories.
 - Expect Chandra HF to need materially more memory than PaddleOCR-VL.
+- For an image-based PDF with an embedded OCR layer, use LiteParse or that layer
+  for search and prose, PaddleOCR-VL for structured page evidence, and the
+  rendered source image as authority.
+- Benchmark 5-10 representative pages before whole-document processing.
 - On CPU-only hosts, benchmark one representative page before committing to a
   batch; prefer small crops for repeat readings.
 - Use cropped second passes for uncertain formulas or table cells.
@@ -279,6 +337,7 @@ LaTeX engine for `.tex`; do not introduce a TeX distribution implicitly.
 
 - LiteParse: <https://developers.llamaindex.ai/python/cloud/llamaparse/features/liteparse/>
 - PaddleOCR installation: <https://www.paddleocr.ai/main/en/version3.x/installation.html>
+- PaddlePaddle framework installation: <https://www.paddleocr.ai/main/en/version3.x/paddlepaddle_installation.html>
 - PaddleOCR inference engines: <https://www.paddleocr.ai/main/en/version3.x/inference_deployment/local_inference/inference_engine.html>
 - PaddleOCR-VL usage: <https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/PaddleOCR-VL.html>
 - PaddleOCR-VL 1.6: <https://www.paddleocr.ai/main/en/version3.x/algorithm/PaddleOCR-VL/PaddleOCR-VL-1.6.html>

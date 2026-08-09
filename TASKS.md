@@ -13,6 +13,9 @@
       without replacing custom accelerator engines; report advisory Chandra
       CUDA and VRAM status only when an NVIDIA GPU is visible; and add
       manifest-scoped skill pruning.
+- [x] Prepare PaddleOCR-VL for a Linux RTX 3080 pilot with explicit NVIDIA
+      selection, driver-based CUDA 12.6 or 11.8 wheels, isolated CPU-to-GPU
+      reconfiguration, CUDA verification, and no implicit model download.
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
 - [ ] Confirm both agents discover and invoke all seven skills, including the
       unified document routing without implicit runtime installation.
