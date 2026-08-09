@@ -42,8 +42,9 @@ Current phase: **controlled discovery**.
       review completion.
 - [x] Add an authenticated local pull-request review fallback with explicit
       authorization before posting a GitHub comment.
-- [x] Consolidate LiteParse, PaddleOCR-VL, and Chandra OCR into one document
-      analysis skill that preserves Markdown and converts through Pandoc.
+- [x] Consolidate canonical sources, LiteParse, approved native vision, and
+      optional PaddleOCR-VL or Chandra sidecars into one document-analysis
+      skill that supports direct native authoring and verified conversion.
 - [x] Add a separate idempotent installer for LiteParse, PaddleOCR, and Chandra
       runtimes without installing model weights.
 - [x] Preflight runtime versions and paths, install missing uv tools concurrently

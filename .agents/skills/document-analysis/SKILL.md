@@ -1,6 +1,6 @@
 ---
 name: document-analysis
-description: Analyze and reconstruct local PDFs, Office files, document images, and scans by routing among LiteParse, PaddleOCR, and Chandra OCR. Use for document reading, OCR, handwriting, tables, formulas, charts, forms, reading order, page images, bounding boxes, or conversion to structured Markdown, LaTeX, or Typst; use general vision instead when the task is primarily about non-document image meaning.
+description: Analyze and reconstruct local PDFs, Office files, document images, and scans by combining canonical sources, LiteParse, available agent vision, and optional PaddleOCR or Chandra sidecars. Use for document reading, OCR, handwriting, tables, formulas, charts, forms, reading order, page images, bounding boxes, or conversion to structured Markdown, LaTeX, or Typst.
 ---
 
 # Document Analysis
@@ -14,10 +14,13 @@ one canonical result, and verify important content against the source.
   in a document or image.
 - Keep inputs local by default. Do not use hosted OCR without explicit approval
   to disclose the content.
-- Check the selected executable before processing. If it is unavailable, stop
-  and direct the user to
-  [runtime-and-selection.md](references/runtime-and-selection.md). Do not
-  install, upgrade, start Docker, or download model weights implicitly.
+- Check an executable before using it. A missing optional OCR runtime must not
+  block canonical-source, LiteParse, or approved native-vision work. Choose the
+  smallest available route that can satisfy the request, and stop only when no
+  available route can satisfy the request. Direct the user to
+  [runtime-and-selection.md](references/runtime-and-selection.md) when a
+  requested runtime is unavailable. Do not install, upgrade, start Docker, or
+  download model weights implicitly.
 - Warn before first PaddleOCR or Chandra inference that model weights may be
   downloaded and may use substantial disk, memory, and GPU resources. Request
   approval before starting that first inference when the weights are absent.
@@ -38,8 +41,9 @@ Inspect the input and requested output before choosing:
 | Nearby canonical `.typ`, `.tex`, or `.md` source for the requested document | Read the source, then verify it against the rendered document |
 | Born-digital PDF, Office, text, page lookup, screenshots, boxes, annotations, or forms | LiteParse |
 | Quick text extraction from an ordinary scan where perfect layout is unnecessary | LiteParse OCR |
-| Printed or photographed documents with multilingual text, formulas, tables, charts, or reading order | PaddleOCR-VL |
-| Difficult handwriting, forms, old scans, dense columns, complex tables, or uncertain math, when its runtime fits the host | Chandra OCR 2 |
+| Printed or photographed documents with formulas, tables, charts, or important layout | Rendered source plus available native vision |
+| Independent local structured reading of a difficult page or crop | PaddleOCR-VL, when its expected value justifies inference cost |
+| Difficult handwriting, forms, old scans, or uncertain math needing another local reading | Chandra OCR 2, only when its runtime fits the host and workload |
 | Plain line text with boxes and confidence | PaddleOCR plain OCR |
 | Objects, people, scenery, style, or other non-document meaning | General vision |
 
@@ -55,13 +59,15 @@ because the output contains a few extraction errors. Embedded extraction can
 still omit math glyphs, so inspect formula-bearing output before accepting it.
 For an image-based PDF with an added OCR layer, use that layer and LiteParse as
 cheap navigation and prose evidence, not proof that the page is born-digital or
-that its mathematics and layout are accurate. Render representative pages and
-use PaddleOCR-VL when exact formulas, tables, figures, or reading order matter.
-Prefer PaddleOCR-VL as the structured-image default because it is smaller and
-more broadly deployable than Chandra. Use Chandra for its specialties or as an
-independent second reading only when a viable runtime is available. Apply a
-second engine only to the smallest ambiguous crop or page rather than
-reprocessing the whole document.
+that its mathematics and layout are accurate. When a vision-capable agent is
+available and the user permits that processing, render the relevant pages and
+use native vision to read the source and author the requested structure. Treat
+PaddleOCR-VL and Chandra as optional independent sidecars, not prerequisites or
+automatic batch steps. Use them only when they are already available or the
+user explicitly approves setup, and when another reading could change a real
+decision. A missing, slow, or workload-incompatible local model does not block
+the native-vision route. Apply a second engine only to the smallest ambiguous
+crop or page rather than reprocessing the whole document.
 
 Read [runtime-and-selection.md](references/runtime-and-selection.md) when
 choosing between engines, checking supported versions and hardware, installing
@@ -117,7 +123,13 @@ liteparse screenshot "$document_path" --target-pages "13" --dpi 150 \
 
 Increase DPI only when the relevant region is illegible.
 
-## Use structured OCR when needed
+## Use local structured OCR only when it adds value
+
+PaddleOCR and Chandra inference are optional. Their CUDA helper scripts only
+verify runtime visibility and hardware details; they do not perform OCR or
+improve recognition quality. Do not run a local model merely because its CLI or
+CUDA runtime is available. If it is missing, too slow, or cannot fit the
+workload, continue with LiteParse evidence and approved source-image vision.
 
 For PaddleOCR-VL local inference, preserve Markdown and structured JSON:
 
@@ -129,10 +141,12 @@ paddleocr doc_parser -i "$document_path" \
 ```
 
 Replace `--device cpu` with `--device gpu:0` only after the PaddleOCR CUDA check
-passes. Before a large batch, run a representative 5-10 page pilot spanning
-prose, dense math, tables, figures, code, and weak scans. Compare PaddleOCR
-output, the embedded text, and the source image; the source image remains
-authoritative.
+passes. Start local-model inference with one representative page or crop. Only
+before a planned multi-page or whole-document local-model batch, expand that
+check to a representative 5-10 page pilot spanning the content classes present,
+such as prose, dense math, tables, figures, code, and weak scans. Compare
+PaddleOCR output, the embedded text, and the source image; the source image
+remains authoritative.
 
 Enable orientation classification or unwarping only for rotated, curved, or
 perspective-distorted photos. Use `paddleocr ocr` only when line text, boxes,
@@ -159,8 +173,11 @@ knowingly accepts the likely time, memory, and disk cost.
 
 ## Reconstruct and search conservatively
 
-- Keep Markdown with LaTeX math as the canonical result. Preserve image
-  references beside it.
+- Keep the verified requested output format canonical. For direct Typst, LaTeX,
+  or another non-Markdown output, preserve OCR Markdown with LaTeX math only as
+  a sidecar. When Markdown is the requested result or the verified input to a
+  requested Pandoc conversion, keep it canonical. Preserve image references
+  beside either form.
 - Preserve headings, reading order, lists, table spans, code blocks, formula
   boundaries, captions, and footnotes when supported by the source.
 - Do not silently repair names, measurements, signs, exponents, subscripts,
@@ -171,10 +188,9 @@ knowingly accepts the likely time, memory, and disk cost.
   values unchanged.
 - Reuse saved output instead of rerunning a parser merely to search or change
   formats.
-- When a vision-capable agent is available and the user permits the document
-  content to be processed by that service, use the rendered source page to
-  reconcile OCR sidecars and author the final structure. Neither model
-  confidence nor agreement between text extractors replaces visual checking.
+- Use a rendered source page with available approved native vision to author
+  and verify the final structure. Neither model confidence nor agreement
+  between text extractors replaces visual checking.
 
 Search a saved result with bounded context:
 
@@ -188,9 +204,11 @@ Load larger windows only after locating the relevant lines.
 
 ## Convert and verify
 
-Use Pandoc for requested LaTeX or Typst only after the Markdown is accurate.
-Follow the commands and version requirements in the runtime reference. Treat
-conversion as structural translation, not another OCR pass.
+Use Pandoc when converting verified Markdown to LaTeX or Typst. Author native
+Typst directly when that is the requested reconstruction and source-image
+vision is available. Follow the commands and version requirements in the
+runtime reference. Treat conversion as structural translation, not another OCR
+pass.
 
 Render or compile the requested output when its toolchain is available. Compare
 formulas, tables, high-impact values, and suspicious text with the source image.

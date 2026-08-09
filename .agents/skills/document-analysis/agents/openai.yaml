@@ -1,4 +1,4 @@
 interface:
   display_name: "Document Analysis"
-  short_description: "Route documents across parsing and OCR tools"
-  default_prompt: "Use $document-analysis to analyze this document with the best local parser or OCR tool and return the requested structured output."
+  short_description: "Reconstruct documents with vision and optional OCR"
+  default_prompt: "Use $document-analysis to reconstruct this document with the smallest available route and optional local OCR evidence."

@@ -20,11 +20,13 @@ Research baseline: 2026-08-09.
 | --- | --- | --- |
 | Exact reconstruction with nearby `.typ`, `.tex`, or `.md` source | Existing source plus rendered-document verification | Preserve authored formulas and structure without lossy extraction |
 | Born-digital PDF, Office file, metadata, or page image | LiteParse 2.x | Extract embedded structure without unnecessary model inference |
-| General document image or structured scan | PaddleOCR 3.7 with PaddleOCR-VL 1.6 | Compact 0.9B VLM, 109 languages, formulas, tables, charts, Markdown, and broad hardware support |
+| General document image or structured scan | Rendered source plus available approved native vision | Read math and layout in context and author the requested structure directly |
+| Independent local structured sidecar | PaddleOCR 3.7 with PaddleOCR-VL 1.6 | Optional second reading for formulas, tables, charts, and reading order |
 | Plain text with boxes and confidence | PaddleOCR PP-OCRv6 | Avoid a document VLM when layout reconstruction is unnecessary |
-| Handwriting, forms, old scans, or difficult math | Chandra OCR 2 | Strong complex-layout, handwriting, form, table, and math results |
+| Handwriting, forms, old scans, or difficult math needing another local reading | Chandra OCR 2, when viable | Optional specialty fallback with high hardware and time cost |
 | Independent check of an uncertain crop | The other OCR engine | Different model families make disagreement useful evidence |
-| Native Typst output | None | Convert verified Markdown with Pandoc |
+| Native Typst reconstruction | Vision-capable agent | Author directly, then compile and compare with the rendered source |
+| Convert verified OCR Markdown to Typst | Pandoc | Structural conversion without another OCR pass |
 | General photo understanding | A general vision model | Document tools do not interpret the whole scene reliably |
 
 The vendors publish strong results on different benchmark suites. Do not treat
@@ -32,10 +34,12 @@ PaddleOCR's OmniDocBench score and Chandra's olmOCR score as a direct
 head-to-head comparison. Prefer LiteParse before OCR when a PDF already has
 usable native content. For an image-only PDF with a later OCR layer, use the
 embedded text for navigation and prose hints but still judge formulas and
-layout from the page image. Prefer PaddleOCR as the practical structured-image
-default because it is smaller and supports more local hardware paths. Add
-Chandra where its specialties justify the 5B model, stricter weight license,
-and hardware cost.
+layout from the page image. When approved native vision is available, use it to
+author and verify the final structure. PaddleOCR is an optional local second
+reading, not a prerequisite, because even its smaller model adds material
+latency. Add Chandra only where its specialties justify the 5B model, stricter
+weight license, hardware cost, and elapsed time. Missing or impractical local
+models do not block the native-vision route.
 
 A local representative check on 2026-08-07 reinforced two limits. LiteParse
 quickly recovered useful prose and headings from a born-digital mathematics
@@ -66,15 +70,16 @@ fidelity-check formula passages, and scope CPU OCR to a page or crop first.
 quality, and output scoring differ. Validate the selected engines on a few
 representative documents before a large conversion.
 
-## One-time global setup
+## Optional local runtime setup
 
 The agent installer links this unified skill globally for Codex and Claude
-Code; it does not install document runtimes or model weights. From this
-repository, explicitly preview and install all three runtime CLIs once:
+Code; it does not install document runtimes or model weights. The skill does not
+require every local runtime. Install only a selected tool when the user
+explicitly requests that local route. Preview the exact selection first:
 
 ```sh
-./scripts/install-tools.sh --dry-run
-./scripts/install-tools.sh
+./scripts/install-tools.sh --tool paddleocr --dry-run
+./scripts/install-tools.sh --tool paddleocr
 ```
 
 Select one runtime with `--tool liteparse`, `--tool paddleocr`, or
@@ -83,7 +88,9 @@ later, uv's tool executable directory, PaddleOCR's Word-export dependency, and
 Chandra's local Hugging Face dependencies. It diagnoses an installed package
 whose command is missing from `PATH` and never downloads model weights. It
 requires an existing `npm` for LiteParse and `uv` for the OCR engines; it does
-not bootstrap package managers.
+not bootstrap package managers. The PaddleOCR and Chandra CUDA helpers only
+report runtime and device readiness; they do not run OCR, download weights, or
+make inference more accurate.
 
 The default installs PaddleOCR's CPU engine only when PaddleOCR is absent and
 preserves an existing working accelerator engine. On a Linux x86_64 NVIDIA
@@ -179,10 +186,12 @@ Inspect an output directory after any late save failure before rerunning costly
 inference.
 
 The installer verifies that an existing uv-managed tool can import its
-PaddlePaddle engine before reporting it usable. If the import fails, it stops
-before changing the environment. When `python-docx` alone is missing, the
+PaddlePaddle engine before reporting it usable. The CPU route stops when the
+engine import fails. The explicit NVIDIA route may safely rebuild that
+uv-managed environment with the selected GPU engine and restores the prior
+environment if replacement fails. When `python-docx` alone is missing, the
 installer injects that package without recreating the tool or replacing its
-engine. Only `--accelerator nvidia` authorizes replacement of a CPU engine.
+engine. Only `--accelerator nvidia` authorizes engine replacement.
 
 An RTX 3080 has sufficient compute capability for PaddleOCR-VL's documented
 local NVIDIA path, and the 0.9B model is materially smaller than Chandra OCR 2.
@@ -303,10 +312,15 @@ model card before business use. Remove the tool with
 ## Markdown, LaTeX, and Typst
 
 Both OCR engines produce structured Markdown containing LaTeX math. Neither
-documents native Typst output. Use Pandoc 3.1.3 or later, which includes the
-Typst writer.
+documents native Typst output. When native Typst reconstruction is requested,
+an available approved vision-capable agent can author Typst directly from the
+source image and verify the render. Use Pandoc 3.1.3 or later only when
+converting already verified Markdown.
 
-Preserve OCR Markdown as the canonical source and convert beside its assets:
+For a requested Pandoc conversion, preserve verified OCR Markdown as the
+canonical source and convert beside its assets. For direct Typst or another
+non-Markdown reconstruction, keep the requested output canonical and preserve
+OCR Markdown only as a sidecar:
 
 ```sh
 pandoc input.md --from markdown+tex_math_dollars \
@@ -327,13 +341,18 @@ LaTeX engine for `.tex`; do not introduce a TeX distribution implicitly.
 
 - Keep each OCR engine in its own `uv` environment.
 - Keep model caches global rather than inside repositories.
+- Treat local model inference as optional evidence, not a prerequisite merely
+  because its CLI or CUDA runtime is available.
 - Expect Chandra HF to need materially more memory than PaddleOCR-VL.
 - For an image-based PDF with an embedded OCR layer, use LiteParse or that layer
-  for search and prose, PaddleOCR-VL for structured page evidence, and the
-  rendered source image as authority.
-- Benchmark 5-10 representative pages before whole-document processing.
-- On CPU-only hosts, benchmark one representative page before committing to a
-  batch; prefer small crops for repeat readings.
+  for search and prose, available approved native vision for reconstruction,
+  and the rendered source image as authority. Use PaddleOCR-VL or Chandra only
+  when an independent local reading could resolve uncertainty.
+- Start local-model inference with one representative page or crop. Before a
+  planned multi-page or whole-document local-model batch, benchmark a 5-10 page
+  pilot spanning the document's relevant content classes.
+- On CPU-only hosts, prefer small crops for repeat readings and do not expand
+  the pilot unless the measured runtime makes the planned batch practical.
 - Use cropped second passes for uncertain formulas or table cells.
 - Compare rendered output with the source; syntax is not semantic accuracy.
 - Use hosted OCR only after approval because document content leaves the

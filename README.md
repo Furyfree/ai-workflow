@@ -49,8 +49,8 @@ they are not installed globally.
 
 - `ai-project-manager`: assess repository foundations and define one bounded phase
 - `html-plan`: derive a self-contained visual explanation from canonical sources
-- `document-analysis`: route documents through LiteParse, PaddleOCR, or Chandra
-  OCR
+- `document-analysis`: combine canonical sources, LiteParse, native vision, and
+  optional local OCR sidecars
 - `local-pr-review`: provide an explicit or fallback review from a local checkout
 - `passthrough`: audit and tighten a repository as a whole
 - `pr-readiness`: prepare pull-request creation, updates, and merge-readiness checks
@@ -61,13 +61,13 @@ also provides optional `AGENTS.md`, `CLAUDE.md`, `SPEC.md`, `ROADMAP.md`, and
 `TASKS.md` templates. Skills are selected from the current request; using one
 does not keep it active for later unrelated work.
 
-The unified `document-analysis` workflow routes born-digital documents and
-ordinary extraction through LiteParse, structured document images through
-PaddleOCR-VL, and difficult handwriting, forms, old scans, tables, and math
-through Chandra OCR when its runtime fits the host. For image-based PDFs with an
-added OCR layer, it uses embedded text for navigation and prose while keeping
-the rendered page authoritative for formulas and layout. It preserves Markdown
-with LaTeX math and converts verified output to LaTeX or Typst through Pandoc. Its
+The unified `document-analysis` workflow uses LiteParse for born-digital text,
+navigation, screenshots, and quick ordinary OCR. When approved native vision is
+available, it uses rendered source pages for image-based mathematics, layout,
+and direct structured authoring. PaddleOCR-VL and Chandra remain optional local
+second readings; missing, slow, or workload-incompatible models do not block a
+viable native-vision route. The rendered page remains authoritative. The skill
+can author native Typst directly or convert verified Markdown through Pandoc. Its
 [runtime and selection reference](.agents/skills/document-analysis/references/runtime-and-selection.md)
 contains the research, current versions, hardware guidance, licenses, and
 direct setup commands.

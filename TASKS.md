@@ -2,7 +2,8 @@
 
 ## Current phase: Controlled discovery
 
-- [x] Add the unified document-analysis skill, engine-selection research, and
+- [x] Add the unified document-analysis skill with vision-first reconstruction,
+      optional non-blocking local OCR sidecars, engine-selection research, and
       UI metadata.
 - [x] Extend isolated install, uninstall, and inventory validation to all seven
       skills.

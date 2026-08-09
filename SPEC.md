@@ -126,17 +126,17 @@ materially clearer as HTML. Markdown remains canonical.
 
 ### `document-analysis`
 
-Routes local PDF, Office, image, and text documents among separately managed
-LiteParse, PaddleOCR, and Chandra runtimes. It uses LiteParse for embedded
-document content and proportional screenshots or metadata, including navigation
-and prose hints from an OCR layer over a scanned PDF. It uses PaddleOCR-VL for
-structured document images and Chandra for difficult handwriting, forms, old
-scans, complex tables, math, or a second reading when the runtime fits the host.
-It prefers a verified nearby native source, keeps rendered source pages
-authoritative for image-based mathematics and layout, preserves Markdown with
-LaTeX math, converts requested LaTeX or Typst through Pandoc, and does not edit
-documents, install dependencies, download model weights, start a model server,
-or send content to a hosted service implicitly.
+Routes local PDF, Office, image, and text documents among canonical sources,
+LiteParse, approved native vision, and optional separately managed PaddleOCR or
+Chandra runtimes. It uses LiteParse for embedded content, navigation, quick
+ordinary OCR, screenshots, and metadata. For image-based mathematics and
+layout, it keeps rendered source pages authoritative and uses available native
+vision to author and verify the requested structure. PaddleOCR-VL and Chandra
+are independent local sidecars only when their expected value justifies their
+runtime cost; missing or impractical models do not block another adequate
+route. It can author native Typst directly or convert verified Markdown through
+Pandoc, and it does not edit documents, install dependencies, download model
+weights, start a model server, or send content to a hosted service implicitly.
 
 ### `subagent`
 
