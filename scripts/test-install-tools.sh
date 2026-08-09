@@ -410,6 +410,9 @@ make_fake_command "$paddle_gpu_bin/uv" \
   '    ;;' \
   '  tool:install)' \
   '    printf "uv %s\n" "$*" >>"$FAKE_MANAGER_LOG"' \
+  '    ;;' \
+  '  pip:install)' \
+  '    printf "uv %s\n" "$*" >>"$FAKE_MANAGER_LOG"' \
   '    : >"$FAKE_PADDLE_GPU_MARKER"' \
   '    ;;' \
   '  *) exit 2 ;;' \
@@ -444,8 +447,14 @@ paddle_gpu_output="$(
       --accelerator nvidia
 )"
 grep -Fqx \
-  "uv tool install --force --python 3.12 --index https://www.paddlepaddle.org.cn/packages/stable/cu126/ --with paddlepaddle-gpu>=3.3,<4 --with python-docx>=1.1,<2 paddleocr[doc-parser]>=3.7,<4" \
-  "$paddle_gpu_log" || fail "PaddleOCR NVIDIA reconfiguration command was not exact"
+  "uv tool install --force --python 3.12 --index-strategy first-index --with python-docx>=1.1,<2 paddleocr[doc-parser]>=3.7,<4" \
+  "$paddle_gpu_log" || fail "PaddleOCR NVIDIA tool command was not exact"
+grep -Fqx \
+  "uv pip install --python $paddle_gpu_tools/python --index-strategy first-index --index https://www.paddlepaddle.org.cn/packages/stable/cu126/ paddlepaddle-gpu>=3.3,<4" \
+  "$paddle_gpu_log" || fail "PaddleOCR NVIDIA engine command was not exact"
+if grep -Fq -- "--index-strategy unsafe" "$paddle_gpu_log"; then
+  fail "PaddleOCR NVIDIA installation used an unsafe index strategy"
+fi
 grep -Fq \
   "notice: PaddleOCR CUDA ready: NVIDIA GeForce RTX 3080 (10240 MiB, compute 8.6)" \
   <<<"$paddle_gpu_output" ||

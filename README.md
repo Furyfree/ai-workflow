@@ -160,7 +160,9 @@ pandoc --version
 Chandra's Hugging Face path installs a large PyTorch stack and later downloads
 5B model weights. The supported NVIDIA PaddleOCR path and other
 accelerator-specific guidance are documented in the skill reference. Neither
-runtime installation path downloads OCR model weights.
+runtime installation path downloads OCR model weights. The NVIDIA installer
+resolves PaddleOCR from PyPI before resolving only `paddlepaddle-gpu` against
+the official CUDA index, keeping uv's safe `first-index` strategy throughout.
 
 Remove the independently managed runtimes separately from the skill links:
 

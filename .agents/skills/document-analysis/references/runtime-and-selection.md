@@ -97,6 +97,9 @@ host, preview and explicitly select the GPU engine instead:
 This route requires `nvidia-smi` to report the driver. It selects the official
 CUDA 12.6 wheel for driver 550.54.14 or later, otherwise the CUDA 11.8 wheel for
 driver 450.80.02 or later. It rejects older drivers before package mutation.
+It first resolves PaddleOCR from PyPI, then resolves only `paddlepaddle-gpu`
+with the selected CUDA index. Both operations retain uv's dependency-confusion-
+resistant `first-index` strategy; do not replace it with an `unsafe-*` strategy.
 When a uv-managed PaddleOCR tool currently has the CPU engine, the explicit
 NVIDIA command rebuilds that one isolated tool with `paddlepaddle-gpu`; it does
 not alter Chandra, a project environment, the system Python, or the driver.

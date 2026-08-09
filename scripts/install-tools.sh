@@ -532,7 +532,7 @@ cleanup() {
 trap cleanup EXIT
 
 install_uv_tool() {
-  local tool_name="$1"
+  local paddle_python tool_name="$1"
   case "$tool_name" in
     paddleocr)
       if [[ "${action[paddleocr]}" == "repair" ]]; then
@@ -541,8 +541,7 @@ install_uv_tool() {
       elif [[ "$paddle_accelerator" == "nvidia" ]]; then
         declare -a paddle_install_args=(
           tool install --python 3.12
-          --index "$paddle_cuda_index"
-          --with 'paddlepaddle-gpu>=3.3,<4'
+          --index-strategy first-index
           --with 'python-docx>=1.1,<2'
           'paddleocr[doc-parser]>=3.7,<4'
         )
@@ -550,6 +549,13 @@ install_uv_tool() {
           paddle_install_args=(tool install --force "${paddle_install_args[@]:2}")
         fi
         uv "${paddle_install_args[@]}"
+        paddle_python="$uv_tools_dir/paddleocr/bin/python"
+        [[ -x "$paddle_python" ]] ||
+          fail "PaddleOCR's rebuilt uv environment has no usable Python interpreter"
+        uv pip install --python "$paddle_python" \
+          --index-strategy first-index \
+          --index "$paddle_cuda_index" \
+          'paddlepaddle-gpu>=3.3,<4'
       else
         uv tool install --python 3.12 \
           --with 'paddlepaddle>=3.3,<4' \
