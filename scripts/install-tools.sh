@@ -354,6 +354,8 @@ inspect_paddleocr_export_support() {
         detail[paddleocr]="replace its CPU engine with the $paddle_cuda_label NVIDIA engine for driver $paddle_driver_version"
       elif [[ $cuda_status -eq 3 ]]; then
         fail "PaddleOCR-VL requires NVIDIA GPU 0 compute capability 7.0 or later"
+      elif [[ $cuda_status -eq 4 ]]; then
+        fail "PaddleOCR's CUDA build has no visible NVIDIA devices; check CUDA_VISIBLE_DEVICES and driver/runtime visibility without reinstalling"
       else
         fail "PaddleOCR's CUDA runtime check failed"
       fi
@@ -392,6 +394,9 @@ report_paddle_gpu_status() {
   fi
   if [[ $cuda_status -eq 3 ]]; then
     fail "PaddleOCR installed, but NVIDIA GPU 0 has compute capability below 7.0"
+  fi
+  if [[ $cuda_status -eq 4 ]]; then
+    fail "PaddleOCR installed, but its CUDA build has no visible NVIDIA devices"
   fi
   fail "PaddleOCR installed, but its CUDA check failed"
 }

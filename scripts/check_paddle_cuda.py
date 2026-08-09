@@ -13,6 +13,10 @@ class UnsupportedCudaCapabilityError(RuntimeError):
     """Raised when GPU 0 cannot run PaddleOCR-VL local inference."""
 
 
+class CudaDeviceUnavailableError(RuntimeError):
+    """Raised when a CUDA build cannot see an NVIDIA device."""
+
+
 def _load_paddle() -> Any:
     import paddle
 
@@ -25,7 +29,9 @@ def cuda_details(paddle: Any) -> tuple[int, int, str] | None:
 
     device_count = paddle.device.cuda.device_count()
     if device_count < 1:
-        return None
+        raise CudaDeviceUnavailableError(
+            "the PaddlePaddle CUDA build has no visible NVIDIA devices"
+        )
 
     devices: list[tuple[str, int, int, int]] = []
     for index in range(device_count):
@@ -56,6 +62,9 @@ def main() -> int:
     except UnsupportedCudaCapabilityError as error:
         print(f"error: {error}", file=sys.stderr)
         return 3
+    except CudaDeviceUnavailableError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 4
     except Exception as error:
         print(f"error: could not inspect PaddleOCR CUDA support: {error}", file=sys.stderr)
         return 2

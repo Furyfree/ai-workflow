@@ -101,6 +101,15 @@ class CheckPaddleCudaTests(unittest.TestCase):
         self.assertEqual(stdout, "")
         self.assertIn("compute capability 6.1", stderr)
 
+    def test_returns_four_when_cuda_build_has_no_visible_devices(self) -> None:
+        fake_paddle = types.SimpleNamespace(device=FakeDevice([]))
+
+        status, stdout, stderr = self.run_main(fake_paddle)
+
+        self.assertEqual(status, 4)
+        self.assertEqual(stdout, "")
+        self.assertIn("CUDA build has no visible NVIDIA devices", stderr)
+
     def test_returns_two_when_cuda_query_fails(self) -> None:
         with mock.patch.object(
             check_paddle_cuda,

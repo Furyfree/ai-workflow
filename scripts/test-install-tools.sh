@@ -398,6 +398,7 @@ make_fake_command "$paddle_gpu_tools/python" \
   'fi' \
   '[[ "${1:-}" == */check_paddle_cuda.py ]] || exit 2' \
   '[[ "${FAKE_PADDLE_UNSUPPORTED:-false}" != "true" ]] || exit 3' \
+  '[[ "${FAKE_PADDLE_NO_VISIBLE:-false}" != "true" ]] || exit 4' \
   '[[ -e "$FAKE_PADDLE_GPU_MARKER" ]] || exit 1' \
   'printf "1\t10240\tNVIDIA GeForce RTX 3080 (10240 MiB, compute 8.6)\n"'
 ln -s "$paddle_gpu_tools/paddleocr" "$paddle_gpu_bin/paddleocr"
@@ -508,6 +509,25 @@ fi
 grep -Fq "requires NVIDIA GPU 0 compute capability 7.0 or later" \
   "$paddle_old_gpu_error" ||
   fail "unsupported PaddleOCR GPU capability was not explained"
+rm -f -- "$paddle_gpu_marker"
+
+: >"$paddle_gpu_marker"
+paddle_hidden_gpu_error="$test_root/paddle-hidden-gpu.log"
+paddle_log_before_hidden_gpu="$(<"$paddle_gpu_log")"
+if PATH="$paddle_gpu_bin:$base_bin" FAKE_PADDLE_NO_VISIBLE=true \
+  FAKE_MANAGER_LOG="$paddle_gpu_log" \
+  FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+  FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+  FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+  "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+    --accelerator nvidia --dry-run >"$paddle_hidden_gpu_error" 2>&1; then
+  fail "installer accepted a CUDA build without visible NVIDIA devices"
+fi
+grep -Fq "CUDA build has no visible NVIDIA devices" \
+  "$paddle_hidden_gpu_error" ||
+  fail "hidden PaddleOCR NVIDIA devices were not explained"
+[[ "$(<"$paddle_gpu_log")" == "$paddle_log_before_hidden_gpu" ]] ||
+  fail "installer reconfigured a CUDA build without visible devices"
 rm -f -- "$paddle_gpu_marker"
 
 paddle_no_gpu_bin="$test_root/paddle-no-gpu-bin"
