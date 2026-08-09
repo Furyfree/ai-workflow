@@ -178,13 +178,14 @@ first.
 ### Limited-VRAM NVIDIA GPUs
 
 The Chandra OCR 2 model card lists a 5B BF16 model, and its published checkpoint
-weights total about 10.6 GB. A 10 GB RTX 3080 therefore cannot keep the complete
-BF16 checkpoint in VRAM, while a 12 GB GPU leaves little room for activations
-and other runtime allocations. Chandra's Hugging Face loader uses
-`device_map="auto"`, so Transformers and Accelerate may place layers on the CPU,
-but whether that succeeds and performs acceptably also depends on system RAM,
-the installed PyTorch and CUDA build, and the driver. Treat this as a sizing
-estimate from the published model, not an official RTX 3080 compatibility
+weights total about 10.6 GB. On a 10 GB RTX 3080, the raw weights consume almost
+all nominal VRAM and leave no practical headroom for CUDA, image inputs,
+activations, and generation. A 12 GB GPU also leaves little runtime headroom.
+Chandra's Hugging Face loader uses `device_map="auto"`, so Transformers and
+Accelerate may place layers on the CPU, but whether that succeeds and performs
+acceptably also depends on system RAM, the installed PyTorch and CUDA build,
+and the driver. A host with 32 GB system RAM has a reasonable starting pool for
+limited CPU offload, but that is not an official minimum or a compatibility
 guarantee.
 
 On this class of GPU, start with Hugging Face inference, a batch size of 1, and
@@ -203,7 +204,8 @@ Chandra's PyTorch build can use it and reports the visible GPU memory:
 ```
 
 After approval for the first model download, run a one-page smoke test before a
-larger job:
+larger job. Chandra's PDF page range is zero-based, so `0` selects the first
+page and human page number `N` uses index `N-1`:
 
 ```sh
 document_tmp_dir="$(mktemp -d)" || exit 1

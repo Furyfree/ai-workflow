@@ -140,7 +140,7 @@ pandoc --version
 ```
 
 Chandra's Hugging Face path installs a large PyTorch stack and later downloads
-4B model weights. Accelerator-specific PaddleOCR and Chandra setup depends on
+5B model weights. Accelerator-specific PaddleOCR and Chandra setup depends on
 the host driver and is documented in the skill reference. The tool installer
 uses PaddleOCR's portable CPU package; use the documented direct setup instead
 when an accelerator-specific PaddlePaddle build is required.

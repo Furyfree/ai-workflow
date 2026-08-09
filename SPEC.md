@@ -180,8 +180,10 @@ with early stopping.
   commands and customized inference engines, diagnoses unsupported versions and
   installed packages missing from `PATH`, checks Node.js, uv's executable path,
   and PaddlePaddle engine imports before mutation, keeps the two Python OCR
-  stacks isolated, bounds concurrent uv installs, and does not install package
-  managers, model weights, GPU drivers, Pandoc, or model servers.
+  stacks isolated, bounds concurrent uv installs, and runs an advisory Chandra
+  CUDA and VRAM check only when an NVIDIA GPU is visible. It does not replace
+  accelerator packages or install package managers, model weights, GPU drivers,
+  Pandoc, or model servers.
 - Re-running skill installation discovers newly added canonical skill
   directories. The known `liteparse` to `document-analysis` rename migrates
   both agent links, restores any backup owned by the old target, and updates the
@@ -214,7 +216,8 @@ with early stopping.
   missing uv tools concurrently, repairs incomplete PaddleOCR and Chandra
   environments without replacing custom engines, and diagnoses unsupported
   Node.js or LiteParse versions, broken commands, missing PaddlePaddle engines,
-  and package-to-`PATH` mismatches.
+  package-to-`PATH` mismatches, and Chandra CUDA and limited-VRAM states without
+  requiring a GPU.
 - Isolated tests prove pruning removes only obsolete manifest-owned skills,
   leaves unrelated user skills unchanged, and remains inert during dry runs.
 - Codex policy checks allow the documented low-risk examples and leave

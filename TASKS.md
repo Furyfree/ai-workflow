@@ -10,8 +10,9 @@
       runtime installer.
 - [x] Preflight runtime tools, versions, and paths as one plan; install missing
       uv tools concurrently; reject missing PaddlePaddle engines; repair extras
-      without replacing custom accelerator engines; and add manifest-scoped
-      skill pruning.
+      without replacing custom accelerator engines; report advisory Chandra
+      CUDA and VRAM status only when an NVIDIA GPU is visible; and add
+      manifest-scoped skill pruning.
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
 - [ ] Confirm both agents discover and invoke all seven skills, including the
       unified document routing without implicit runtime installation.

@@ -48,8 +48,9 @@ Current phase: **controlled discovery**.
       runtimes without installing model weights.
 - [x] Preflight runtime versions and paths, install missing uv tools concurrently
       in isolated environments, verify PaddlePaddle engine imports, preserve
-      custom accelerator engines during repair, and prune only obsolete
-      manifest-owned skills.
+      custom accelerator engines during repair, report advisory Chandra CUDA
+      and VRAM status only when an NVIDIA GPU is visible, and prune only
+      obsolete manifest-owned skills.
 - [x] Use local pull-request review in readiness checks and propose coherent
       commit groups when one large commit would mix independent outcomes.
 - [x] Document useful Codex slash-command handoffs without making skills depend
