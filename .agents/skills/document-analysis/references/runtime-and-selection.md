@@ -4,7 +4,7 @@
 
 - [Current recommendation](#current-recommendation)
 - [Alternatives considered](#alternatives-considered)
-- [One-time global setup](#one-time-global-setup)
+- [Optional local runtime setup](#optional-local-runtime-setup)
 - [LiteParse](#liteparse)
 - [PaddleOCR](#paddleocr)
 - [Chandra OCR](#chandra-ocr)
