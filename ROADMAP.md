@@ -54,8 +54,9 @@ Current phase: **controlled discovery**.
 - [x] Add an explicit Linux x86_64 NVIDIA PaddleOCR path that selects the
       supported CUDA 12.6 or 11.8 wheel from the driver, rebuilds only an
       uv-managed CPU tool when requested, resolves PyPI and GPU-index packages
-      separately with `first-index`, verifies CUDA, and keeps model downloads
-      separate from runtime installation.
+      separately with `first-index`, restores the prior environment after a
+      failed replacement, reinjects an engine omitted by `uv tool upgrade`,
+      verifies CUDA, and keeps model downloads separate from installation.
 - [x] Use local pull-request review in readiness checks and propose coherent
       commit groups when one large commit would mix independent outcomes.
 - [x] Document useful Codex slash-command handoffs without making skills depend

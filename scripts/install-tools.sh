@@ -334,8 +334,17 @@ inspect_paddleocr_export_support() {
   uv_python[paddleocr]="$python_path"
   [[ -x "$python_path" ]] ||
     fail "PaddleOCR's uv environment has no usable Python interpreter"
-  "$python_path" -c 'import paddle' >/dev/null 2>&1 ||
+  if ! "$python_path" -c 'import paddle' >/dev/null 2>&1; then
+    if [[ "$paddle_accelerator" == "nvidia" ]]; then
+      load_uv_inventory
+      uv_package_exists paddleocr ||
+        fail "PaddleOCR is not uv-managed and cannot be reconfigured safely"
+      action[paddleocr]="reconfigure"
+      detail[paddleocr]="restore its missing engine with the $paddle_cuda_label NVIDIA engine for driver $paddle_driver_version"
+      return 0
+    fi
     fail "PaddleOCR's uv environment cannot import a PaddlePaddle engine; install the hardware-compatible engine explicitly"
+  fi
 
   if [[ "$paddle_accelerator" == "nvidia" ]]; then
     if cuda_details="$(
@@ -532,7 +541,8 @@ cleanup() {
 trap cleanup EXIT
 
 install_uv_tool() {
-  local paddle_python tool_name="$1"
+  local paddle_backup_bin="" paddle_backup_dir="" paddle_python
+  local tool_name="$1"
   case "$tool_name" in
     paddleocr)
       if [[ "${action[paddleocr]}" == "repair" ]]; then
@@ -547,15 +557,54 @@ install_uv_tool() {
         )
         if [[ "${action[paddleocr]}" == "reconfigure" ]]; then
           paddle_install_args=(tool install --force "${paddle_install_args[@]:2}")
+          paddle_backup_dir="$uv_tools_dir/.paddleocr.ai-workflow-backup.$BASHPID"
+          paddle_backup_bin="$install_tmp_dir/paddleocr-bin-backup.$BASHPID"
+          [[ -d "$uv_tools_dir/paddleocr" ]] || {
+            printf '%s\n' \
+              "error: PaddleOCR's uv environment disappeared before reconfiguration" >&2
+            return 1
+          }
+          [[ ! -e "$paddle_backup_dir" && ! -L "$paddle_backup_dir" ]] || {
+            printf 'error: refusing to replace existing backup: %s\n' \
+              "$paddle_backup_dir" >&2
+            return 1
+          }
+          if [[ -e "$uv_bin_dir/paddleocr" || -L "$uv_bin_dir/paddleocr" ]]; then
+            cp -a -- "$uv_bin_dir/paddleocr" "$paddle_backup_bin" || return 1
+          fi
+          if ! mv -- "$uv_tools_dir/paddleocr" "$paddle_backup_dir"; then
+            rm -f -- "$paddle_backup_bin"
+            return 1
+          fi
         fi
-        uv "${paddle_install_args[@]}"
-        paddle_python="$uv_tools_dir/paddleocr/bin/python"
-        [[ -x "$paddle_python" ]] ||
-          fail "PaddleOCR's rebuilt uv environment has no usable Python interpreter"
-        uv pip install --python "$paddle_python" \
-          --index-strategy first-index \
-          --index "$paddle_cuda_index" \
-          'paddlepaddle-gpu>=3.3,<4'
+        if uv "${paddle_install_args[@]}" &&
+          paddle_python="$uv_tools_dir/paddleocr/bin/python" &&
+          [[ -x "$paddle_python" ]] &&
+          uv pip install --python "$paddle_python" \
+            --index-strategy first-index \
+            --index "$paddle_cuda_index" \
+            'paddlepaddle-gpu>=3.3,<4' &&
+          working_command paddleocr doc_parser --help &&
+          "$paddle_python" -c 'import paddle, docx' >/dev/null 2>&1 &&
+          "$paddle_python" "$script_dir/check_paddle_cuda.py" \
+            >/dev/null 2>&1; then
+          if [[ -n "$paddle_backup_dir" ]]; then
+            rm -rf -- "$paddle_backup_dir"
+            rm -f -- "$paddle_backup_bin"
+          fi
+        else
+          if [[ -n "$paddle_backup_dir" && -d "$paddle_backup_dir" ]]; then
+            rm -rf -- "$uv_tools_dir/paddleocr"
+            mv -- "$paddle_backup_dir" "$uv_tools_dir/paddleocr"
+            rm -f -- "$uv_bin_dir/paddleocr"
+            if [[ -e "$paddle_backup_bin" || -L "$paddle_backup_bin" ]]; then
+              mv -- "$paddle_backup_bin" "$uv_bin_dir/paddleocr"
+            fi
+            printf '%s\n' \
+              'warning: PaddleOCR NVIDIA reconfiguration failed; restored the previous uv tool environment' >&2
+          fi
+          return 1
+        fi
       else
         uv tool install --python 3.12 \
           --with 'paddlepaddle>=3.3,<4' \

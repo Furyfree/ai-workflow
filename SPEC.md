@@ -188,8 +188,11 @@ with early stopping.
   CUDA 12.6 or 11.8 wheel from the detected driver, may rebuild only an
   uv-managed PaddleOCR tool, resolves PaddleOCR and its GPU engine separately
   with uv's dependency-confusion-resistant `first-index` strategy, and must
-  verify CUDA and GPU 0 compute capability 7.0 or later afterward. Chandra
-  retains its advisory CUDA and VRAM check.
+  retain or restore the prior tool until the replacement passes CUDA
+  verification. Because uv's tool receipt cannot persist the separately
+  sourced GPU engine, the same explicit route repairs an engine removed by a
+  later `uv tool upgrade`. GPU 0 must have compute capability 7.0 or later.
+  Chandra retains its advisory CUDA and VRAM check.
   Runtime installation does not install package managers, model weights, GPU
   drivers, Pandoc, or model servers.
 - Re-running skill installation discovers newly added canonical skill
@@ -225,8 +228,9 @@ with early stopping.
   environments without replacing custom engines, and diagnoses unsupported
   Node.js or LiteParse versions, broken commands, missing PaddlePaddle engines,
   package-to-`PATH` mismatches, PaddleOCR NVIDIA driver selection and CUDA
-  readiness, safe package-source separation, and Chandra CUDA and limited-VRAM
-  states without requiring a GPU.
+  readiness, safe package-source separation, failed NVIDIA reconfiguration
+  rollback, post-upgrade GPU-engine reinjection, and Chandra CUDA and
+  limited-VRAM states without requiring a GPU.
 - Isolated tests prove pruning removes only obsolete manifest-owned skills,
   leaves unrelated user skills unchanged, and remains inert during dry runs.
 - Codex policy checks allow the documented low-risk examples and leave

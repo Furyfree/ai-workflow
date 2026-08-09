@@ -103,7 +103,9 @@ resistant `first-index` strategy; do not replace it with an `unsafe-*` strategy.
 When a uv-managed PaddleOCR tool currently has the CPU engine, the explicit
 NVIDIA command rebuilds that one isolated tool with `paddlepaddle-gpu`; it does
 not alter Chandra, a project environment, the system Python, or the driver.
-After installation it verifies that PaddlePaddle sees at least one CUDA device.
+The installer retains the prior tool until the replacement passes its CUDA
+check and restores it if package installation or verification fails. After
+installation it verifies that PaddlePaddle sees at least one CUDA device.
 GPU 0 must also have compute capability 7.0 or later, matching PaddleOCR-VL's
 documented local inference requirement.
 
@@ -203,7 +205,10 @@ import is runtime readiness, not an OCR quality result.
 
 The first `doc_parser` run downloads models and may download a rendering font.
 Keep those network and disk changes explicit. Upgrade deliberately with
-`uv tool upgrade paddleocr`, then rerun a known sample because PaddleOCR 3.x has
+`uv tool upgrade paddleocr`. Because uv's receipt does not include the NVIDIA
+engine injected from its separate package index, rerun
+`install-tools.sh --tool paddleocr --accelerator nvidia` afterward. It safely
+reinjects a missing engine. Then rerun a known sample because PaddleOCR 3.x has
 changed CLI and dependency contracts between minor releases. Remove it with
 `uv tool uninstall paddleocr`.
 

@@ -106,8 +106,10 @@ This requires a working `nvidia-smi`. It selects PaddlePaddle's CUDA 12.6 wheel
 for driver 550.54.14 or later and its CUDA 11.8 wheel for driver 450.80.02 or
 later, then verifies that the isolated runtime sees a CUDA device. An explicit
 NVIDIA selection also requires GPU 0 compute capability 7.0 or later and
-rebuilds an existing uv-managed CPU PaddleOCR environment. A normal run still
-preserves a working accelerator-specific environment.
+rebuilds an existing uv-managed CPU PaddleOCR environment. It retains that
+environment until the replacement passes its CUDA check and restores it if the
+replacement fails. A normal run still preserves a working accelerator-specific
+environment.
 
 The runtime installer puts PaddleOCR and Chandra in separate `uv` tool
 environments so their Python dependencies do not conflict. After inspecting all
@@ -123,13 +125,16 @@ In-place repair uses `uv pip install --python` inside the existing tool
 environment. It adds `python-docx` to PaddleOCR or the Hugging Face dependencies
 to Chandra without recreating the environment, so an existing CUDA or other
 accelerator-specific PaddlePaddle build is preserved. A later `uv tool upgrade`
-may reconstruct the environment from its original receipt; rerun this installer
-after deliberate tool upgrades to recheck the extras.
+may reconstruct the environment from its original receipt, which cannot record
+the separately sourced NVIDIA engine. After a deliberate upgrade, rerun this
+installer with `--tool paddleocr --accelerator nvidia`; it detects and safely
+reinserts a missing engine.
 
 Before skipping or repairing a uv-managed PaddleOCR environment, the installer
-also verifies that its PaddlePaddle engine imports successfully. If the engine
-is absent or broken, it stops before mutation. The NVIDIA route is explicit;
-the installer never infers it merely because a GPU happens to be visible.
+also verifies that its PaddlePaddle engine imports successfully. The CPU route
+stops if the engine is absent or broken. The explicit NVIDIA route can rebuild
+that uv-managed environment with the selected GPU engine; it is never inferred
+merely because a GPU happens to be visible.
 
 "Global" here means available from every repository through the user's
 `PATH`, not installed into each project or the system Python. LiteParse uses the

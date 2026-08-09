@@ -20,7 +20,7 @@ fail() {
 
 base_bin="$test_root/base-bin"
 mkdir -p "$base_bin"
-for command_name in bash cat chmod cp dirname env grep ln mkdir mktemp readlink rm sleep uname; do
+for command_name in bash cat chmod cp dirname env grep ln mkdir mktemp mv readlink rm sleep uname; do
   command_path="$(command -v "$command_name")" ||
     fail "test dependency missing: $command_name"
   ln -s "$command_path" "$base_bin/$command_name"
@@ -387,20 +387,32 @@ grep -Fq "about 10.6 GB of BF16 weights" <<<"$gpu_ready_output" ||
 paddle_gpu_bin="$test_root/paddle-gpu-bin"
 paddle_gpu_tools_root="$test_root/paddle-gpu-tools"
 paddle_gpu_tools="$paddle_gpu_tools_root/paddleocr/bin"
+paddle_gpu_prior_sources="$test_root/paddle-gpu-prior-sources"
+paddle_gpu_sources="$test_root/paddle-gpu-replacement-sources"
 paddle_gpu_log="$test_root/paddle-gpu.log"
 paddle_gpu_marker="$test_root/paddle-gpu-ready"
-mkdir -p "$paddle_gpu_bin" "$paddle_gpu_tools"
-make_fake_command "$paddle_gpu_tools/paddleocr" \
+mkdir -p "$paddle_gpu_bin" "$paddle_gpu_tools" "$paddle_gpu_sources"
+make_fake_command "$paddle_gpu_sources/paddleocr" \
   '[[ "${1:-}:${2:-}" == "doc_parser:--help" ]] || exit 2'
-make_fake_command "$paddle_gpu_tools/python" \
+make_fake_command "$paddle_gpu_sources/python" \
   'if [[ "${1:-}" == "-c" ]]; then' \
-  '  case "${2:-}" in "import paddle"|"import docx") exit 0 ;; *) exit 2 ;; esac' \
+  '  case "${2:-}" in' \
+  '    "import paddle"|"import paddle, docx")' \
+  '      [[ "${FAKE_PADDLE_IMPORT_MISSING:-false}" != "true" || -e "$FAKE_PADDLE_GPU_MARKER" ]]' \
+  '      ;;' \
+  '    "import docx") exit 0 ;;' \
+  '    *) exit 2 ;;' \
+  '  esac' \
+  '  exit' \
   'fi' \
   '[[ "${1:-}" == */check_paddle_cuda.py ]] || exit 2' \
   '[[ "${FAKE_PADDLE_UNSUPPORTED:-false}" != "true" ]] || exit 3' \
   '[[ "${FAKE_PADDLE_NO_VISIBLE:-false}" != "true" ]] || exit 4' \
   '[[ -e "$FAKE_PADDLE_GPU_MARKER" ]] || exit 1' \
   'printf "1\t10240\tNVIDIA GeForce RTX 3080 (10240 MiB, compute 8.6)\n"'
+cp -a -- "$paddle_gpu_sources" "$paddle_gpu_prior_sources"
+ln -s "$paddle_gpu_prior_sources/paddleocr" "$paddle_gpu_tools/paddleocr"
+ln -s "$paddle_gpu_prior_sources/python" "$paddle_gpu_tools/python"
 ln -s "$paddle_gpu_tools/paddleocr" "$paddle_gpu_bin/paddleocr"
 make_fake_command "$paddle_gpu_bin/uv" \
   'case "${1:-}:${2:-}" in' \
@@ -410,9 +422,14 @@ make_fake_command "$paddle_gpu_bin/uv" \
   '    ;;' \
   '  tool:install)' \
   '    printf "uv %s\n" "$*" >>"$FAKE_MANAGER_LOG"' \
+  '    mkdir -p "$FAKE_UV_TOOLS_DIR/paddleocr/bin"' \
+  '    ln -sf "$FAKE_PADDLE_COMMAND_SOURCE/paddleocr" "$FAKE_UV_TOOLS_DIR/paddleocr/bin/paddleocr"' \
+  '    ln -sf "$FAKE_PADDLE_COMMAND_SOURCE/python" "$FAKE_UV_TOOLS_DIR/paddleocr/bin/python"' \
+  '    ln -sf "$FAKE_UV_TOOLS_DIR/paddleocr/bin/paddleocr" "$FAKE_UV_BIN_DIR/paddleocr"' \
   '    ;;' \
   '  pip:install)' \
   '    printf "uv %s\n" "$*" >>"$FAKE_MANAGER_LOG"' \
+  '    [[ "${FAKE_PADDLE_PIP_FAIL:-false}" != "true" ]] || exit 1' \
   '    : >"$FAKE_PADDLE_GPU_MARKER"' \
   '    ;;' \
   '  *) exit 2 ;;' \
@@ -424,6 +441,7 @@ make_fake_command "$paddle_gpu_bin/nvidia-smi" \
 paddle_gpu_dry_output="$(
   PATH="$paddle_gpu_bin:$base_bin" \
     FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_COMMAND_SOURCE="$paddle_gpu_sources" \
     FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
     FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
     FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
@@ -440,6 +458,7 @@ grep -Fq \
 paddle_gpu_output="$(
   PATH="$paddle_gpu_bin:$base_bin" \
     FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_COMMAND_SOURCE="$paddle_gpu_sources" \
     FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
     FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
     FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
@@ -464,6 +483,7 @@ paddle_gpu_first_log="$(<"$paddle_gpu_log")"
 paddle_gpu_second_output="$(
   PATH="$paddle_gpu_bin:$base_bin" \
     FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_COMMAND_SOURCE="$paddle_gpu_sources" \
     FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
     FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
     FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
@@ -476,10 +496,61 @@ grep -Fq "skip: PaddleOCR CUDA is available" <<<"$paddle_gpu_second_output" ||
   fail "repeated PaddleOCR NVIDIA installation was not idempotent"
 
 rm -f -- "$paddle_gpu_marker"
+ln -sf "$paddle_gpu_prior_sources/paddleocr" "$paddle_gpu_tools/paddleocr"
+ln -sf "$paddle_gpu_prior_sources/python" "$paddle_gpu_tools/python"
+: >"$paddle_gpu_tools/previous-environment"
+paddle_rollback_error="$test_root/paddle-rollback.log"
+if PATH="$paddle_gpu_bin:$base_bin" FAKE_PADDLE_PIP_FAIL=true \
+  FAKE_MANAGER_LOG="$paddle_gpu_log" \
+  FAKE_PADDLE_COMMAND_SOURCE="$paddle_gpu_sources" \
+  FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+  FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+  FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+  "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+    --accelerator nvidia >"$paddle_rollback_error" 2>&1; then
+  fail "failed PaddleOCR NVIDIA engine installation reported success"
+fi
+grep -Fq "restored the previous uv tool environment" \
+  "$paddle_rollback_error" ||
+  fail "failed PaddleOCR NVIDIA engine installation did not report rollback"
+[[ -e "$paddle_gpu_tools/previous-environment" ]] ||
+  fail "failed PaddleOCR NVIDIA engine installation did not restore the prior environment"
+[[ -x "$paddle_gpu_tools/python" && -x "$paddle_gpu_tools/paddleocr" ]] ||
+  fail "PaddleOCR rollback did not restore its commands"
+[[ "$(readlink -f "$paddle_gpu_tools/python")" == \
+  "$paddle_gpu_prior_sources/python" ]] ||
+  fail "PaddleOCR rollback retained the replacement Python command"
+[[ "$(readlink -f "$paddle_gpu_tools/paddleocr")" == \
+  "$paddle_gpu_prior_sources/paddleocr" ]] ||
+  fail "PaddleOCR rollback retained the replacement PaddleOCR command"
+if compgen -G "$paddle_gpu_tools_root/.paddleocr.ai-workflow-backup.*" \
+  >/dev/null; then
+  fail "PaddleOCR rollback left its temporary environment backup behind"
+fi
+
+paddle_missing_engine_output="$(
+  PATH="$paddle_gpu_bin:$base_bin" FAKE_PADDLE_IMPORT_MISSING=true \
+    FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_COMMAND_SOURCE="$paddle_gpu_sources" \
+    FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
+    FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
+    FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
+    "$repo_root/scripts/install-tools.sh" --tool paddleocr \
+      --accelerator nvidia
+)"
+grep -Fq \
+  "reconfigure: paddleocr in an isolated uv tool environment" \
+  <<<"$paddle_missing_engine_output" ||
+  fail "PaddleOCR NVIDIA installation did not repair a missing injected engine"
+grep -Fq "notice: PaddleOCR CUDA ready" <<<"$paddle_missing_engine_output" ||
+  fail "PaddleOCR missing-engine repair did not verify CUDA"
+
+rm -f -- "$paddle_gpu_marker"
 paddle_cu118_output="$(
   PATH="$paddle_gpu_bin:$base_bin" \
     FAKE_NVIDIA_DRIVER=535.54.03 \
     FAKE_MANAGER_LOG="$paddle_gpu_log" \
+    FAKE_PADDLE_COMMAND_SOURCE="$paddle_gpu_sources" \
     FAKE_PADDLE_GPU_MARKER="$paddle_gpu_marker" \
     FAKE_UV_BIN_DIR="$paddle_gpu_bin" \
     FAKE_UV_TOOLS_DIR="$paddle_gpu_tools_root" \
