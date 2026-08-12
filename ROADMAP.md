@@ -77,9 +77,10 @@ Start after the portable core passes locally and installation is authorized.
       runtime or model installation.
 - [ ] Confirm fresh requests select only matching skills and do not inherit a
       workflow from earlier unrelated work.
-- [ ] Confirm agents prefer existing capabilities, avoid hypothetical future
-      work, preserve required safeguards in small diffs, and trace bug callers
-      to shared causes.
+- [ ] Confirm agents prefer existing capabilities and project-declared
+      dependencies, avoid hypothetical future work, preserve required
+      safeguards in small diffs, and fix root causes at the narrowest correct
+      layer.
 - [ ] Confirm repository-foundation planning assesses optional Codex Cloud and
       hosted Codex review without changing external state.
 - [ ] Confirm the installed global Codex policy handles required read-only

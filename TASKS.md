@@ -19,8 +19,9 @@
       reconfiguration, dependency-confusion-safe package-source separation,
       rollback on failed replacement, post-upgrade engine reinjection, CUDA
       verification, and no implicit model download.
-- [x] Tighten shared change guidance around existing capabilities, YAGNI,
-      required safeguards, and root-cause fixes.
+- [x] Tighten shared change guidance around existing capabilities,
+      project-declared dependencies, YAGNI, required safeguards, and root-cause
+      fixes.
 - [ ] Confirm Codex and Claude Code load the linked global instructions.
 - [ ] Confirm both agents discover and invoke all seven skills, including the
       unified document routing without implicit runtime installation.
@@ -29,9 +30,10 @@
       LaTeX, and Typst paths in fresh sessions.
 - [ ] In fresh sessions, confirm ordinary edits do not activate planning,
       passthrough, or pull-request workflows.
-- [ ] In fresh sessions, confirm agents prefer existing capabilities, avoid
-      hypothetical future work, preserve required safeguards in small diffs,
-      and trace bug callers to shared causes.
+- [ ] In fresh sessions, confirm agents prefer existing capabilities and
+      project-declared dependencies, avoid hypothetical future work, preserve
+      required safeguards in small diffs, and fix root causes at the narrowest
+      correct layer.
 - [ ] Confirm a request to create a pull request or commit further work to an
       existing pull request activates `pr-readiness`.
 - [ ] Confirm a local-review request activates `local-pr-review`, while a

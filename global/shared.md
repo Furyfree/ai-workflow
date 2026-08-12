@@ -15,8 +15,8 @@ instruction says otherwise.
   only when the user or repository instructions authorize it.
 - Follow the repository's existing architecture, code patterns, naming, tests,
   and style before introducing a new pattern.
-- For bug fixes, trace the affected flow and callers, then fix the shared cause
-  rather than only the reported symptom.
+- For bug fixes, trace the affected flow and callers, then fix the root cause
+  at the narrowest correct layer rather than only the reported symptom.
 - Treat existing user changes as intentional unless evidence shows otherwise.
 - Surface conflicts between instructions, requirements, plans, and code.
 - Resolve uncertainty by inspecting evidence. Say when a premise appears wrong,
@@ -32,10 +32,10 @@ instruction says otherwise.
   handling, or established repository architecture for a smaller diff.
 - Keep repository-specific commands, architecture, and hazards in that
   repository.
-- Prefer existing code, configuration, standard-library and platform
-  capabilities, and installed dependencies before adding new machinery. Do not
-  add functionality, dependencies, abstractions, or configuration for
-  hypothetical future needs.
+- Prefer existing code and configuration, standard-library and platform
+  capabilities, and dependencies already declared by the project before adding
+  new machinery. Do not add functionality, dependencies, abstractions, or
+  configuration for hypothetical future needs.
 - Treat thousands of changed lines or a broad rewrite as a scope warning.
   Recheck the request and existing design unless an explicit end-to-end feature,
   migration, or rewrite justifies that size.
