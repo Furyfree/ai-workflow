@@ -8,8 +8,10 @@ across multiple repositories.
 ## Required behavior
 
 - Store shared coding-agent behavior once.
-- Keep shared guidance concise and bias changes toward existing project
-  patterns, proportional scope, and removal of generated bloat.
+- Keep shared guidance concise and bias changes toward existing project and
+  platform capabilities, proportional scope, root-cause fixes, YAGNI, and
+  removal of generated bloat without trading correctness or required
+  safeguards for smaller diffs.
 - Link the same global instructions into the supported Codex and Claude Code
   locations.
 - Install a small Codex-only rules file for low-risk inspection and validation
