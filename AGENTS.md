@@ -1,79 +1,40 @@
-# Repository instructions
+# ai-workflow
 
-## Scope
+One rules file and a few skills, linked into every coding agent I use:
+OpenCode, Claude Code, Codex, Grok, and later Pi.
 
-This repository owns portable coding-agent instructions, seven reusable skills,
-project templates, a small Codex command policy, and a Linux installer for
-Codex and Claude Code.
+## What must not break
 
-## Repository-specific boundaries
+- `rules.md` stays short; every session of every model reads all of it.
+- Skills start from plain words in every agent and model. No slash commands.
+- Rules: imperative, "never" and "only", the exception next to its rule.
+  Skill descriptions: quoted phrases I really type, in English and Danish,
+  plus a "Not ..." line. Cheap models match them literally.
+- Non-goals: review policy in `rules.md`, planning docs, an installer that
+  edits agent config files.
 
-- Change repository sources only. Do not run real installation or uninstall
-  against active agent homes while maintaining this repository.
-- Keep shared instructions agent-neutral and put tool-specific policy in the
-  relevant skill, rules file, or other clearly scoped source.
-- Base task branches on `main` and use short names matching the requested work.
+## Map
 
-## Git and pull requests
+- `rules.md`: the global rules. A new habit of mine goes here, one bullet.
+- `skills/<name>/SKILL.md`: my skills. New trigger phrases go in `description`.
+- `skills/validate/run.sh`: the validator commands. CLI flag changes go here.
+- `skills/subagent/SKILL.md`: how to reach other models. No versioned ids.
+- `vendor/<name>/`: foreign skills, copied unchanged. To update one, copy the
+  new upstream files and the new commit into the README table. Never edit.
+- `install.sh`: the link targets per agent. A new agent is one line here.
+- `check.sh`: line budgets. When one fails, cut text; do not raise it.
+- Pi extensions later: `extensions/` plus a root `package.json`. Not before.
 
-- Follow the global authorization boundaries without broadening them.
-- For a requested commit, stage only intended paths and inspect the staged
-  diff.
-- Before a requested commit, push, pull-request creation, or pull-request
-  update, run focused checks, `./scripts/validate.sh`, and `pr-readiness`.
-- Keep hosted and local review lifecycle policy in the relevant skills rather
-  than duplicating it here.
+## Ways to hurt yourself
 
-After a requested publication, report completion as a short list:
+- Do not run `install.sh` or touch `~/.claude`, `~/.codex`, `~/.agents`,
+  `~/.grok`, `~/.config/opencode`, or `~/.pi` unless I ask. They are live.
+- Skills are linked, not copied: an edit here changes every agent at once.
 
-- pull request number and URL
-- branch and commit
-- checks that passed
-- actionable review findings, naming each problem and its disposition
-- unavailable or skipped evidence
+## Verify
 
-## Document ownership
+`./check.sh`. For `install.sh`, run it with `HOME` set to a temp directory.
 
-- `SPEC.md`: requirements and boundaries
-- `ROADMAP.md`: phase order and exit criteria
-- `roadmap/<topic>.md`: research and decisions for one linked complex phase
-- `TASKS.md`: current work and validation status
-- `README.md`: installation, recovery, validation, and the public overview
-- A skill's `SKILL.md`: that reusable workflow
+## Git
 
-Do not create additional planning or implementation documents when one of these
-files already owns the information. A roadmap detail file is an exception only
-when `ROADMAP.md` links it and the phase cannot stay concise without it.
-
-## Editing
-
-- Use plain Markdown and simple ASCII punctuation.
-- Keep project-specific commands and requirements out of global instructions.
-- Keep generated HTML derived from canonical Markdown.
-- Prefer instructions over scripts unless deterministic automation is needed.
-- Update the specification, roadmap, and tasks together when their shared
-  contract changes.
-- Do not mark work complete before its evidence passes.
-
-## Code Review Rules
-
-### Documentation contracts
-
-- Review changed documentation and instructions as first-class behavior. Flag
-  claims, commands, paths, authorization boundaries, or recovery guidance that
-  contradict the implementation or would materially mislead an operator.
-- Leave spelling, formatting, and other deterministic Markdown checks to local
-  validation unless they change meaning.
-
-## Validation
-
-Run `./scripts/validate.sh` after changing instructions, skills, templates,
-installation, validation, or repository layout. Also inspect:
-
-```sh
-git status --short
-git diff --check
-git diff --cached --check
-```
-
-Report checks that could not run.
+When I ask for a commit, it goes on main.

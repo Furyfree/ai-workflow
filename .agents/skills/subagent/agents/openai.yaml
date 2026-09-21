@@ -1,4 +1,0 @@
-interface:
-  display_name: "Subagent"
-  short_description: "Delegate bounded independent agent work"
-  default_prompt: "Use $subagent to group and delegate independent work, then review and integrate the results."

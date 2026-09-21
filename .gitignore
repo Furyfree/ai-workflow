@@ -1,47 +1,17 @@
-# Filesystem metadata
 .DS_Store
-Thumbs.db
-
-# Editor state
 .idea/
 .vscode/
 *.swp
-*.swo
 *~
-
-# Secrets and local environment
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-
-# Logs and temporary files
 *.log
-*.tmp
-*.bak
-.tmp/
 tmp/
 
-# Common build and test output
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.venv/
-node_modules/
-coverage/
-dist/
-build/
-target/
-
-# Private agent runtime state
+# Secrets and agent runtime state must never land here
+.env
+.env.*
+*.pem
+*.key
 auth.json
 history.jsonl
-installation_id
-*.sqlite
-*.sqlite-shm
-*.sqlite-wal
+*.sqlite*
 sessions/
-shell_snapshots/
