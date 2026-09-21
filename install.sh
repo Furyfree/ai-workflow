@@ -47,9 +47,10 @@ for t in .claude/CLAUDE.md .codex/AGENTS.md .config/opencode/AGENTS.md .pi/agent
   if [[ -d "$HOME/${t%/*}" ]]; then link "$repo/rules.md" "$HOME/$t"; fi
 done
 
-# Skills. ~/.agents/skills serves OpenCode, Codex, Grok, and Pi; Claude needs its own.
+# Skills. Local names override vendor names; Claude needs its own links.
 for s in "$repo"/skills/*/ "$repo"/vendor/*/; do
   s="${s%/}"
+  if [[ "$s" == "$repo/vendor/"* && -f "$repo/skills/${s##*/}/SKILL.md" ]]; then continue; fi
   link "$s" "$HOME/.agents/skills/${s##*/}"
   if [[ -d "$HOME/.claude" ]]; then link "$s" "$HOME/.claude/skills/${s##*/}"; fi
 done
