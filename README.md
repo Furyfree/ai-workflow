@@ -26,6 +26,11 @@ Say what you want, or name the skill: "use the pr skill".
 | `lean-docs` | "write an AGENTS.md", "debloat the docs" |
 | `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF" - needs `mise use -g npm:@llamaindex/liteparse` |
+| `video-analysis` | A YouTube link, "summarise this video", "transskriber videoen" |
+
+`video-analysis` uses `yt-dlp` (Fedora package managed by Nimbus), Node from
+Mise, and ffmpeg when inspecting video frames. A bare link prompts for
+summary or transcript; instructions or conversation context take precedence.
 
 ## Vendored skills
 

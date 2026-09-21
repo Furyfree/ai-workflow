@@ -1,0 +1,3 @@
+interface:
+  display_name: "Video Analysis"
+  short_description: "Summarize videos or extract timestamped captions"
