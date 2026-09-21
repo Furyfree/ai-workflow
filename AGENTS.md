@@ -29,7 +29,8 @@ OpenCode, Claude Code, Codex, Grok, and later Pi.
 - `install.sh`: the link targets per agent. A new agent is one line here.
 - `check.sh`: fails on real errors. Line counts are aims: go over when the
   lines are needed, never squeeze wording to hit a number.
-- Pi extensions later: `extensions/` plus a root `package.json`. Not before.
+- `extensions/git-commit.ts`: preserved Pi extension; not installed by default.
+  Keep its MIT notice in `extensions/LICENSE`. Integration plans live in docs.
 
 ## Ways to hurt yourself
 

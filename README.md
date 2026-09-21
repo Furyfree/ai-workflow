@@ -45,6 +45,16 @@ skill is a prompt every agent obeys. `use-modern-go` needs Go installed.
 
 The previous pull-request and CodeRabbit workflow is at tag `v1-legacy`.
 
+## Pi extension
+
+`extensions/git-commit.ts` preserves the existing Pi Git extension. It is not
+installed by `install.sh`. `/gencommit` drafts a message; `/commit` commits
+and pushes, staging all changes when nothing is staged or `--all` is used.
+Review that behavior before loading it. Its MIT license is in
+`extensions/LICENSE`; it has not been retested against the current Pi runtime.
+Remaining integration work lives in
+[docs](https://github.com/Furyfree/docs/blob/main/ai-workflow/pi/README.md).
+
 ## Open
 
 - Still to check: whether "validate this" triggers `validate` in a live Codex
