@@ -5,7 +5,7 @@ Code, Codex, Grok, and Pi.
 
     ./install.sh              # link rules and skills into the agent homes
     ./install.sh --uninstall  # remove only the links that point here
-    ./check.sh                # line budgets, skill names, shellcheck
+    ./check.sh                # skill names, vendor sources, shellcheck, selftest
 
 `rules.md` is linked as each agent's global instruction file. Skills are
 linked into `~/.agents/skills` (OpenCode, Codex, Grok, Pi) and
@@ -22,25 +22,21 @@ Say what you want, or name the skill: "use the pr skill".
 | `pr` | "make a PR", "lav en PR", "check the PR" |
 | `subagent` | "use subagents", "ask opus to ...", "have grok check" |
 | `lean-docs` | "write an AGENTS.md", "debloat the docs" |
+| `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF" - needs `mise use -g npm:@llamaindex/liteparse` |
 
 ## Vendored skills
 
-Copied unchanged into `vendor/` (skill files only, no plugins or hooks). Read
-before updating: a skill is a prompt that every agent will follow.
+Foreign skills are copied unchanged into `vendor/`; sources, commits, and
+licenses are in `vendor/SOURCES`. Say "update the vendor skills", or run
+`./update-vendor.sh` and read `git diff vendor/` before keeping anything: a
+skill is a prompt every agent obeys. `use-modern-go` needs Go installed.
 
-| Skill | Source | Commit | License |
-| --- | --- | --- | --- |
-| `stop-slop` | hardikpandya/stop-slop | `8da1f030185b` | MIT |
-| `brainstorm` | maragudk/skills | `9859f7bceb7a` | MIT |
-| `modern-python` | trailofbits/skills | `123037ec8aed` | CC-BY-SA-4.0 |
-| `caveman-commit` | JuliusBrussee/caveman | `ae26f3a47755` | MIT |
-| `caveman` (trial) | JuliusBrussee/caveman | `ae26f3a47755` | MIT |
+## External
 
-## Plugins
-
-Ponytail needs hooks, so it installs once per agent through that agent's own
-plugin system. `find-skills` and `use-modern-go` stay managed by `npx skills`.
+- Ponytail needs hooks, so it is a plugin in each agent. Update it with that
+  agent's own plugin command.
+- `find-skills`: `npx skills update find-skills -g -y`.
 
 The previous pull-request and CodeRabbit workflow is at tag `v1-legacy`.
 

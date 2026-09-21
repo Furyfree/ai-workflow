@@ -17,7 +17,8 @@ open items only. Ask before adding either.
 ## AGENTS.md is a map
 
 Write it so an agent that has never seen the repository knows where to edit.
-60 lines at most, in this order, skipping a section with nothing real in it:
+Aim for under 60 lines, and go over when the lines are needed. Use this order
+and skip a section with nothing real in it:
 
     # <project>
     <What it is and who uses it, two or three sentences.>
