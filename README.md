@@ -6,12 +6,13 @@ Code, Codex, Grok, and Pi.
     ./install.sh              # link rules and skills into the agent homes
     ./install.sh --force      # also replace what is in the way; real files are backed up
     ./install.sh --uninstall  # remove only the links that point here
-    ./check.sh                # skill names, vendor sources, shellcheck, selftest
+    ./check.sh                # structure, shellcheck, notebook and CLI checks
 
 `rules.md` is linked as each agent's global instruction file. Skills are
 linked into `~/.agents/skills` (OpenCode, Codex, Grok, Pi) and
-`~/.claude/skills`. Edits here apply at once; rerun `install.sh` only after
-adding or removing a skill.
+`~/.claude/skills`. Links always point to the current files; start a fresh
+session to load changed instructions. Rerun `install.sh` after adding or
+removing a skill.
 
 ## Skills
 
@@ -35,6 +36,9 @@ skill is a prompt every agent obeys. `use-modern-go` needs Go installed.
 
 ## External
 
+- Chezmoi in `~/Projects/dotfiles` owns persistent agent permission settings.
+  This repo owns instructions, skills, and their links; it does not reproduce
+  account state, local model settings, or installed plugins.
 - Ponytail needs hooks, so it is a plugin in each agent. Update it with that
   agent's own plugin command.
 - `find-skills`: `npx skills update find-skills -g -y`.
@@ -43,10 +47,6 @@ The previous pull-request and CodeRabbit workflow is at tag `v1-legacy`.
 
 ## Open
 
-- Codex has not run these files yet; its usage limit blocked the test. After
-  install, check in a fresh Codex session: `~/.codex/AGENTS.md` is loaded, the
-  skills are listed, "validate this" starts `validate`, and the `codex exec`
-  line in `skills/subagent/SKILL.md` returns a review.
-- The `agents/openai.yaml` files (Codex display name, short description,
-  default prompt per skill) were removed. Decide after that check whether
-  Codex or Codex Desktop needs them back; the old ones are at `v1-legacy`.
+- Still to check: whether "validate this" triggers `validate` in a live Codex
+  session, and whether Codex Desktop needs `agents/openai.yaml` to display
+  skills (the old files are at `v1-legacy`).

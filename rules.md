@@ -29,8 +29,14 @@
   exist yet.
 - Copy how upstream or established projects do it before inventing.
 - Fix the root cause. After a fix, verify it or tell me exactly what to test.
+- Use the testing skill when choosing verification or writing or reviewing tests.
 - Subagents only when I ask (validate counts), or for read-only searching.
-  Native ones, the smallest model the harness lets you pick, unless I name one.
+- Choose model and reasoning per task: small for simple work, flagship for
+  hard work. This covers subagents.
+- Reasoning: never above XHigh where the model and tool support it,
+  otherwise never above High. DeepSeek and GLM may use Max. These are
+  ceilings, not defaults.
+- Never override a model or reasoning level I name.
 - Stop a command or subagent that hangs, and tell me.
 - When a sandbox blocks a command (pkexec, gh, push, another CLI), tell me.
   Never work around it.

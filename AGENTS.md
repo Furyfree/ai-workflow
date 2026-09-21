@@ -20,8 +20,10 @@ OpenCode, Claude Code, Codex, Grok, and later Pi.
 
 - `rules.md`: the global rules. A new habit of mine goes here, one bullet.
 - `skills/<name>/SKILL.md`: my skills. New trigger phrases go in `description`.
-- `skills/validate/run.sh`: the validator commands. CLI flag changes go here.
+- `skills/validate/`: review workflow, prompt, and default reviewer set.
 - `skills/subagent/SKILL.md`: how to reach other models. No versioned ids.
+- `skills/subagent/run.sh`: shared CLI commands, effort flags, and timeout.
+- `skills/subagent/test.sh`: offline launcher and review workflow checks.
 - `skills/notebook/nb.py`: the notebook parser. `--selftest` checks it.
 - `vendor/<name>/`: foreign skills, copied unchanged. Never edit; see below.
 - `install.sh`: the link targets per agent. A new agent is one line here.
@@ -45,6 +47,9 @@ in `vendor/SOURCES`. Ponytail and `find-skills` are external; see the README.
 ## Verify
 
 `./check.sh`. Test `install.sh` with `HOME` set to a temp directory.
+After changing a CLI's read-only flags, test it through `run.sh` in a
+temporary scratch directory: ask it to create a file and check that none
+appears. A blocked or failed provider call does not count as a passing test.
 
 ## Git
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fails on real errors: skill names, vendor/SOURCES, shellcheck, nb.py selftest.
+# Check structure, shell syntax, notebook parsing, and offline CLI workflows.
 # Line counts are aims: going over only prints a note.
 set -euo pipefail
 shopt -s nullglob
@@ -21,4 +21,5 @@ for d in vendor/*/; do
 done
 if command -v shellcheck >/dev/null; then shellcheck install.sh check.sh update-vendor.sh skills/*/*.sh || fail=1; fi
 python3 skills/notebook/nb.py --selftest >/dev/null || { echo "nb.py selftest failed"; fail=1; }
+bash skills/subagent/test.sh || fail=1
 exit "$fail"
