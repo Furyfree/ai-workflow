@@ -58,7 +58,7 @@ and pushes, staging all changes when nothing is staged or `--all` is used.
 Review that behavior before loading it. Its MIT license is in
 `extensions/LICENSE`; it has not been retested against the current Pi runtime.
 Remaining integration work lives in
-[docs](https://github.com/Furyfree/docs/blob/main/ai-workflow/pi/README.md).
+[docs](https://github.com/Furyfree/docs/blob/main/ideas/ai-workflow/pi/README.md).
 
 ## Open
 
