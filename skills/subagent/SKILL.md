@@ -1,6 +1,6 @@
 ---
 name: subagent
-description: Hand work to another agent or model - native subagents, or the claude, grok, codex, and opencode CLIs. Use when the user says "use a subagent", "use subagents", "brug subagents", or names a model - "get opus to check this", "ask grok", "have codex review", "få opus til at tjekke", "spørg grok". Never start subagents the user did not ask for.
+description: Hand work to another agent or model - native subagents, or the claude, grok, codex, and opencode CLIs. Use when the user says "use a subagent", "use subagents", "brug subagents", or names a model - "ask grok", "have codex review this", "get opus to check", "spørg grok", "få codex til at tjekke". Never start subagents the user did not ask for.
 ---
 
 # Subagent
@@ -20,7 +20,8 @@ description: Hand work to another agent or model - native subagents, or the clau
 | anything else (glm, deepseek, qwen ...) | `opencode` | `opencode models [provider]` |
 
 Never write a model name from memory. Look it up with the command above and
-pick the entry that matches what the user said ("opus 5" -> the `opus` alias).
+pick the entry that matches what the user said ("grok 4.6" -> that line in
+`grok models`; "opus 5" -> the `opus` alias).
 If nothing matches, show the closest three and ask.
 
 ## Which model
@@ -45,11 +46,12 @@ opencode always needs `-m`. Some native subagents have no model choice;
 then skip the model step.
 
     timeout -k 5 600 claude -p [--model <alias>] --permission-mode plan <"$p"
-    timeout -k 5 600 grok --prompt-file "$p" [-m <model>] --permission-mode plan </dev/null
+    timeout -k 5 600 grok --prompt-file "$p" [-m <model>] --tools "read_file,grep,list_dir" </dev/null
     timeout -k 5 600 codex exec [-m <model>] -s read-only -o "$p.out" - <"$p"
     timeout -k 5 600 opencode run -m <provider/model> --agent plan -f "$p" -- "Follow the attached file." </dev/null
 
-Codex writes its final answer to the `-o` file; outside a Git repository add
+Grok at medium or high effort can take over five minutes; add
+`--reasoning-effort low` for reviews. Codex writes its final answer to the `-o` file; outside a Git repository add
 `--skip-git-repo-check`. These modes ask for read-only behaviour; they are not
 a sandbox. Let a subagent edit only when the user asked for that:
 find the edit mode in `--help`, swap it for `plan` or `read-only`, and give

@@ -4,6 +4,7 @@ One set of rules and skills for every coding agent I use: OpenCode, Claude
 Code, Codex, Grok, and Pi.
 
     ./install.sh              # link rules and skills into the agent homes
+    ./install.sh --force      # also replace what is in the way; real files are backed up
     ./install.sh --uninstall  # remove only the links that point here
     ./check.sh                # skill names, vendor sources, shellcheck, selftest
 

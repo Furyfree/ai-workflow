@@ -13,13 +13,23 @@ description: Second opinion on a diff, plan, or file from the default set of oth
    starts the validators in parallel, read-only, five minutes each, and prints
    the directory holding one `.txt` per validator.
 3. Read every output. Each ends with `[exit N]`. Anything but `[exit 0]`
-   (124 is the time limit) means that validator is unavailable, never LGTM;
-   do not retry it. Delete the directory afterwards.
+   (124 is the time limit), or an empty answer, means that validator is
+   unavailable, never LGTM; its `.log` says why. Do not retry it. Delete the
+   directory afterwards.
 4. Check each finding against the real code. Drop the ones that are wrong,
    duplicated, or outside what was asked.
 5. Give the user one numbered list: finding, `file:line`, your recommendation.
    If all validators say LGTM, say that in one line.
 
-Never fix anything until the user answers by number. Claude is rate-limited:
-add it to the default set only when the user says so ("validate, with opus
-too"), by setting `VALIDATE_CLAUDE` to the alias from `claude --help`.
+Never fix anything until the user answers by number.
+
+The default reviewers are Grok and GLM. Change the set with `VALIDATORS`:
+
+    VALIDATORS="grok glm codex" run.sh <file>      # add GPT through Codex
+    VALIDATORS="glm claude:opus" run.sh <file>     # name:model picks a model
+
+Entries: `grok`, `claude`, `codex`, `glm`, `opencode:<provider/model>`. Leave
+your own model out: if you are Grok or GLM, set `VALIDATORS` without
+yourself. A model reviewing itself is not a second opinion. Claude and Codex run on rate-limited subscriptions; add them only
+when the user says so ("validate, with codex too"). Look a model name up
+first (`claude --help`, `grok models`, `opencode models`); never guess it.

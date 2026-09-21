@@ -1,24 +1,39 @@
 #!/usr/bin/env bash
 # Link rules.md and every skill into the agent homes. --uninstall removes them.
-# Only touches links that point into this repository.
+# Only touches links that point into this repository. --force also replaces
+# anything else in the way: a foreign link is removed (its old target is
+# printed), a real file or folder is moved to a backup folder, never deleted.
 # ponytail: bash is enough for symlinks; move to Python if this ever has to
 # edit JSON or TOML agent config.
 set -euo pipefail
 shopt -s nullglob
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+undo=false force=false
+if (($# > 1)); then echo "usage: install.sh [--force | --uninstall]" >&2; exit 2; fi
 case "${1:-}" in
-  "") undo=false ;;
+  "") ;;
   --uninstall) undo=true ;;
-  *) echo "usage: install.sh [--uninstall]" >&2; exit 2 ;;
+  --force) force=true ;;
+  *) echo "usage: install.sh [--force | --uninstall]" >&2; exit 2 ;;
 esac
+# Outside the skill folders, or agents would load a backed-up skill twice. Only
+# $HOME decides where, so a test with HOME set to a temp directory stays there.
+backup="$HOME/.local/state/ai-workflow-backup/$(date +%Y%m%d-%H%M%S)"
 
 link() { # link <source> <target>
   local src="$1" dst="$2"
-  if [[ -L "$dst" ]]; then
-    if [[ "$(readlink "$dst")" != "$repo"/* ]]; then echo "skip, not ours: $dst"; return; fi
+  if [[ -L "$dst" && "$(readlink "$dst")" == "$repo"/* ]]; then
     rm "$dst"
-  elif [[ -s "$dst" || -d "$dst" ]]; then
-    echo "skip, not ours: $dst"; return
+  elif [[ -L "$dst" || -s "$dst" || -d "$dst" ]]; then
+    if ! $force; then
+      echo "skip, not ours: $dst$($undo || echo ' (--force replaces it)')"; return
+    elif [[ -L "$dst" ]]; then
+      echo "replaced link: $dst (was -> $(readlink "$dst"))"; rm "$dst"
+    else
+      mkdir -p "$backup/$(dirname "${dst#"$HOME"/}")"
+      mv "$dst" "$backup/${dst#"$HOME"/}"
+      echo "backed up: $dst -> $backup/${dst#"$HOME"/}"
+    fi
   fi
   if $undo; then return; fi
   mkdir -p "$(dirname "$dst")"
