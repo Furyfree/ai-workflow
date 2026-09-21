@@ -137,3 +137,8 @@ Start after a local Forgejo instance and one representative repository exist.
       remote administration, package installation, or infrastructure changes.
 - [ ] Tighten an existing rule when a correction reveals a repeat mistake
       instead of growing duplicate guidance.
+
+## 7. [Rebuild around actual use](roadmap/rebuild.md)
+
+- [ ] Settle the open decisions in the linked analysis before changing
+      anything.
