@@ -23,7 +23,7 @@ shift 3
 exec "$@"
 SH
 chmod +x "$tmp/bin/cli" "$tmp/bin/timeout"
-for cli in claude grok codex opencode; do ln -s cli "$tmp/bin/$cli"; done
+for cli in claude grok codex opencode pi; do ln -s cli "$tmp/bin/$cli"; done
 export PATH="$tmp/bin:$PATH" TMPDIR="$tmp/results"
 # shellcheck disable=SC2016 # The task must reach the CLI literally.
 prompt='Task with "quotes", * and $(not-a-command).
@@ -51,11 +51,17 @@ expect "$tmp/grok" '<grok-test>' '<--reasoning-effort>' '<high>' '<read_file,gre
 expect "$tmp/codex" '<gpt-test>' '<model_reasoning_effort="xhigh">' '<read-only>' "$prompt"
 "$here/run.sh" opencode openrouter/test max <<<"$prompt" >"$tmp/opencode"
 expect "$tmp/opencode" '<openrouter/test>' '<--variant>' '<max>' '<plan>' "$prompt"
+"$here/run.sh" pi anthropic/test xhigh <<<"$prompt" >"$tmp/pi"
+expect "$tmp/pi" '<-p>' '<--no-session>' '<--model>' '<anthropic/test>' '<--thinking>' '<xhigh>' \
+  '<--no-extensions>' '<read,grep,find,ls>' "$prompt"
+"$here/run.sh" --review pi <<<"$prompt" >"$tmp/pi-review"
+expect "$tmp/pi-review" '<--no-extensions>' '<--no-tools>' "$prompt"
+if grep -Eq '<(--tools|--model|--thinking)>' "$tmp/pi-review"; then echo 'Pi review must have no tools or forced model' >&2; exit 1; fi
 
 # Larger than Linux's single-argument limit; compare the complete received task.
 head -c 200000 /dev/zero | tr '\0' x >"$tmp/large"
 printf '\n' >>"$tmp/large"
-for cli in grok opencode; do
+for cli in grok opencode pi; do
   "$here/run.sh" "$cli" test-model high <"$tmp/large" >"$tmp/large-output"
   tail -c "$(wc -c <"$tmp/large")" "$tmp/large-output" | cmp - "$tmp/large"
 done
@@ -63,14 +69,14 @@ done
 # No forced effort or model; edit mode must be an explicit caller choice.
 "$here/run.sh" grok <<<"$prompt" >"$tmp/default"
 if grep -Eq '<(-m|--reasoning-effort)>' "$tmp/default"; then exit 1; fi
-for cli in claude grok codex opencode; do
+for cli in claude grok codex pi opencode; do
   "$here/run.sh" --edit "$cli" test-model high <<<"$prompt" >"$tmp/edit"
-  if grep -Eq '<(plan|read-only|read_file,grep,list_dir|Read,Grep,Glob|--strict-mcp-config)>' "$tmp/edit"; then exit 1; fi
+  if grep -Eq '<(plan|read-only|read_file,grep,list_dir|Read,Grep,Glob|--strict-mcp-config|--no-tools|--no-extensions|read,grep,find,ls)>' "$tmp/edit"; then exit 1; fi
 done
 expect "$tmp/edit" '<build>'
 status_is 2 "$here/run.sh" opencode
 status_is 2 "$here/run.sh" unknown
-for cli in grok opencode; do
+for cli in grok opencode pi; do
   status_is 7 env FAKE_EXIT=7 "$here/run.sh" "$cli" test-model <<<"$prompt"
   status_is 124 env FAKE_EXIT=124 "$here/run.sh" "$cli" test-model <<<"$prompt"
 done

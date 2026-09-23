@@ -15,6 +15,11 @@ for f in skills/*/SKILL.md vendor/*/SKILL.md; do
   d="${f%/SKILL.md}"
   grep -qx "name: ${d##*/}" "$f" || { echo "$f: name does not match its directory"; fail=1; }
 done
+for f in skills/*/SKILL.md; do # a wrapper must still find its upstream skill
+  while IFS= read -r p; do
+    [[ -e "${f%/*}/$p" ]] || { echo "$f: missing $p"; fail=1; }
+  done < <(grep -o '\.\./\.\./vendor/[^)]*' "$f")
+done
 awk -F'\t' '!/^#/ && NF && NF != 5 {print "vendor/SOURCES: need 5 fields: " $0; bad = 1} END {exit bad}' vendor/SOURCES || fail=1
 for d in vendor/*/; do
   d="${d%/}"; grep -q "^${d##*/}	" vendor/SOURCES || { echo "$d: not listed in vendor/SOURCES"; fail=1; }

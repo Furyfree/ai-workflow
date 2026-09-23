@@ -7,3 +7,5 @@ modern-python	trailofbits/skills	plugins/modern-python/skills/modern-python	1230
 caveman-commit	JuliusBrussee/caveman	skills/caveman-commit	8909f6af8806897cbb8330c11028eee168ad7cc7	MIT
 caveman	JuliusBrussee/caveman	skills/caveman	82d2a600843944844d254791bafbec1255793370	MIT
 use-modern-go	JetBrains/go-modern-guidelines	plugin/skills/use-modern-go	b63e517a2d44e664d09fec2cb69eca67eecdd44c	Apache-2.0
+lightpanda	lightpanda-io/agent-skill	.	090c08680dc66a258e8f5138476556027e930e3d	Apache-2.0
+pandascript	lightpanda-io/agent-skill	pandascript	7ed620996df7786d83565f20a3255aa7785f5eb9	Apache-2.0

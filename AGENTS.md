@@ -1,7 +1,7 @@
 # ai-workflow
 
 One rules file and a few skills, linked into every coding agent I use:
-OpenCode, Claude Code, Codex, Grok, and later Pi.
+OpenCode, Claude Code, Codex, Grok, and Pi.
 
 ## What must not break
 
@@ -20,6 +20,7 @@ OpenCode, Claude Code, Codex, Grok, and later Pi.
 
 - `rules.md`: the global rules. A new habit of mine goes here, one bullet.
 - `skills/<name>/SKILL.md`: my skills. New trigger phrases go in `description`.
+  Same name as a vendor skill: a wrapper that links `../../vendor/<name>/`.
 - `skills/validate/`: review workflow, prompt, and default reviewer set.
 - `skills/subagent/SKILL.md`: how to reach other models. No versioned ids.
 - `skills/subagent/run.sh`: shared CLI commands, effort flags, and timeout.
@@ -29,8 +30,9 @@ OpenCode, Claude Code, Codex, Grok, and later Pi.
 - `install.sh`: the link targets per agent. A new agent is one line here.
 - `check.sh`: fails on real errors. Line counts are aims: go over when the
   lines are needed, never squeeze wording to hit a number.
-- `extensions/git-commit.ts`: preserved Pi extension; not installed by default.
-  Keep its MIT notice in `extensions/LICENSE`. Integration plans live in docs.
+- `extensions/pi/`: Pi-only extensions, linked by `install.sh`. Other agents'
+  plugin APIs differ; do not share code across them. Keep the MIT notice in
+  `extensions/LICENSE`.
 
 ## Ways to hurt yourself
 

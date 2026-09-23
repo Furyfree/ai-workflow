@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Usage: run.sh [--edit|--review] <claude|grok|codex|opencode> [model] [effort]
+# Usage: run.sh [--edit|--review] <claude|grok|codex|opencode|pi> [model] [effort]
 # Task on stdin, answer on stdout. Editing uses the CLI's saved permissions.
 set -euo pipefail
 mode=read-only
 case "${1:-}" in --edit|--review) mode="${1#--}"; shift ;; esac
 if (($# < 1 || $# > 3)); then
-  echo 'usage: run.sh [--edit|--review] <claude|grok|codex|opencode> [model] [effort]' >&2
+  echo 'usage: run.sh [--edit|--review] <claude|grok|codex|opencode|pi> [model] [effort]' >&2
   exit 2
 fi
 provider="$1" model="${2:-}" effort="${3:-}"
@@ -38,6 +38,16 @@ case "$provider" in
     cmd=(opencode run -m "$model" --agent)
     if [[ "$mode" == edit ]]; then cmd+=(build); else cmd+=(plan); fi
     [[ -z "$effort" ]] || cmd+=(--variant "$effort")
+    ;;
+  pi)
+    # Pi has no sandbox: read-only rests on the tool allowlist alone.
+    cmd=(pi -p --no-session)
+    case "$mode" in
+      read-only) cmd+=(--no-extensions --tools "read,grep,find,ls") ;;
+      review) cmd+=(--no-extensions --no-tools) ;;
+    esac
+    [[ -z "$model" ]] || cmd+=(--model "$model")
+    [[ -z "$effort" ]] || cmd+=(--thinking "$effort")
     ;;
   *) echo "unknown CLI: $provider" >&2; exit 2 ;;
 esac

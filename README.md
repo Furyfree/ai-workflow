@@ -27,6 +27,7 @@ Say what you want, or name the skill: "use the pr skill".
 | `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF" - needs `mise use -g npm:@llamaindex/liteparse` |
 | `video-analysis` | A YouTube link, "summarise this video", "transskriber videoen" |
+| `lightpanda` | "the page needs JavaScript", "fill in the form" - needs `lightpanda` from Mise |
 
 `video-analysis` uses `yt-dlp` (Fedora package managed by Nimbus), Node from
 Mise, and ffmpeg when inspecting video frames. A bare link prompts for
@@ -38,6 +39,8 @@ Foreign skills are copied unchanged into `vendor/`; sources, commits, and
 licenses are in `vendor/SOURCES`. Say "update the vendor skills", or run
 `./update-vendor.sh` and read `git diff vendor/` before keeping anything: a
 skill is a prompt every agent obeys. `use-modern-go` needs Go installed.
+A skill in `skills/` with a vendor skill's name replaces it and reads the
+vendor copy by relative link (`modern-python`, `lightpanda`).
 
 ## External
 
@@ -50,15 +53,13 @@ skill is a prompt every agent obeys. `use-modern-go` needs Go installed.
 
 The previous pull-request and CodeRabbit workflow is at tag `v1-legacy`.
 
-## Pi extension
+## Pi extensions
 
-`extensions/git-commit.ts` preserves the existing Pi Git extension. It is not
-installed by `install.sh`. `/gencommit` drafts a message; `/commit` commits
-and pushes, staging all changes when nothing is staged or `--all` is used.
-Review that behavior before loading it. Its MIT license is in
-`extensions/LICENSE`; it has not been retested against the current Pi runtime.
-Remaining integration work lives in
-[docs](https://github.com/Furyfree/docs/blob/main/ideas/ai-workflow/pi/README.md).
+`install.sh` links `extensions/pi/*.ts` into `~/.pi/agent/extensions` when
+`~/.pi/agent` exists. `git-commit.ts` adds `/gencommit`, which drafts a
+message, and `/commit`, which drafts one, opens it for you to edit (empty
+cancels), then commits what is staged, or everything with `--all`. It never
+pushes. Its MIT license is in `extensions/LICENSE`.
 
 ## Open
 

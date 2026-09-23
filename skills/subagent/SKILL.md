@@ -1,6 +1,6 @@
 ---
 name: subagent
-description: Hand work to another agent or model - native subagents, or the claude, grok, codex, and opencode CLIs. Use when the user says "use a subagent", "use subagents", "brug subagents", or names a model - "ask grok", "have codex review this", "get opus to check", "spørg grok", "få codex til at tjekke". Not for the default set of reviewers; use validate.
+description: Hand work to another agent or model - native subagents, or the claude, grok, codex, opencode, and pi CLIs. Use when the user says "use a subagent", "use subagents", "brug subagents", or names a model - "ask grok", "have codex review this", "get opus to check", "ask pi", "spørg grok", "få codex til at tjekke". Not for the default set of reviewers; use validate.
 ---
 
 # Subagent
@@ -22,6 +22,7 @@ CLI routes:
 | claude, fable, opus, sonnet, haiku | `claude` | aliases in `claude --help` under `--model` |
 | grok | `grok` | `grok models` |
 | codex, gpt | `codex` | no list command: omit `-m` for the default, or pass the id the user names |
+| pi | `pi` | `pi --list-models [search]` |
 | anything else (glm, deepseek, qwen ...) | `opencode` | `opencode models [provider]` |
 
 Never write a model name from memory. Use the native tool's model list or,
@@ -70,10 +71,11 @@ Omitting effort keeps the CLI default. Report a nonzero exit as unavailable.
 Modes, set before the CLI name:
 
 - none: read-only. Claude and Grok get file-reading tools, Codex runs in its
-  read-only sandbox, OpenCode uses its plan agent.
+  read-only sandbox, OpenCode uses its plan agent, Pi gets read, grep, find,
+  and ls without extensions.
 - `--review`, used by `validate`: Claude gets an empty tool list. Grok keeps
   its file-reading tools because it treats an empty list as all tools.
-  Codex and OpenCode stay as in read-only mode.
+  Codex and OpenCode stay as in read-only mode. Pi gets no tools.
 - `--edit`: only when the user authorised edits. Uses the CLI's saved permissions.
 
 Every call stops after ten minutes, edits too. Split editing work into tasks
@@ -81,7 +83,8 @@ that finish well inside that. An edit that times out may leave partial changes:
 run `git status` and `git diff`, show the user what changed, and wait.
 Never retry or clean up those edits on your own.
 
-Of these commands, only the Codex one selects a filesystem sandbox.
+Of these commands, only the Codex one selects a filesystem sandbox. Pi has
+none: only its tool list keeps it read-only.
 If a flag is rejected, check the CLI's `--help` and report the mismatch.
 
 - Run independent subagents in parallel and ordered steps yourself.

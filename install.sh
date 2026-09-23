@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Link rules.md and every skill into the agent homes. --uninstall removes them.
-# Only touches links that point into this repository. --force also replaces
-# anything else in the way: a foreign link is removed (its old target is
-# printed), a real file or folder is moved to a backup folder, never deleted.
+# Link rules.md, skills, and Pi extensions into the agent homes. --uninstall
+# removes them. Only touches links that point into this repository. --force
+# also replaces anything else in the way: a foreign link is removed (its old
+# target is printed), a real file or folder is moved to a backup folder,
+# never deleted.
 # ponytail: bash is enough for symlinks; move to Python if this ever has to
 # edit JSON or TOML agent config.
 set -euo pipefail
@@ -55,7 +56,12 @@ for s in "$repo"/skills/*/ "$repo"/vendor/*/; do
   if [[ -d "$HOME/.claude" ]]; then link "$s" "$HOME/.claude/skills/${s##*/}"; fi
 done
 
-# Links left behind by a skill that was deleted from this repository.
-for l in "$HOME"/.agents/skills/* "$HOME"/.claude/skills/*; do
+# Pi extensions, only when Pi is installed.
+if [[ -d "$HOME/.pi/agent" ]]; then
+  for e in "$repo"/extensions/pi/*.ts; do link "$e" "$HOME/.pi/agent/extensions/${e##*/}"; done
+fi
+
+# Links left behind by a skill or extension deleted from this repository.
+for l in "$HOME"/.agents/skills/* "$HOME"/.claude/skills/* "$HOME"/.pi/agent/extensions/*; do
   if [[ -L "$l" && ! -e "$l" && "$(readlink "$l")" == "$repo"/* ]]; then rm "$l"; echo "pruned: $l"; fi
 done
