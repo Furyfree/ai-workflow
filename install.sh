@@ -48,12 +48,19 @@ for t in .claude/CLAUDE.md .codex/AGENTS.md .config/opencode/AGENTS.md .pi/agent
   if [[ -d "$HOME/${t%/*}" ]]; then link "$repo/rules.md" "$HOME/$t"; fi
 done
 
-# Skills. Local names override vendor names; Claude needs its own links.
+# Skills. Local names override vendor names, and a vendor skill a local
+# skill links to is reached only through it. Claude needs its own links.
 for s in "$repo"/skills/*/ "$repo"/vendor/*/; do
-  s="${s%/}"
-  if [[ "$s" == "$repo/vendor/"* && -f "$repo/skills/${s##*/}/SKILL.md" ]]; then continue; fi
-  link "$s" "$HOME/.agents/skills/${s##*/}"
-  if [[ -d "$HOME/.claude" ]]; then link "$s" "$HOME/.claude/skills/${s##*/}"; fi
+  s="${s%/}" n="${s##*/}"
+  if [[ "$s" == "$repo/vendor/"* ]] && { [[ -f "$repo/skills/$n/SKILL.md" ]] ||
+    grep -qF "../../vendor/$n/" "$repo"/skills/*/SKILL.md; }; then
+    for l in "$HOME/.agents/skills/$n" "$HOME/.claude/skills/$n"; do
+      if [[ -L "$l" && "$(readlink "$l")" == "$s" ]]; then rm "$l"; echo "pruned: $l"; fi
+    done
+    continue
+  fi
+  link "$s" "$HOME/.agents/skills/$n"
+  if [[ -d "$HOME/.claude" ]]; then link "$s" "$HOME/.claude/skills/$n"; fi
 done
 
 # Pi extensions, only when Pi is installed.

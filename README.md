@@ -40,7 +40,8 @@ licenses are in `vendor/SOURCES`. Say "update the vendor skills", or run
 `./update-vendor.sh` and read `git diff vendor/` before keeping anything: a
 skill is a prompt every agent obeys. `use-modern-go` needs Go installed.
 A skill in `skills/` with a vendor skill's name replaces it and reads the
-vendor copy by relative link (`modern-python`, `lightpanda`).
+vendor copy by relative link (`modern-python`, `lightpanda`). A vendor skill
+linked this way, such as `pandascript`, is not installed on its own.
 
 ## External
 
