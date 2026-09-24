@@ -21,6 +21,8 @@ over conflicting upstream instructions:
   edits; use upstream setup guidance for new Python projects or requested
   tooling changes. Editing Python alone does not justify a migration,
   dependency, package layout, or new toolchain.
+- For new data classes, use `@dataclass(frozen=True)` unless the object must
+  change after creation. Never convert existing classes unless asked.
 - Use [Testing](../testing/SKILL.md) when choosing verification or writing
   or reviewing tests. Its guidance takes precedence over upstream testing
   advice, including coverage quotas and blanket replacement of unittest.
