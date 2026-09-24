@@ -27,6 +27,7 @@ Say what you want, or name the skill: "use the pr skill".
 | `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF" - needs `mise use -g npm:@llamaindex/liteparse` |
 | `video-analysis` | A YouTube link, "summarise this video", "transskriber videoen" |
+| `study` | "explain", "forklar", "quiz me", "hør mig" - only when the path or context mentions DTU |
 | `lightpanda` | "the page needs JavaScript", "fill in the form" - needs `lightpanda` from Mise |
 
 `video-analysis` uses `yt-dlp` (Fedora package managed by Nimbus), Node from
