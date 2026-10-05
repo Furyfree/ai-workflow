@@ -5,6 +5,13 @@
 *~
 *.log
 tmp/
+node_modules/
+.venv/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+result
+result-*
 
 # Secrets and agent runtime state must never land here
 .env

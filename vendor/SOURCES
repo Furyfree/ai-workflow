@@ -1,6 +1,6 @@
 # Foreign skills copied unchanged into vendor/. Tab-separated:
 # name	repo	path in repo (. = repo root)	commit that last touched the path	license
-# Update with ./update-vendor.sh. Never edit the copies.
+# Update with just update-vendor inside nix develop. Never edit the copies.
 stop-slop	hardikpandya/stop-slop	.	8da1f030185bdfe8471220585162991eaeb970e9	MIT
 brainstorm	maragudk/skills	brainstorm	e21aa4f3bdd882d3025bad362e65d3144c93b0d9	MIT
 modern-python	trailofbits/skills	plugins/modern-python/skills/modern-python	123037ec8aed26f0d86327cc39137ee5043e5deb	CC-BY-SA-4.0

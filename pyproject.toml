@@ -1,0 +1,28 @@
+[project]
+name = "ai-workflow"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = []
+
+[tool.ruff]
+target-version = "py313"
+include = ["*.py", "*.pyi", "**/pyproject.toml"]
+extend-exclude = ["vendor", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.basedpyright]
+pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"
+exclude = ["vendor", "node_modules", ".venv", "**/__pycache__"]
+# Allow dynamic CLI/JSON values, ignored side-effect results, and multiline strings.
+reportAny = false
+reportUnusedCallResult = false
+reportImplicitStringConcatenation = false
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.1",
+]

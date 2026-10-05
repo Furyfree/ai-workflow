@@ -1,2 +1,0 @@
-// Placeholder: Capture explicit local snapshots and confirm restore of staged, unstaged, and untracked files.
-// Review Pi's git-checkpoint example; keep checkpoints persistent and never push their refs.
