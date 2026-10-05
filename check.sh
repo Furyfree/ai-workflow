@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check structure, shell syntax, notebook parsing, and offline CLI workflows.
+# Check structure, shell syntax, notebook parsing, CLI workflows, and Pi extensions.
 # Line counts are aims: going over only prints a note.
 set -euo pipefail
 shopt -s nullglob
@@ -24,7 +24,9 @@ awk -F'\t' '!/^#/ && NF && NF != 5 {print "vendor/SOURCES: need 5 fields: " $0; 
 for d in vendor/*/; do
   d="${d%/}"; grep -q "^${d##*/}	" vendor/SOURCES || { echo "$d: not listed in vendor/SOURCES"; fail=1; }
 done
-if command -v shellcheck >/dev/null; then shellcheck install.sh check.sh update-vendor.sh skills/*/*.sh || fail=1; fi
+for f in install.sh check.sh update-vendor.sh skills/*/*.sh extensions/*.sh; do bash -n "$f" || fail=1; done
+if command -v shellcheck >/dev/null; then shellcheck install.sh check.sh update-vendor.sh skills/*/*.sh extensions/*.sh || fail=1; fi
 python3 skills/notebook/nb.py --selftest >/dev/null || { echo "nb.py selftest failed"; fail=1; }
 bash skills/subagent/test.sh || fail=1
+bash extensions/test.sh || fail=1
 exit "$fail"

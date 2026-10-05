@@ -57,11 +57,31 @@ The previous pull-request and CodeRabbit workflow is at tag `v1-legacy`.
 
 ## Pi extensions
 
-`install.sh` links `extensions/pi/*.ts` into `~/.pi/agent/extensions` when
-`~/.pi/agent` exists. `git-commit.ts` adds `/gencommit`, which drafts a
-message, and `/commit`, which drafts one, opens it for you to edit (empty
-cancels), then commits what is staged, or everything with `--all`. It never
-pushes. Its MIT license is in `extensions/LICENSE`.
+`install.sh` links extension files and directories into
+`~/.pi/agent/extensions`, and subagent roles into `~/.pi/agent/agents`, when
+Pi's agent directory exists. `.todo` drafts are not loaded. Start a fresh
+Pi session or use `/reload` after installation.
+
+| Extension | Use |
+| --- | --- |
+| Question | The agent asks one question with choices or a custom answer. |
+| Subagent | Say "use a scout" or "have a reviewer check this". |
+| Notify | The terminal notifies you when Pi finishes. |
+| Bookmark | `/bookmark label`, `/unbookmark`; find labels in `/tree`. |
+| Handoff | `/handoff next task`; review the draft, then submit in a new session. |
+| GitHub issues | Type `#` to choose an open issue number and title; ask the agent to read its body. |
+| Permission gate | Ordinary work runs without prompts; deletion, push, and hard-reset patterns need approval. `sudo` is blocked. |
+
+Roles inherit your active Pi model and reasoning. Scout, planner, and
+reviewer have file-reading tools only; workers need an approved scope.
+Children load only the permission gate, stop after ten minutes, and block
+risky commands that need interactive approval. Editing agents run separately
+from automatic chains. Explicit requests for another CLI still use the
+shared launcher. The gate checks patterns, not arbitrary shell programs;
+it is not a sandbox.
+
+These examples come from Pi 1.0.2, with local adaptations. Their MIT notice
+is in `extensions/LICENSE`. Git commit and checkpoint extensions remain drafts.
 
 ## Open
 

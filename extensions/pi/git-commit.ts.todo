@@ -1,0 +1,2 @@
+// Placeholder: Draft a staged-diff commit message, let the user edit it, and confirm the commit.
+// Reuse the commit-message skill and review the historical extension; require separate push authorization.

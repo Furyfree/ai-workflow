@@ -30,9 +30,10 @@ OpenCode, Claude Code, Codex, Grok, and Pi.
 - `install.sh`: the link targets per agent. A new agent is one line here.
 - `check.sh`: fails on real errors. Line counts are aims: go over when the
   lines are needed, never squeeze wording to hit a number.
-- `extensions/pi/`: Pi-only extensions, linked by `install.sh`. Other agents'
-  plugin APIs differ; do not share code across them. Keep the MIT notice in
-  `extensions/LICENSE`.
+- `extensions/pi/`: Pi-only extensions, linked by `install.sh`; `.todo` files
+  stay inactive. Roles live in `subagent/agents/`. Keep the MIT notice in
+  `extensions/LICENSE`; do not share plugin code across agents.
+- `extensions/test.sh` and `test.ts`: isolated installer and Pi runtime checks.
 
 ## Ways to hurt yourself
 

@@ -63,12 +63,16 @@ for s in "$repo"/skills/*/ "$repo"/vendor/*/; do
   if [[ -d "$HOME/.claude" ]]; then link "$s" "$HOME/.claude/skills/$n"; fi
 done
 
-# Pi extensions, only when Pi is installed.
+# Pi extensions and roles, only when Pi is installed. Ignore .todo drafts.
 if [[ -d "$HOME/.pi/agent" ]]; then
-  for e in "$repo"/extensions/pi/*.ts; do link "$e" "$HOME/.pi/agent/extensions/${e##*/}"; done
+  for e in "$repo"/extensions/pi/*.ts "$repo"/extensions/pi/*/; do
+    e="${e%/}"
+    if [[ -f "$e" || -f "$e/index.ts" ]]; then link "$e" "$HOME/.pi/agent/extensions/${e##*/}"; fi
+  done
+  for a in "$repo"/extensions/pi/subagent/agents/*.md; do link "$a" "$HOME/.pi/agent/agents/${a##*/}"; done
 fi
 
-# Links left behind by a skill or extension deleted from this repository.
-for l in "$HOME"/.agents/skills/* "$HOME"/.claude/skills/* "$HOME"/.pi/agent/extensions/*; do
+# Links left behind by a skill, extension, or role deleted from this repository.
+for l in "$HOME"/.agents/skills/* "$HOME"/.claude/skills/* "$HOME"/.pi/agent/extensions/* "$HOME"/.pi/agent/agents/*; do
   if [[ -L "$l" && ! -e "$l" && "$(readlink "$l")" == "$repo"/* ]]; then rm "$l"; echo "pruned: $l"; fi
 done
