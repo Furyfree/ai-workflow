@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Link rules and skills into coding agent homes."""
+"""Link rules, skills, and Pi extensions into coding agent homes."""
 
 import argparse
 import os
@@ -114,8 +114,16 @@ def skill_links(repo: Path, home: Path) -> Iterator[tuple[Path, Path]]:
                 yield source, targets[1]
 
 
+def extension_links(repo: Path, home: Path) -> Iterator[tuple[Path, Path]]:
+    target = home / ".pi/agent/extensions"
+    if target.parent.is_dir():
+        for source in sorted((repo / "extensions").glob("*.ts")):
+            if source.is_file() and not source.name.startswith("."):
+                yield source, target / source.name
+
+
 def prune_links(repo: Path, home: Path) -> None:
-    # Include old extension and role links when pruning deleted sources.
+    # Include old role links when pruning deleted sources.
     for directory in (
         ".agents/skills",
         ".claude/skills",
@@ -133,7 +141,9 @@ def main() -> None:
     repo = Path(__file__).resolve().parent
     home = Path(os.environ["HOME"]).absolute()
     backup = None
-    for source, target in chain(rule_links(repo, home), skill_links(repo, home)):
+    for source, target in chain(
+        rule_links(repo, home), skill_links(repo, home), extension_links(repo, home)
+    ):
         backup = link(
             source,
             target,
