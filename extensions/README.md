@@ -47,6 +47,24 @@ PNG, JPEG, GIF, and WebP work. Pi's image settings apply; unsupported terminals
 and unreadable, invalid, or oversized images fall back to filenames.
 Files stay unchanged. The extension will not replace another custom editor.
 
+## Web
+
+`web_search` accepts up to three `queries` and returns source links plus a
+Codex-generated summary. It uses your selected Codex model and Pi login at minimal
+reasoning, with a separate request per query. Usage counts toward your subscription
+and Pi's session totals. Only send public search terms, not private code or chat.
+
+`web_read` accepts up to three `urls`. GitHub source links return raw text;
+other pages use the installed Lightpanda browser to return Markdown locally.
+Use `offset` and `limit` for longer pages. Each result is bounded to 12 KB,
+with a 2 MiB reader limit, a 30-second reading deadline and a 60-second search
+deadline. Private-network access and credential URLs are blocked. Neither tool
+retries or switches providers. Pages remain untrusted data.
+
+Search requires a Codex model on the official endpoint. Page reading works with
+other models too. When SearXNG is running in the homelab, replace the Codex search
+backend; keep local page reading and the tool names. SearXNG is not wired up yet.
+
 ## Question
 
 The agent calls `question`; you choose from 2–4 options or type an answer.
@@ -123,7 +141,6 @@ the editing guard. Keep the repository layout: it needs [the launcher](../skills
 | Presets | Switch model, tools, reasoning, and instructions together. | [Pi example](https://github.com/earendil-works/pi/blob/v1.0.3/packages/coding-agent/examples/extensions/preset.ts) |
 | Plan mode | Read-only exploration and progress tracking. | [Pi example](https://github.com/earendil-works/pi/tree/v1.0.3/packages/coding-agent/examples/extensions/plan-mode) |
 | Browser | Reuse existing browser tools before adding an adapter. | [Lightpanda skill](../skills/lightpanda/SKILL.md) |
-| Web routing | Choose a search provider and reuse browser extraction. | [Lightpanda skill](../skills/lightpanda/SKILL.md) |
 | Notebook context | Bring notebook content into prompts. | [Notebook reader](../skills/notebook/SKILL.md) |
 | PDF context | Add page-aware document context. | [Document analysis](../skills/document-analysis/SKILL.md) |
 | Git checkpoints | Confirm snapshots and restoration of staged, unstaged, and untracked files; never push snapshot refs. | [Pi example](https://github.com/earendil-works/pi/blob/v1.0.3/packages/coding-agent/examples/extensions/git-checkpoint.ts) |
