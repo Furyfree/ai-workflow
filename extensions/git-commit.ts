@@ -893,7 +893,7 @@ export default function commit(pi: ExtensionAPI) {
 						"--no-follow-tags",
 						"--recurse-submodules=no",
 						"--",
-						push.url,
+						push.remote,
 						`${headToPush}:${push.ref}`,
 					],
 					signal,

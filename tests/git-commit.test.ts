@@ -593,9 +593,10 @@ function remote(app: ReturnType<typeof harness>, name = "publish") {
 	return path;
 }
 
-test("commit and push shows its destination and earlier commits on one approval screen", async (t) => {
+test("commit and push updates origin/main and shows its destination and earlier commits on one screen", async (t) => {
 	const app = harness(t);
-	const path = remote(app);
+	const path = remote(app, "origin");
+	app.git(["branch", "--set-upstream-to", "origin/main"]);
 	app.write("code.txt", "older\n");
 	app.stage();
 	app.git(["commit", "-m", "fix: earlier work"]);
@@ -607,14 +608,16 @@ test("commit and push shows its destination and earlier commits on one approval 
 	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), app.head());
 	const final = app.prompts.filter((prompt) => prompt.title.startsWith("Commit ·"));
 	assert.equal(final.length, 1);
-	assert.match(final[0].initial ?? "", /publish\/main · 1 earlier commits/);
+	assert.match(final[0].initial ?? "", /origin\/main · 1 earlier commits/);
 	assert.match(final[0].text, /earlier work/);
 	assert.equal(app.inputs.length, 0);
+	assert.equal(app.git(["rev-parse", "refs/remotes/origin/main"]), app.head());
+	assert.equal(app.git(["rev-list", "--count", "@{upstream}..HEAD"]), "0");
 });
 
-test("push failure keeps the new local commit and does not retry or roll it back", async (t) => {
+test("push failure leaves origin/main unchanged and keeps the local commit without rollback", async (t) => {
 	const app = harness(t);
-	const path = remote(app);
+	const path = remote(app, "origin");
 	const reject = join(path, "hooks", "pre-receive");
 	writeFileSync(reject, "#!/bin/sh\necho rejected-by-remote >&2\nexit 1\n");
 	chmodSync(reject, 0o755);
@@ -628,6 +631,7 @@ test("push failure keeps the new local commit and does not retry or roll it back
 	assert.match(app.text(result), /Local commit .* remains/);
 	assert.notEqual(app.head(), remoteHead);
 	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), remoteHead);
+	assert.equal(app.git(["rev-parse", "refs/remotes/origin/main"]), remoteHead);
 });
 
 test("a hook changing the commit content blocks pushing and keeps the changed commit", async (t) => {
@@ -979,20 +983,25 @@ test("HEAD changes invalidate approval even when staged file status remains unch
 	assert.equal(app.git(["diff", "--cached", "--name-only"]), "code.txt");
 });
 
-test("changed remote configuration cancels pushing before any commit", async (t) => {
+test("changed remote configuration cancels before commit and leaves tracking refs unchanged", async (t) => {
 	const app = harness(t);
-	remote(app);
+	const path = remote(app);
+	const replacement = join(path, "replacement.git");
+	app.git(["init", "--bare", replacement]);
 	const head = app.head();
 	app.write("code.txt", "selected\n");
 	app.stage();
 	app.onPrompt = ({ title }) => {
-		if (title.startsWith("Commit ·"))
-			app.git(["remote", "set-url", "--push", "publish", join(app.root, "missing.git")]);
+		if (title.startsWith("Commit ·")) app.git(["remote", "set-url", "--push", "publish", replacement]);
 	};
 	app.selections.push("Commit & push");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
+	assert.match(app.text(result), /Push destination changed during review/);
 	assert.equal(app.head(), head);
+	assert.equal(app.git(["rev-parse", "refs/remotes/publish/main"]), head);
+	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), head);
+	assert.equal(app.git(["for-each-ref", "--format=%(objectname)", "refs/heads/main"], replacement), "");
 });
 
 test("model context signals omitted patch content while the diff remains inspectable", async (t) => {
@@ -1237,9 +1246,10 @@ test(
 	},
 );
 
-test("a clean working tree can publish existing commits without drafting or making another commit", async (t) => {
+test("push-only updates origin/main without drafting or making another commit", async (t) => {
 	const app = harness(t);
-	const path = remote(app);
+	const path = remote(app, "origin");
+	app.git(["branch", "--set-upstream-to", "origin/main"]);
 	app.write("code.txt", "local commit\n");
 	app.stage();
 	app.git(["commit", "-m", "fix: local change"]);
@@ -1249,6 +1259,8 @@ test("a clean working tree can publish existing commits without drafting or maki
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.head(), head);
 	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), head);
+	assert.equal(app.git(["rev-parse", "refs/remotes/origin/main"]), head);
+	assert.equal(app.git(["rev-list", "--count", "@{upstream}..HEAD"]), "0");
 	assert.equal(app.modelInputs.length, 0);
 	assert.match(app.prompts[0].text, /fix: local change/);
 	assert.match(app.text(result), /Pushed/);
@@ -1290,6 +1302,7 @@ test("configured upstreams take precedence over another remote and preserve thei
 	assert.equal(result.isError, false, app.text(result));
 	assert.match(app.prompts[0].initial ?? "", /upstream\/release/);
 	assert.equal(app.git(["rev-parse", "refs/heads/release"], path), app.head());
+	assert.equal(app.git(["rev-parse", "refs/remotes/upstream/release"]), app.head());
 });
 
 test("ambiguous destinations require choosing a target and reviewing it before approval", async (t) => {
