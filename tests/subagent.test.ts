@@ -22,6 +22,7 @@ import {
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { type Component, KeybindingsManager, type TUI, TUI_KEYBINDINGS, visibleWidth } from "@earendil-works/pi-tui";
+import commit from "../extensions/git-commit.ts";
 import notify from "../extensions/notify.ts";
 import subagent from "../extensions/subagent.ts";
 
@@ -176,6 +177,7 @@ function harness(t: TestContext, bindings = {}) {
 			find: (provider: string, id: string) => (provider === "fixture" && id === "model" ? ctx.model : undefined),
 		},
 		sessionManager: manager,
+		waitForIdle: async () => {},
 		isIdle: () => idle,
 		hasPendingMessages: () => pending,
 		ui: {
@@ -206,6 +208,7 @@ function harness(t: TestContext, bindings = {}) {
 		on: (name: string, handler: Hook) => {
 			hooks.set(name, [...(hooks.get(name) ?? []), handler]);
 		},
+		registerMessageRenderer() {},
 		registerTool: (value: ToolDefinition) => {
 			tool = value;
 		},
@@ -289,6 +292,11 @@ function harness(t: TestContext, bindings = {}) {
 			const command = commands.get("subagents");
 			assert.ok(command);
 			await command.handler(args, ctx);
+		},
+		commit: async () => {
+			const command = commands.get("commit");
+			assert.ok(command);
+			await command.handler("", ctx);
 		},
 		jobs: () => {
 			const jobs = new Map<string, Job>();
@@ -631,6 +639,84 @@ test("editing cancellation grants no permission; a confirmed editor blocks paren
 	assert.equal(details(reader).jobs[0].status, "completed");
 	await app.execute({ action: "stop", id });
 	assert.equal(await app.emit("tool_call", { toolName: "write" }), undefined);
+});
+
+test("the direct commit command refuses a running editor and releases after the editor stops", async (t) => {
+	const app = harness(t);
+	commit(app.api);
+	await exec("git", ["init", "-b", "main"], { cwd: app.root });
+	const started = await app.execute(
+		launch("CASE:hold", {
+			edit: true,
+			background: true,
+			tasks: [{ task: "CASE:hold", scope: ["one.ts"] }],
+		}),
+	);
+	await until(() => existsSync(join(app.root, "pids")));
+	await app.commit();
+	assert.match(app.notices[0], /owns editing/);
+	assert.equal(app.messages.length, 0);
+	assert.equal(app.calls().length, 1);
+	await app.execute({ action: "stop", id: details(started).jobs[0].id });
+	// The fixture directory has untracked files; cancel scope selection before drafting.
+	app.ctx.ui.select = async () => "Cancel";
+	await app.commit();
+	assert.match(String(app.messages[0].content), /cancelled/);
+	assert.equal(app.calls().length, 1);
+});
+
+test("direct commit reservations block editors and defer background delivery until release", async (t) => {
+	const app = harness(t);
+	await app.execute(launch("CASE:normal", { background: true }));
+	await until(() => app.jobs()[0]?.status === "completed");
+	const claim: { id: string; phase: string; reason?: string } = { id: "command", phase: "start" };
+	app.api.events.emit("ai-workflow:commit", claim);
+	assert.equal(claim.reason, undefined);
+	await assert.rejects(
+		app.execute(
+			launch("CASE:normal", {
+				edit: true,
+				tasks: [{ task: "CASE:normal", scope: ["one.ts"] }],
+			}),
+		),
+		/one editor/,
+	);
+	app.idle = true;
+	await app.emit("agent_settled");
+	assert.equal(app.messages.length, 0);
+	app.api.events.emit("ai-workflow:commit", { id: "command", phase: "end" });
+	await until(() => app.messages.length === 1);
+	assert.equal(app.confirmations, 0);
+	assert.equal(
+		details(
+			await app.execute(
+				launch("CASE:normal", {
+					edit: true,
+					tasks: [{ task: "CASE:normal", scope: ["one.ts"] }],
+				}),
+			),
+		).jobs[0].status,
+		"completed",
+	);
+});
+
+test("a commit reservation during editing approval invalidates that approval", async (t) => {
+	const app = harness(t);
+	app.approve = async () => {
+		app.api.events.emit("ai-workflow:commit", { id: "command", phase: "start" });
+		return true;
+	};
+	await assert.rejects(
+		app.execute(
+			launch("CASE:normal", {
+				edit: true,
+				tasks: [{ task: "CASE:normal", scope: ["one.ts"] }],
+			}),
+		),
+		/changed during approval/,
+	);
+	assert.equal(app.calls().length, 0);
+	app.api.events.emit("ai-workflow:commit", { id: "command", phase: "end" });
 });
 
 test("parent work and permission changes during approval prevent launching an editor", async (t) => {
@@ -1101,6 +1187,9 @@ for (const edit of [false, true]) {
 		assert.match(details(answer).jobs[0].error, /Cleanup not verified/);
 		assert.ok(await app.emit("tool_call", { toolName: "write" }));
 		assert.ok(await app.emit("tool_call", { toolName: "git_commit" }));
+		const claim: { id: string; phase: string; reason?: string } = { id: "command", phase: "start" };
+		app.api.events.emit("ai-workflow:commit", claim);
+		assert.match(claim.reason ?? "", /cleanup is unverified/);
 		await assert.rejects(
 			app.execute(launch("CASE:normal", { edit: true, tasks: [{ task: "CASE:normal", scope: ["one.ts"] }] })),
 			/Cleanup is unverified/,

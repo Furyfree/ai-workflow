@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { type TestContext, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+	BorderedLoader,
+	createEventBus,
 	type ExtensionAPI,
 	type ExtensionCommandContext,
 	type ExtensionContext,
@@ -28,6 +30,8 @@ type Hook = (event: unknown, ctx: ExtensionContext) => unknown;
 type Prompt = Component & { dispose?(): void };
 const UP = "\x1b[A";
 const DOWN = "\x1b[B";
+const LEFT = "\x1b[D";
+const RIGHT = "\x1b[C";
 const ENTER = "\r";
 const ESC = "\x1b";
 
@@ -54,7 +58,9 @@ function harness(t: TestContext, initial = true) {
 	const hooks = new Map<string, Hook>();
 	let tool: ToolDefinition | undefined;
 	const messages: string[] = [];
-	const prompts: { title: string; text: string; choices?: string[] }[] = [];
+	const completions: { content: unknown; details?: unknown }[] = [];
+	const events = createEventBus();
+	const prompts: { title: string; text: string; initial?: string; choices?: string[] }[] = [];
 	const attention: unknown[] = [];
 	const notices: string[] = [];
 	const modelInputs: unknown[] = [];
@@ -62,8 +68,8 @@ function harness(t: TestContext, initial = true) {
 	const inputs: string[] = [];
 	const drafts = ["fix: update code"];
 	let onPrompt: (prompt: { title: string; component: Prompt }) => void = () => {};
+	let onWorking: (component: Prompt) => void = () => {};
 	let selectFile = 0;
-	let pendingPrompt: Prompt | undefined;
 	const keys = new KeybindingsManager(TUI_KEYBINDINGS);
 	const theme = { fg: (_key: string, text: string) => text, bold: (text: string) => text } as Theme;
 	const terminal = { rows: 40 };
@@ -112,62 +118,104 @@ function harness(t: TestContext, initial = true) {
 			},
 			custom: (factory: Parameters<ExtensionContext["ui"]["custom"]>[0]) =>
 				new Promise((resolve) => {
+					let finished = false;
 					const component = factory(
 						{ terminal, requestRender() {} } as unknown as TUI,
 						theme,
 						keys as Parameters<typeof factory>[2],
 						(value) => {
-							pendingPrompt?.dispose?.();
+							finished = true;
+							component.dispose?.();
 							resolve(value);
 						},
-					);
+					) as Prompt;
 					assert.ok(!(component instanceof Promise));
-					pendingPrompt = component;
-					let rendered = component.render(100).join("\n");
-					const title = rendered.includes("Edit commit message") ? "Edit commit message" : rendered.split("\n")[0];
-					const lines: string[] = [rendered];
-					for (let i = 0; i < 10_000; i++) {
-						component.handleInput?.("\x1b[6;2~");
-						const next = component.render(100).join("\n");
-						if (next === rendered) break;
-						lines.push(next);
-						rendered = next;
+					if (component instanceof BorderedLoader) {
+						onWorking(component);
+						return;
 					}
-					prompts.push({ title, text: lines.join("\n") });
+					let rendered = component.render(100).join("\n");
+					const title = rendered.split("\n")[0];
+					const prompt = { title, text: rendered, initial: rendered };
+					prompts.push(prompt);
 					onPrompt({ title, component });
+					if (finished) return;
+					rendered = component.render(100).join("\n");
+					prompt.text += `\n${rendered}`;
 					if (title.startsWith("Pick files")) {
 						for (let i = 0; i < selectFile; i++) component.handleInput?.(DOWN);
 						component.handleInput?.(" ");
 						component.handleInput?.(ENTER);
-					} else if (title === "Edit commit message") {
-						component.handleInput?.("\x01");
-						component.handleInput?.("\x0b");
-						component.handleInput?.(`\x1b[200~${inputs.shift()}\x1b[201~`);
-						component.handleInput?.(ENTER);
-					} else if (title === "Commit diff") component.handleInput?.(ESC);
-					else {
+						return;
+					}
+					while (!finished) {
+						// Select through the UI, retaining only controls this screen exposes.
+						const choices = [
+							"Edit message",
+							"Changed files",
+							"Diff",
+							"Regenerate",
+							"Earlier commits",
+							"Warning details",
+							"Destination",
+							"Commit & push despite warnings",
+							"Commit & push",
+							"Push",
+							"Commit only despite warnings",
+							"Commit only",
+							"Cancel",
+						].filter((choice) => {
+							if (choice === "Push") return title.startsWith("Push ·") && /(?:>| ) Push(?:\s|$)/.test(rendered);
+							if (choice === "Commit & push" || choice === "Commit only")
+								return rendered.includes(choice) && !rendered.includes(`${choice} despite warnings`);
+							return rendered.includes(choice);
+						});
+						let cursor = choices.findIndex(
+							(choice) =>
+								rendered.includes(`> ${choice}`) ||
+								rendered.includes(`> ▸ ${choice}`) ||
+								rendered.includes(`> ▾ ${choice}`),
+						);
 						const selection = selections.shift();
 						assert.ok(selection, `No response for ${title}`);
-						if (selection === "Escape") component.handleInput?.(ESC);
-						else {
-							const choices =
-								title === "Commit preview"
-									? ["Review diff", "Edit message", "Regenerate", "Continue"]
-									: rendered.includes("Commit despite warnings")
-										? ["Commit despite warnings", "Commit and push despite warnings", "Cancel"]
-										: ["Commit", "Commit and push", "Cancel"];
-							const target = choices.indexOf(selection);
-							assert.notEqual(target, -1, `Invalid response ${selection}`);
-							for (let i = 0; i < choices.length - 1 - target; i++) component.handleInput?.(UP);
-							component.handleInput?.(ENTER);
+						if (selection === "Escape") {
+							component.handleInput?.(ESC);
+							continue;
+						}
+						const target = choices.indexOf(selection);
+						assert.ok(target >= 0 && cursor >= 0, `Missing choice ${selection} in ${rendered}`);
+						while (cursor !== target) {
+							component.handleInput?.(cursor > target ? "\x1b[Z" : "\t");
+							cursor += cursor > target ? -1 : 1;
+						}
+						component.handleInput?.(ENTER);
+						if (selection === "Edit message" && !finished) {
+							component.handleInput?.("\x01");
+							component.handleInput?.("\x0b");
+							component.handleInput?.(`\x1b[200~${inputs.shift()}\x1b[201~`);
+							component.handleInput?.("\t");
+						}
+						rendered = component.render(100).join("\n");
+						prompt.text += `\n${rendered}`;
+						if (["Changed files", "Diff", "Earlier commits", "Warning details"].includes(selection)) {
+							for (let i = 0; i < 10_000; i++) {
+								component.handleInput?.("\x1b[6;2~");
+								const next = component.render(100).join("\n");
+								if (next === rendered) break;
+								prompt.text += `\n${next}`;
+								rendered = next;
+							}
 						}
 					}
 				}),
 		},
 	} as unknown as ExtensionCommandContext;
+	events.on("ai-workflow:attention", (data) => attention.push(data));
 	commit({
 		on: (name: string, hook: Hook) => hooks.set(name, hook),
-		events: { emit: (_channel: string, data: unknown) => attention.push(data) },
+		events,
+		registerMessageRenderer() {},
+		sendMessage: (message: { content: unknown; details?: unknown }) => completions.push(message),
 		registerTool: (definition: ToolDefinition) => {
 			tool = definition;
 		},
@@ -201,6 +249,8 @@ function harness(t: TestContext, initial = true) {
 		execute,
 		hooks,
 		messages,
+		completions,
+		events,
 		selections,
 		inputs,
 		drafts,
@@ -211,6 +261,9 @@ function harness(t: TestContext, initial = true) {
 		terminal,
 		set onPrompt(value: typeof onPrompt) {
 			onPrompt = value;
+		},
+		set onWorking(value: typeof onWorking) {
+			onWorking = value;
 		},
 		set selectFile(value: number) {
 			selectFile = value;
@@ -236,20 +289,120 @@ function harness(t: TestContext, initial = true) {
 	};
 }
 
-test("staged hunks commit without including unstaged edits; every commit gets final confirmation", async (t) => {
+test("the message and approval stay visible before scrolling through a large file list", async (t) => {
+	const app = harness(t);
+	for (let i = 0; i < 15; i++) app.write(`file-${i}.txt`, "changed\n");
+	app.stage();
+	app.onPrompt = ({ component }) => {
+		for (const rows of [24, 40]) {
+			app.terminal.rows = rows;
+			const initial = component.render(80).join("\n");
+			assert.match(initial, /fix: update code/);
+			assert.match(initial, /Cancel/);
+		}
+	};
+	app.selections.push("Escape");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+});
+
+test("commit arrows follow visible button rows and columns after resizing", async (t) => {
+	const app = harness(t);
+	remote(app);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	const head = app.head();
+	const index = readFileSync(join(app.root, ".git", "index"));
+	app.onPrompt = ({ component }) => {
+		const selected = (name: string, width = 100) =>
+			assert.match(component.render(width).join("\n"), new RegExp(`> (?:[▸▾] )?${name}`));
+		selected("Cancel");
+		component.handleInput?.(UP);
+		selected("Diff");
+		component.handleInput?.(UP);
+		selected("Diff"); // No row above.
+		component.handleInput?.(RIGHT);
+		selected("Regenerate");
+		component.handleInput?.(LEFT);
+		selected("Diff");
+		component.handleInput?.(DOWN);
+		selected("Cancel");
+		component.handleInput?.(RIGHT);
+		selected("Cancel"); // No button to the right.
+		component.handleInput?.(LEFT);
+		selected("Commit only");
+		component.handleInput?.(LEFT);
+		selected("Commit & push");
+		component.handleInput?.(LEFT);
+		selected("Commit & push");
+		component.handleInput?.(UP);
+		selected("Edit message");
+		component.handleInput?.(LEFT);
+		selected("Edit message");
+		component.handleInput?.(DOWN);
+		selected("Commit & push");
+		component.handleInput?.("\t");
+		selected("Commit only");
+		component.handleInput?.("\x1b[Z");
+		selected("Commit & push");
+		component.handleInput?.("\x1b[Z");
+		selected("Destination");
+		component.handleInput?.("\t");
+		component.handleInput?.("\t");
+		component.handleInput?.("\t");
+		selected("Cancel");
+		selected("Cancel", 40);
+		component.handleInput?.(UP);
+		selected("Destination", 40);
+		component.handleInput?.(DOWN);
+		selected("Commit only", 40);
+		component.handleInput?.(RIGHT);
+		selected("Cancel", 40);
+		selected("Cancel", 30);
+		component.handleInput?.(UP);
+		selected("Commit & push", 30);
+		component.handleInput?.(UP);
+		selected("Destination", 30);
+		component.handleInput?.(RIGHT);
+		selected("Destination", 30);
+		component.handleInput?.(DOWN);
+		selected("Commit & push", 30);
+		component.handleInput?.(RIGHT);
+		selected("Commit only", 30);
+		component.handleInput?.(DOWN);
+		selected("Cancel", 30);
+		selected("Cancel", 20);
+		component.handleInput?.(UP);
+		selected("Commit only", 20);
+		component.handleInput?.(DOWN);
+		selected("Cancel", 20);
+		selected("Cancel", 100);
+		component.handleInput?.(UP);
+		selected("Diff");
+		component.handleInput?.(ESC);
+	};
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.text(result), /cancelled/);
+	assert.equal(app.head(), head);
+	assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
+	assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "changed\n");
+});
+
+test("staged hunks exclude unstaged edits and show the message before approval", async (t) => {
 	const app = harness(t);
 	app.write("code.txt", "staged\nsecond\nthird\n");
 	app.stage();
 	app.write("code.txt", "staged\nsecond\nunstaged\n");
 	app.write("outside.txt", "keep outside\n");
-	app.selections.push("Continue", "Commit");
+	app.selections.push("Commit only");
 	const result = await app.execute("focus on the first line");
 	assert.equal(result.isError, false);
 	assert.equal(app.git(["show", "HEAD:code.txt"]), "staged\nsecond\nthird");
 	assert.match(app.git(["diff"]), /unstaged/);
 	assert.ok(existsSync(join(app.root, "outside.txt")));
-	assert.equal(app.prompts.at(-1)?.title, "Final confirmation");
-	assert.match(app.prompts.at(-1)?.text ?? "", /Exact message:.*\nfix: update code/);
+	assert.equal(app.prompts.filter((prompt) => prompt.title.startsWith("Commit ·")).length, 1);
+	assert.match(app.prompts.at(-1)?.initial ?? "", /Message: fix: update code/);
 	assert.match(app.text(result), /Not pushed/);
 	assert.match(JSON.stringify(app.modelInputs), /focus on the first line/);
 	assert.equal(result.usage?.totalTokens, 15);
@@ -261,7 +414,7 @@ test("cancel before confirmation preserves index bytes and all working contents"
 	app.write("new.txt", "new\n");
 	const index = readFileSync(join(app.root, ".git", "index"));
 	const head = app.head();
-	app.selections.push("Everything", "Continue", "Cancel");
+	app.selections.push("Everything", "Cancel");
 	const result = await app.execute();
 	assert.match(app.text(result), /cancelled/);
 	assert.equal(app.head(), head);
@@ -270,12 +423,69 @@ test("cancel before confirmation preserves index bytes and all working contents"
 	assert.equal(readFileSync(join(app.root, "new.txt"), "utf8"), "new\n");
 });
 
+test("Esc in the file picker returns to scope choices without staging selected files", async (t) => {
+	for (const next of ["Everything", "Pick files", "Cancel"]) {
+		await t.test(next, async (t) => {
+			const app = harness(t);
+			app.write("code.txt", "changed\n");
+			app.write("new.txt", "new\n");
+			const index = readFileSync(join(app.root, ".git", "index"));
+			const head = app.head();
+			let pickers = 0;
+			app.onPrompt = ({ title, component }) => {
+				if (!title.startsWith("Pick files") || ++pickers !== 1) return;
+				component.handleInput?.(" ");
+				component.handleInput?.(ESC);
+			};
+			app.selections.push("Pick files", next, ...(next === "Cancel" ? [] : ["Cancel"]));
+			const result = await app.execute();
+			assert.equal(result.isError, false, app.text(result));
+			assert.match(app.text(result), /cancelled/);
+			assert.equal(app.prompts.filter((prompt) => prompt.choices?.includes("Everything")).length, 2);
+			assert.equal(pickers, next === "Pick files" ? 2 : 1);
+			assert.equal(app.modelInputs.length, next === "Cancel" ? 0 : 1);
+			if (next !== "Cancel")
+				assert.match(
+					app.prompts.at(-1)?.initial ?? "",
+					next === "Everything" ? /Scope: everything/ : /Scope: selected whole files/,
+				);
+			assert.equal(app.head(), head);
+			assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
+			assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "changed\n");
+			assert.equal(readFileSync(join(app.root, "new.txt"), "utf8"), "new\n");
+		});
+	}
+});
+
+test("aborting the file picker cancels instead of returning to scope choices", async (t) => {
+	const app = harness(t);
+	app.write("code.txt", "changed\n");
+	const index = readFileSync(join(app.root, ".git", "index"));
+	const head = app.head();
+	const controller = new AbortController();
+	app.onPrompt = ({ title, component }) => {
+		if (!title.startsWith("Pick files")) return;
+		component.handleInput?.(" ");
+		controller.abort();
+		component.handleInput?.(ESC);
+	};
+	app.selections.push("Pick files");
+	const result = await app.execute("", controller.signal);
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.text(result), /cancelled/);
+	assert.equal(app.prompts.filter((prompt) => prompt.choices?.includes("Everything")).length, 1);
+	assert.equal(app.modelInputs.length, 0);
+	assert.equal(app.head(), head);
+	assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
+	assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "changed\n");
+});
+
 test("whole-file picker handles literal pathspec-looking names and excludes other changes", async (t) => {
 	const app = harness(t);
 	app.write(":(glob)*", "literal\n");
 	app.write("code.txt", "outside scope\n");
 	app.selectFile = 1; // Status lists tracked code.txt before this untracked file.
-	app.selections.push("Pick files", "Continue", "Commit");
+	app.selections.push("Pick files", "Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["show", "HEAD::(glob)*"]), "literal");
@@ -286,12 +496,12 @@ test("whole-file picker handles literal pathspec-looking names and excludes othe
 test("initial commits support untracked files; Everything includes deletions and ignores ignored files", async (t) => {
 	const app = harness(t, false);
 	app.write("new.txt", "initial\n");
-	app.selections.push("Everything", "Continue", "Commit");
+	app.selections.push("Everything", "Commit only");
 	assert.equal((await app.execute()).isError, false);
 	app.write(".gitignore", "ignored.txt\n");
 	app.write("ignored.txt", "keep local\n");
 	rmSync(join(app.root, "new.txt"));
-	app.selections.push("Everything", "Continue", "Commit");
+	app.selections.push("Everything", "Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["ls-tree", "--name-only", "HEAD"]), ".gitignore");
@@ -305,14 +515,14 @@ test("edit, inspect, and regenerate preserve the scope and show the exact final 
 	app.write("not-selected.txt", "outside\n");
 	app.drafts.push("fix: regenerated");
 	app.inputs.push("fix: user wording\n\nExplain the reason.");
-	app.selections.push("Review diff", "Edit message", "Regenerate", "Continue", "Commit");
+	app.selections.push("Diff", "Edit message", "Regenerate", "Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["log", "-1", "--format=%B"]), "fix: regenerated");
 	assert.equal(app.git(["ls-tree", "--name-only", "HEAD"]), "code.txt");
 	assert.equal(app.modelInputs.length, 2);
 	assert.equal(result.usage?.totalTokens, 30);
-	assert.ok(app.prompts.some((prompt) => prompt.title === "Commit diff" && /selected/.test(prompt.text)));
+	assert.ok(app.prompts.some((prompt) => /─ Diff ─/.test(prompt.text) && /selected/.test(prompt.text)));
 	assert.deepEqual(app.attention.at(-1), { id: "commit:test", waiting: false });
 });
 
@@ -323,9 +533,9 @@ test("content changes with the same git status invalidate approval before real s
 	const index = app.git(["ls-files", "--stage"]);
 	const status = app.git(["status", "--porcelain"]);
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation") app.write("code.txt", "version two\n");
+		if (title.startsWith("Commit ·")) app.write("code.txt", "version two\n");
 	};
-	app.selections.push("Everything", "Continue", "Commit");
+	app.selections.push("Everything", "Commit only");
 	const result = await app.execute();
 	assert.equal(app.git(["status", "--porcelain"]), status);
 	assert.equal(result.isError, true);
@@ -340,19 +550,19 @@ test("staging and branch changes invalidate approval instead of resetting or swi
 	app.stage();
 	const head = app.head();
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation") {
+		if (title.startsWith("Commit ·")) {
 			app.write("outside.txt", "new staging\n");
 			app.stage();
 		}
 	};
-	app.selections.push("Continue", "Commit");
+	app.selections.push("Commit only");
 	assert.equal((await app.execute()).isError, true);
 	assert.equal(app.head(), head);
 	assert.match(app.git(["diff", "--cached", "--name-only"]), /outside.txt/);
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation") app.git(["switch", "-c", "other"]);
+		if (title.startsWith("Commit ·")) app.git(["switch", "-c", "other"]);
 	};
-	app.selections.push("Continue", "Commit");
+	app.selections.push("Commit only");
 	assert.equal((await app.execute()).isError, true);
 	assert.equal(app.git(["branch", "--show-current"]), "other");
 	assert.equal(app.head(), head);
@@ -363,7 +573,7 @@ test("failed hooks preserve staging and leave history unchanged without retry", 
 	app.write("code.txt", "changed\n");
 	app.hook("pre-commit", "echo hook-rejected >&2\nexit 1");
 	const head = app.head();
-	app.selections.push("Everything", "Continue", "Commit");
+	app.selections.push("Everything", "Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.match(app.text(result), /hook-rejected/);
@@ -376,12 +586,14 @@ function remote(app: ReturnType<typeof harness>, name = "publish") {
 	const path = join(app.root, "remote.git");
 	mkdirSync(path);
 	app.git(["init", "--bare"], path);
+	const exclude = join(app.root, ".git", "info", "exclude");
+	writeFileSync(exclude, `${readFileSync(exclude, "utf8")}\n/remote.git/\n`);
 	app.git(["remote", "add", name, path]);
 	app.git(["push", name, "main:main"]);
 	return path;
 }
 
-test("commit and push requires destination approval and previews older unpushed commits", async (t) => {
+test("commit and push shows its destination and earlier commits on one approval screen", async (t) => {
 	const app = harness(t);
 	const path = remote(app);
 	app.write("code.txt", "older\n");
@@ -389,16 +601,15 @@ test("commit and push requires destination approval and previews older unpushed 
 	app.git(["commit", "-m", "fix: earlier work"]);
 	app.write("code.txt", "new\n");
 	app.stage();
-	app.selections.push("Continue", "Commit and push", "publish", "Commit and push");
-	app.inputs.push("main");
+	app.selections.push("Earlier commits", "Commit & push");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), app.head());
-	const final = app.prompts.filter((prompt) => prompt.title === "Final confirmation");
-	assert.equal(final.length, 2);
-	assert.match(final[1].text, /Existing commits to publish: 1/);
-	assert.match(final[1].text, /earlier work/);
-	assert.match(final[1].text, /publish → main/);
+	const final = app.prompts.filter((prompt) => prompt.title.startsWith("Commit ·"));
+	assert.equal(final.length, 1);
+	assert.match(final[0].initial ?? "", /publish\/main · 1 earlier commits/);
+	assert.match(final[0].text, /earlier work/);
+	assert.equal(app.inputs.length, 0);
 });
 
 test("push failure keeps the new local commit and does not retry or roll it back", async (t) => {
@@ -410,8 +621,7 @@ test("push failure keeps the new local commit and does not retry or roll it back
 	const remoteHead = app.git(["rev-parse", "refs/heads/main"], path);
 	app.write("code.txt", "new\n");
 	app.stage();
-	app.selections.push("Continue", "Commit and push", "publish", "Commit and push");
-	app.inputs.push("main");
+	app.selections.push("Commit & push");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.match(app.text(result), /rejected-by-remote/);
@@ -427,8 +637,7 @@ test("a hook changing the commit content blocks pushing and keeps the changed co
 	app.write("code.txt", "approved\n");
 	app.stage();
 	app.hook("pre-commit", "printf 'hook changed content\\n' > code.txt\ngit add code.txt");
-	app.selections.push("Continue", "Commit and push", "publish", "Commit and push");
-	app.inputs.push("main");
+	app.selections.push("Commit & push");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.match(app.text(result), /differs from the preview/);
@@ -462,17 +671,17 @@ test("sensitive filenames show warnings without disclosing their contents; cance
 		app.write(path, `${opaque}\n`);
 		app.stage();
 		const index = readFileSync(join(app.root, ".git", "index"));
-		app.selections.push("Review diff", "Continue", "Cancel");
+		app.selections.push("Diff", "Warning details", "Cancel");
 		const result = await app.execute();
 		assert.equal(result.isError, false, app.text(result));
 		assert.match(app.text(result), /cancelled/);
 		assert.equal(app.head(), head);
 		assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
-		const preview = app.prompts.filter((prompt) => prompt.title === "Commit preview").at(-1)?.text ?? "";
+		const preview = app.prompts.filter((prompt) => prompt.title.startsWith("Commit ·")).at(-1)?.text ?? "";
 		assert.ok(preview.includes(path));
 		assert.match(preview, /Sensitive filename/);
-		assert.match(app.prompts.at(-1)?.text ?? "", /Commit despite warnings/);
-		assert.match(app.prompts.at(-1)?.text ?? "", /^> Cancel$/m);
+		assert.match(app.prompts.at(-1)?.text ?? "", /Commit only despite warnings/);
+		assert.match(app.prompts.at(-1)?.initial ?? "", /> Cancel/);
 		for (const output of [JSON.stringify(app.modelInputs), JSON.stringify(app.prompts), JSON.stringify(result)]) {
 			assert.equal(output.includes(opaque), false);
 		}
@@ -489,12 +698,12 @@ test("credential warnings identify candidate lines and require explicit confirma
 	app.write("tests/fixture.txt", staged);
 	app.stage();
 	app.write("tests/fixture.txt", `${staged}unstaged tail\n`);
-	app.selections.push("Review diff", "Continue", "Commit despite warnings");
+	app.selections.push("Diff", "Warning details", "Commit only despite warnings");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["show", "HEAD:tests/fixture.txt"]), staged.trim());
 	assert.match(app.git(["diff"]), /unstaged tail/);
-	const preview = app.prompts.find((prompt) => prompt.title === "Commit preview")?.text ?? "";
+	const preview = app.prompts.find((prompt) => prompt.title.startsWith("Commit ·"))?.text ?? "";
 	assert.match(preview, /"tests\/fixture\.txt":2 · API token/);
 	assert.match(preview, /api = "\[redacted\]"/);
 	assert.match(JSON.stringify(app.modelInputs), /diff withheld/);
@@ -509,7 +718,7 @@ test("private-key header fixtures warn with a location while key bodies stay out
 	const body = "OPAQUE-PRIVATE-KEY-FIXTURE";
 	app.write("code.txt", `intro\n-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----\n`);
 	app.stage();
-	app.selections.push("Review diff", "Continue", "Cancel");
+	app.selections.push("Diff", "Warning details", "Cancel");
 	const result = await app.execute();
 	assert.match(app.text(result), /cancelled/);
 	assert.match(app.prompts[0].text, /"code\.txt":2 · Private-key header/);
@@ -519,31 +728,30 @@ test("private-key header fixtures warn with a location while key bodies stay out
 	}
 });
 
-test("sensitive-file approval commits unchanged contents and still needs a separate push destination confirmation", async (t) => {
+test("sensitive-file approval shows the destination before a single commit-and-push approval", async (t) => {
 	const app = harness(t);
 	const path = remote(app);
 	app.write(".env", "OPAQUE-ENV-FIXTURE\n");
 	app.stage();
-	app.selections.push("Continue", "Commit and push despite warnings", "publish", "Commit and push despite warnings");
-	app.inputs.push("main");
+	app.selections.push("Warning details", "Commit & push despite warnings");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["show", "HEAD:.env"]), "OPAQUE-ENV-FIXTURE");
 	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), app.head());
-	const finals = app.prompts.filter((prompt) => prompt.title === "Final confirmation");
-	assert.equal(finals.length, 2);
-	assert.match(finals[1].text, /Sensitive filename/);
-	assert.match(finals[1].text, /publish → main/);
+	const finals = app.prompts.filter((prompt) => prompt.title.startsWith("Commit ·"));
+	assert.equal(finals.length, 1);
+	assert.match(finals[0].text, /Sensitive filename/);
+	assert.match(finals[0].initial ?? "", /publish\/main/);
 	for (const output of [JSON.stringify(app.modelInputs), JSON.stringify(app.prompts), JSON.stringify(result)]) {
 		assert.equal(output.includes("OPAQUE-ENV-FIXTURE"), false);
 	}
 	app.write(".env", "new opaque fixture\n");
 	app.stage();
 	const head = app.head();
-	app.selections.push("Continue", "Cancel");
+	app.selections.push("Cancel");
 	await app.execute();
 	assert.equal(app.head(), head);
-	assert.match(app.prompts.at(-1)?.text ?? "", /Commit despite warnings/);
+	assert.match(app.prompts.at(-1)?.text ?? "", /Commit only despite warnings/);
 });
 
 test("changing a suspected secret invalidates its approval even when redacted findings look identical", async (t) => {
@@ -553,9 +761,9 @@ test("changing a suspected secret invalidates its approval even when redacted fi
 	const index = readFileSync(join(app.root, ".git", "index"));
 	const status = app.git(["status", "--porcelain"]);
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation") app.write("code.txt", `api = sk-${"y".repeat(32)}\n`);
+		if (title.startsWith("Commit ·")) app.write("code.txt", `api = sk-${"y".repeat(32)}\n`);
 	};
-	app.selections.push("Everything", "Continue", "Commit despite warnings");
+	app.selections.push("Everything", "Commit only despite warnings");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
@@ -574,7 +782,7 @@ test("removing secrets or deleting sensitive files needs no override and does no
 	app.write("code.txt", "clean contents\n");
 	rmSync(join(app.root, ".env"));
 	app.stage();
-	app.selections.push("Review diff", "Continue", "Commit");
+	app.selections.push("Diff", "Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["show", "HEAD:code.txt"]), "clean contents");
@@ -592,7 +800,7 @@ test("unstaged secrets outside the candidate commit neither trigger an override 
 	app.stage();
 	const token = `sk-ant-${"x".repeat(32)}`;
 	app.write("code.txt", `api = ${token}\n`);
-	app.selections.push("Continue", "Commit");
+	app.selections.push("Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["show", "HEAD:code.txt"]), "safe staged contents");
@@ -607,9 +815,9 @@ test("aborting a secret warning cancels without staging or committing and releas
 	const index = readFileSync(join(app.root, ".git", "index"));
 	const controller = new AbortController();
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation") controller.abort();
+		if (title.startsWith("Commit ·")) controller.abort();
 	};
-	app.selections.push("Everything", "Continue", "Cancel");
+	app.selections.push("Everything", "Cancel");
 	const result = await app.execute("", controller.signal);
 	assert.match(app.text(result), /cancelled/);
 	assert.equal(app.head(), head);
@@ -624,7 +832,7 @@ test("Git hook output for approved sensitive files cannot expose their opaque co
 	app.stage();
 	app.hook("pre-commit", "cat .env >&2\nexit 1");
 	const head = app.head();
-	app.selections.push("Continue", "Commit despite warnings");
+	app.selections.push("Commit only despite warnings");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.equal(app.head(), head);
@@ -639,7 +847,7 @@ test("warnings classify GitHub and AWS credentials and redact guidance before dr
 	const guidance = `sk-${"z".repeat(32)}`;
 	app.write("code.txt", `${github}\n${aws}\n`);
 	app.stage();
-	app.selections.push("Continue", "Cancel");
+	app.selections.push("Warning details", "Cancel");
 	await app.execute(`Do not repeat ${guidance}`);
 	const preview = app.prompts[0].text;
 	assert.match(preview, /"code\.txt":1 · GitHub token/);
@@ -655,24 +863,20 @@ test("files exceeding the bounded scan receive an explicit warning instead of be
 	app.write("large.bin", "\0".repeat(8 * 1024 * 1024 + 1));
 	app.stage();
 	const head = app.head();
-	app.selections.push("Continue", "Cancel");
+	app.selections.push("Warning details", "Cancel");
 	const result = await app.execute();
 	assert.match(app.text(result), /cancelled/);
 	assert.match(app.prompts[0].text, /large\.bin.*Too large to scan/);
-	assert.match(app.prompts.at(-1)?.text ?? "", /Commit despite warnings/);
+	assert.match(app.prompts.at(-1)?.text ?? "", /Commit only despite warnings/);
 	assert.equal(app.head(), head);
 });
 
-test("command routes through the guarded tool; a busy preview blocks mutation and duplicate commits", async (t) => {
+test("the command drafts directly and retains mutation, duplicate-command, and session guards", async (t) => {
 	const app = harness(t);
-	await app.command("focus on behaviour");
-	assert.match(app.messages[0], /git_commit/);
-	assert.match(app.messages[0], /focus on behaviour/);
-	assert.equal(app.git(["log", "--format=%s"]).split("\n").length, 1);
 	app.write("code.txt", "changed\n");
 	app.stage();
-	app.onPrompt = ({ title, component }) => {
-		if (title !== "Commit preview") return;
+	const head = app.head();
+	app.onPrompt = ({ component }) => {
 		const guard = app.hooks.get("tool_call");
 		assert.ok(guard);
 		assert.deepEqual(guard({ toolName: "write", input: {} }, app.ctx), {
@@ -680,6 +884,8 @@ test("command routes through the guarded tool; a busy preview blocks mutation an
 			reason: "Commit preview owns editing. Finish or cancel it first.",
 		});
 		assert.equal(guard({ toolName: "read", input: {} }, app.ctx), undefined);
+		assert.deepEqual(app.hooks.get("session_before_switch")?.({}, app.ctx), { cancel: true });
+		void app.command();
 		for (const width of [80, 20, 1]) {
 			app.terminal.rows = 16;
 			const lines = component.render(width);
@@ -688,9 +894,20 @@ test("command routes through the guarded tool; a busy preview blocks mutation an
 		}
 	};
 	app.selections.push("Escape");
-	const result = await app.execute();
-	assert.match(app.text(result), /cancelled/);
+	await app.command("focus on behaviour");
+	assert.equal(app.messages.length, 0);
+	assert.equal(app.modelInputs.length, 1);
+	assert.match(JSON.stringify(app.modelInputs), /focus on behaviour/);
+	assert.match(String(app.completions[0].content), /cancelled/);
+	assert.match(app.notices[0], /current commit preview/);
+	assert.equal(app.head(), head);
 	assert.equal(app.hooks.get("tool_call")?.({ toolName: "write", input: {} }, app.ctx), undefined);
+	assert.equal(app.hooks.get("session_before_switch")?.({}, app.ctx), undefined);
+	app.onPrompt = () => {};
+	app.selections.push("Commit only");
+	await app.command();
+	assert.match(String(app.completions[1].content), /Committed/);
+	assert.notEqual(app.head(), head);
 });
 
 test("edited multiline messages enter the commit without silent normalization", async (t) => {
@@ -698,10 +915,22 @@ test("edited multiline messages enter the commit without silent normalization", 
 	app.write("code.txt", "changed\n");
 	app.stage();
 	app.inputs.push("fix: explain the change\n\nKeep the reason in the body.");
-	app.selections.push("Edit message", "Continue", "Commit");
+	app.selections.push("Edit message", "Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["log", "-1", "--format=%B"]), "fix: explain the change\n\nKeep the reason in the body.");
+});
+
+test("outer whitespace edits are shown before approval instead of silently changing the message", async (t) => {
+	const app = harness(t);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	app.inputs.push("  fix: reviewed whitespace\n");
+	app.selections.push("Edit message", "Commit only", "Commit only");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts[0].text, /Outer whitespace removed\. Review the message/);
+	assert.equal(app.git(["log", "-1", "--format=%B"]), "fix: reviewed whitespace");
 });
 
 test("bad model output fails without staging or retrying", async (t) => {
@@ -727,7 +956,7 @@ test("worktrees and split indexes preserve staged hunks", async (t) => {
 	app.git(["add", "code.txt"], checkout);
 	app.git(["update-index", "--split-index"], checkout);
 	writeFileSync(join(checkout, "code.txt"), "unstaged in worktree\n");
-	app.selections.push("Continue", "Commit");
+	app.selections.push("Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, false, app.text(result));
 	assert.equal(app.git(["show", "HEAD:code.txt"], checkout), "staged in worktree");
@@ -740,9 +969,9 @@ test("HEAD changes invalidate approval even when staged file status remains unch
 	app.write("code.txt", "selected\n");
 	app.stage();
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation") app.git(["commit", "--allow-empty", "--only", "-m", "chore: external commit"]);
+		if (title.startsWith("Commit ·")) app.git(["commit", "--allow-empty", "--only", "-m", "chore: external commit"]);
 	};
-	app.selections.push("Continue", "Commit");
+	app.selections.push("Commit only");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.match(app.text(result), /changed during review/);
@@ -756,13 +985,11 @@ test("changed remote configuration cancels pushing before any commit", async (t)
 	const head = app.head();
 	app.write("code.txt", "selected\n");
 	app.stage();
-	let finals = 0;
 	app.onPrompt = ({ title }) => {
-		if (title === "Final confirmation" && ++finals === 2)
+		if (title.startsWith("Commit ·"))
 			app.git(["remote", "set-url", "--push", "publish", join(app.root, "missing.git")]);
 	};
-	app.selections.push("Continue", "Commit and push", "publish", "Commit and push");
-	app.inputs.push("main");
+	app.selections.push("Commit & push");
 	const result = await app.execute();
 	assert.equal(result.isError, true);
 	assert.equal(app.head(), head);
@@ -772,11 +999,11 @@ test("model context signals omitted patch content while the diff remains inspect
 	const app = harness(t);
 	app.write("code.txt", `${"large change\n".repeat(8000)}END-OF-PATCH\n`);
 	app.stage();
-	app.selections.push("Review diff", "Continue", "Cancel");
+	app.selections.push("Diff", "Cancel");
 	const result = await app.execute();
 	assert.match(app.text(result), /cancelled/);
 	assert.match(JSON.stringify(app.modelInputs), /Patch truncated/);
-	assert.ok(app.prompts.some((prompt) => prompt.title === "Commit diff" && prompt.text.includes("END-OF-PATCH")));
+	assert.ok(app.prompts.some((prompt) => prompt.text.includes("─ Diff ─") && prompt.text.includes("END-OF-PATCH")));
 });
 
 class MemoryTerminal implements Terminal {
@@ -819,6 +1046,7 @@ test(
 		app.stage();
 		const head = app.head();
 		const agentDir = join(app.root, ".pi", "agent");
+		writeFileSync(join(app.root, ".git", "info", "exclude"), ".pi/\n");
 		mkdirSync(agentDir, { recursive: true });
 		const previous = { HOME: process.env.HOME, PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR };
 		process.env.HOME = app.root;
@@ -916,37 +1144,82 @@ test(
 		assert.ok(tool);
 		for (const tuiMode of ["regular", "fullscreen"] as const) {
 			(mode as unknown as { switchTuiMode(mode: string): void }).switchTuiMode(tuiMode);
-			for (const action of ["cancel", "abort-editor", "cancel-warning"] as const) {
+			for (const action of [
+				"cancel",
+				"abort-editor",
+				"cancel-warning",
+				"command",
+				"back-picker",
+				"grid-navigation",
+			] as const) {
 				app.write(
 					"code.txt",
 					action === "cancel-warning" ? "-----BEGIN PRIVATE KEY-----\nNATIVE-PRIVATE-FIXTURE\n" : "selected\n",
 				);
-				app.stage();
+				if (action === "back-picker") app.git(["restore", "--staged", "code.txt"]);
+				else app.stage();
+				const index = readFileSync(join(app.root, ".git", "index"));
 				ui.setEditorText("unfinished chat");
 				await rendered();
 				terminal.output = "";
 				const controller = new AbortController();
-				const execution = tool.execute(`native-${action}`, {}, controller.signal);
+				const execution =
+					action === "command"
+						? runtime.session.prompt("/commit")
+						: tool.execute(`native-${action}`, {}, controller.signal);
 				try {
-					for (let i = 0; i < 100 && !terminal.output.includes("Commit preview"); i++) await rendered();
-					assert.match(terminal.output, /Commit preview/);
+					if (action === "back-picker") {
+						for (let i = 0; i < 100 && !terminal.output.includes("Nothing is staged"); i++) await rendered();
+						assert.match(terminal.output, /Nothing is staged/);
+						terminal.output = "";
+						terminal.send(DOWN);
+						terminal.send(DOWN);
+						terminal.send(ENTER);
+						for (let i = 0; i < 100 && !terminal.output.includes("Pick files"); i++) await rendered();
+						assert.match(terminal.output, /Pick files/);
+						assert.match(terminal.output, /Esc back/);
+						terminal.send(" ");
+						terminal.output = "";
+						terminal.send(ESC);
+						for (let i = 0; i < 100 && !terminal.output.includes("Nothing is staged"); i++) await rendered();
+						assert.match(terminal.output, /Nothing is staged/);
+						terminal.send(ESC);
+						await execution;
+						assert.equal(app.head(), head);
+						assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
+						assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "selected\n");
+						assert.equal(ui.getEditorText(), "unfinished chat");
+						continue;
+					}
+					for (let i = 0; i < 100 && !terminal.output.includes("Commit · main"); i++) await rendered();
+					assert.match(terminal.output, /Commit · main/);
+					assert.match(terminal.output, /fix: update code/);
 					if (action === "cancel-warning") {
 						assert.match(terminal.output, /Private-key header/);
 						assert.doesNotMatch(terminal.output, /NATIVE-PRIVATE-FIXTURE/);
 					}
 					terminal.output = "";
-					if (action === "cancel" || action === "cancel-warning") {
-						terminal.send(ENTER);
-						await rendered();
-						assert.match(terminal.output, /Final confirmation/);
-						if (action === "cancel-warning") assert.match(terminal.output, /Commit despite warnings/);
-						terminal.send(ENTER);
-					} else {
+					if (action === "grid-navigation") {
 						terminal.send(UP);
-						terminal.send(UP);
-						terminal.send(ENTER);
 						await rendered();
-						assert.match(terminal.output, /Edit commit message/);
+						assert.match(terminal.output, /> ▸ Changed files/);
+						terminal.output = "";
+						terminal.send(RIGHT);
+						await rendered();
+						assert.match(terminal.output, /> ▸ Diff/);
+						terminal.output = "";
+						terminal.send(DOWN);
+						await rendered();
+						assert.match(terminal.output, /> Cancel/);
+					}
+					if (action !== "abort-editor") terminal.send(ENTER);
+					else {
+						terminal.send("\t"); // Cancel wraps to Edit message.
+						terminal.send(ENTER);
+						terminal.send(ENTER); // Enter adds a line, never approval.
+						await rendered();
+						assert.match(terminal.output, /Tab finish editing/);
+						assert.equal(app.head(), head);
 						controller.abort();
 					}
 					await execution;
@@ -956,12 +1229,197 @@ test(
 					assert.equal(ui.getEditorText(), "unfinished chat!");
 				} finally {
 					controller.abort();
+					if (action === "command") terminal.send(ESC);
 					await execution;
 				}
 			}
 		}
 	},
 );
+
+test("a clean working tree can publish existing commits without drafting or making another commit", async (t) => {
+	const app = harness(t);
+	const path = remote(app);
+	app.write("code.txt", "local commit\n");
+	app.stage();
+	app.git(["commit", "-m", "fix: local change"]);
+	const head = app.head();
+	app.selections.push("Earlier commits", "Push");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.head(), head);
+	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), head);
+	assert.equal(app.modelInputs.length, 0);
+	assert.match(app.prompts[0].text, /fix: local change/);
+	assert.match(app.text(result), /Pushed/);
+	assert.doesNotMatch(app.text(result), /Committed/);
+	assert.match(app.text(await app.execute()), /Nothing to commit or push/);
+});
+
+test("push-only cancellation and changed HEAD preserve unpublished history", async (t) => {
+	const app = harness(t);
+	const path = remote(app);
+	const remoteHead = app.head();
+	app.git(["commit", "--allow-empty", "-m", "fix: unpublished"]);
+	const head = app.head();
+	app.selections.push("Cancel");
+	assert.match(app.text(await app.execute()), /cancelled/);
+	assert.equal(app.head(), head);
+	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), remoteHead);
+	app.onPrompt = () => {
+		app.git(["commit", "--allow-empty", "-m", "fix: external"]);
+	};
+	app.selections.push("Push");
+	const result = await app.execute();
+	assert.equal(result.isError, true);
+	assert.match(app.text(result), /changed during review/);
+	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), remoteHead);
+});
+
+test("configured upstreams take precedence over another remote and preserve their branch name", async (t) => {
+	const app = harness(t);
+	const path = remote(app, "upstream");
+	app.git(["push", "upstream", "main:release"]);
+	app.git(["branch", "--set-upstream-to", "upstream/release"]);
+	app.git(["config", "push.default", "upstream"]);
+	app.git(["remote", "add", "origin", join(app.root, "missing.git")]);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	app.selections.push("Commit & push");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts[0].initial ?? "", /upstream\/release/);
+	assert.equal(app.git(["rev-parse", "refs/heads/release"], path), app.head());
+});
+
+test("ambiguous destinations require choosing a target and reviewing it before approval", async (t) => {
+	const app = harness(t);
+	const path = remote(app);
+	app.git(["remote", "add", "other", join(app.root, "missing.git")]);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	app.inputs.push("main");
+	app.selections.push("Edit message", "Destination", "publish", "Commit & push");
+	app.inputs.unshift("fix: user wording");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.doesNotMatch(app.prompts[0].initial ?? "", /Commit & push/);
+	const main = app.prompts.filter((prompt) => prompt.title.startsWith("Commit ·"));
+	assert.equal(main.length, 2);
+	assert.match(main[1].initial ?? "", /publish\/main/);
+	assert.match(main[1].initial ?? "", /fix: user wording/);
+	assert.equal(app.git(["rev-parse", "refs/heads/main"], path), app.head());
+});
+
+test("a failed destination lookup still permits a local commit", async (t) => {
+	const app = harness(t);
+	app.git(["remote", "add", "offline", join(app.root, "missing.git")]);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	app.selections.push("Commit only");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts[0].initial ?? "", /Push unavailable/);
+	assert.doesNotMatch(app.prompts[0].initial ?? "", /Commit & push/);
+	assert.match(app.text(result), /Not pushed/);
+});
+
+test("typing Enter in the inline editor never commits and details preserve the edited message", async (t) => {
+	const app = harness(t);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	const head = app.head();
+	const index = readFileSync(join(app.root, ".git", "index"));
+	app.onPrompt = ({ component }) => {
+		component.handleInput?.("\t");
+		component.handleInput?.(ENTER);
+		component.handleInput?.("\x01");
+		component.handleInput?.("\x0b");
+		component.handleInput?.("\x1b[200~fix: edited inline\x1b[201~");
+		component.handleInput?.(ENTER);
+		assert.equal(app.head(), head);
+		assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
+		component.handleInput?.("\t");
+	};
+	app.selections.push("Diff", "Cancel");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts[0].text, /Message: fix: edited inline/);
+	assert.equal(app.head(), head);
+});
+
+test("narrow previews keep a wrapped subject and cancellation visible with warnings and a long body", async (t) => {
+	const app = harness(t);
+	app.write(".env", "sensitive fixture\n");
+	app.stage();
+	app.drafts[0] = `fix: keep approval visible\n\n${"Long explanation.\n".repeat(100)}`.trimEnd();
+	app.onPrompt = ({ component }) => {
+		for (const width of [20, 40, 80]) {
+			app.terminal.rows = 24;
+			const lines = component.render(width);
+			assert.ok(lines.length <= 24);
+			assert.ok(lines.every((line) => visibleWidth(line) <= width));
+			const text = lines.join("\n");
+			assert.match(text, /fix: keep\s+approval/);
+			assert.match(text, /Cancel/);
+		}
+	};
+	app.selections.push("Cancel");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+});
+
+test("Esc during drafting aborts the model once without staging and releases ownership", async (t) => {
+	const app = harness(t);
+	app.write("code.txt", "changed\n");
+	const head = app.head();
+	const index = readFileSync(join(app.root, ".git", "index"));
+	let signal: AbortSignal | undefined;
+	const model = t.mock.method(
+		app.ctx.modelRegistry,
+		"streamSimple",
+		(_model: unknown, _context: unknown, options: { signal: AbortSignal }) => {
+			signal = options.signal;
+			return {
+				result: () =>
+					new Promise((_resolve, reject) =>
+						signal?.addEventListener("abort", () => reject(new Error("Draft cancelled.")), { once: true }),
+					),
+			};
+		},
+	);
+	app.onWorking = (component) => {
+		if (component.render(80).join("\n").includes("Drafting commit message")) component.handleInput?.(ESC);
+	};
+	app.selections.push("Everything");
+	const result = await app.execute();
+	assert.equal(signal?.aborted, true);
+	assert.equal(model.mock.callCount(), 1);
+	assert.match(app.text(result), /cancelled/i);
+	assert.equal(result.isError, false);
+	assert.equal(app.head(), head);
+	assert.deepEqual(readFileSync(join(app.root, ".git", "index")), index);
+	assert.equal(app.hooks.get("tool_call")?.({ toolName: "write", input: {} }, app.ctx), undefined);
+});
+
+test("command ownership refusals do no Git work and leave the command usable", async (t) => {
+	const app = harness(t);
+	app.write("code.txt", "changed\n");
+	app.stage();
+	const head = app.head();
+	const unsubscribe = app.events.on("ai-workflow:commit", (data) => {
+		const claim = data as { phase: string; reason?: string };
+		if (claim.phase === "start") claim.reason = "Subagent owns editing";
+	});
+	await app.command();
+	assert.match(app.notices[0], /Subagent owns editing/);
+	assert.equal(app.modelInputs.length, 0);
+	assert.equal(app.head(), head);
+	unsubscribe();
+	app.selections.push("Cancel");
+	await app.command();
+	assert.match(String(app.completions[0].content), /cancelled/);
+});
 
 test("non-interactive and pre-aborted calls do not mutate Git", async (t) => {
 	const app = harness(t);
@@ -974,7 +1432,8 @@ test("non-interactive and pre-aborted calls do not mutate Git", async (t) => {
 	const abort = new AbortController();
 	abort.abort();
 	const result = await app.execute("", abort.signal);
-	assert.equal(result.isError, true);
+	assert.equal(result.isError, false);
+	assert.match(app.text(result), /cancelled/);
 	assert.equal(app.head(), head);
 	assert.equal(app.prompts.length, 0);
 });

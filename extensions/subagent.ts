@@ -479,6 +479,7 @@ export default function subagent(pi: ExtensionAPI) {
 	const jobs = new Map<string, Job>();
 	const runs = new Map<string, Run>();
 	const parentTools = new Set<string>();
+	const commits = new Set<string>();
 	let context: ExtensionContext | undefined;
 	let session = "";
 	let prompts = 0;
@@ -605,7 +606,8 @@ export default function subagent(pi: ExtensionAPI) {
 	});
 	const pending = () => [...jobs.values()].filter((job) => job.background && job.finished && !job.delivered);
 	const deliver = () => {
-		if (!context || closing || prompts || controls || !context.isIdle() || context.hasPendingMessages()) return;
+		if (!context || closing || prompts || controls || commits.size || !context.isIdle() || context.hasPendingMessages())
+			return;
 		const completed = pending();
 		if (!completed.length) return;
 		for (const job of completed) {
@@ -659,6 +661,7 @@ export default function subagent(pi: ExtensionAPI) {
 		restore(ctx);
 	});
 	const beforeChange = async () => {
+		if (commits.size) return { cancel: true };
 		await stopAll();
 		closing = false;
 		if (editor || runs.size || cleanupBlocked()) {
@@ -685,6 +688,28 @@ export default function subagent(pi: ExtensionAPI) {
 	pi.on("ui_prompt_end", () => {
 		prompts = Math.max(0, prompts - 1);
 		deliver();
+	});
+	// /commit runs directly, without a model tool call to acquire editing ownership.
+	pi.events.on("ai-workflow:commit", (data) => {
+		const request = object(data);
+		if (!request || typeof request.id !== "string") return;
+		const key = `commit:${request.id}`;
+		if (request.phase === "end") {
+			commits.delete(key);
+			parentTools.delete(key);
+			setImmediate(deliver);
+			return;
+		}
+		if (request.phase !== "start" || request.reason) return;
+		const blocked = cleanupBlocked();
+		if (blocked) request.reason = `Subagent ${blocked} cleanup is unverified. Inspect the job before editing.`;
+		else if (editor) request.reason = `Subagent ${editor} owns editing. Wait or stop it first.`;
+		else if (closing || [...parentTools].some((id) => id !== request.id))
+			request.reason = "Another tool owns editing. Wait before opening a commit preview.";
+		else {
+			commits.add(key);
+			parentTools.add(key);
+		}
 	});
 	pi.on("tool_execution_start", (event) => {
 		if (!READ_TOOLS.has(event.toolName)) parentTools.add(event.toolCallId);

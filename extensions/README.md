@@ -69,25 +69,26 @@ focus and the toggle. Check delivery and click-to-return in your terminal.
 
 ## Git commit
 
-Use `/commit [message guidance]` or ask to commit in plain words.
-Staged hunks define the scope. With nothing staged, choose Everything, Pick files,
-or Stop. In the picker, Space selects files and Enter continues.
+Use `/commit [message guidance]` or ask to commit. Staged changes define the scope.
+With nothing staged, choose Everything, Pick files, or Cancel. Space selects whole
+files in the picker; Enter continues. Nothing enters staging before approval.
 
-Review the diff and the current model's message; edit or regenerate it as needed.
-The final confirmation offers Commit, Commit and push, or Cancel (the default).
-Cancellation before approval preserves staging and working files.
-Use Shift+PageUp/PageDown for long previews.
+One screen shows the editable message, scope, push destination, and earlier unpushed
+commits. Use ↑/↓ or Tab to choose controls and Enter to select. Edit message opens
+an inline editor: Enter adds a line; Tab returns to controls. Expand files, diff,
+or warnings in place; Shift+PageUp/PageDown scrolls details. Regenerate asks the
+current model for another message.
 
-Pushing also requires destination approval and a preview of older unpushed commits.
-Repository changes invalidate approval. Hooks and signing stay enabled; failures
-keep staging and local commits without retries or rollback. After an interrupted
-commit or push, inspect local and remote history before retrying.
-Possible secrets and sensitive filenames show file/line warnings with masked excerpts.
-The model and diff viewer omit flagged file contents. To proceed, choose **Commit
-despite warnings** or **Commit and push despite warnings**; Cancel stays the default.
-Approval applies only to the unchanged preview, with no saved exemptions.
-Review for sensitive content: the guard catches known patterns, not all secrets.
-Detached HEAD and active merge/rebase/cherry-pick operations need manual handling.
+Choose Commit & push, Commit only, or Cancel (the default). Git's push destination
+is prefilled when unambiguous; Destination lets you choose another. A clean working
+tree offers Push for existing unpublished commits. Esc cancels, including drafting.
+Cancellation preserves staging and working files.
+
+Possible secrets show masked warnings and require explicit approval; flagged contents
+stay out of the model and diff. The guard does not catch all secrets. Repository or
+remote changes invalidate approval. Hooks and signing stay enabled. Failures retain
+staging and local commits without retries or rollback; inspect history after an
+interrupted operation. Detached HEAD and active Git operations need manual handling.
 
 ## Subagents
 
