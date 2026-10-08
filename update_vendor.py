@@ -107,7 +107,7 @@ def stage_skill(source: Source, workspace: Path) -> Path:
     staged = directory / "skill"
     if source.path == ".":
         staged.mkdir()
-        for name in ("SKILL.md", "references", "scripts", "LICENSE"):
+        for name in ("SKILL.md", "references", "scripts", "LICENSE", "NOTICE"):
             item = selected / name
             target = staged / name
             if item.is_symlink():
@@ -118,6 +118,11 @@ def stage_skill(source: Source, workspace: Path) -> Path:
                 shutil.copy2(item, target)
     else:
         shutil.copytree(selected, staged, symlinks=True)
+    for name in ("LICENSE", "NOTICE"):
+        if not (staged / name).exists() and (roots[0] / name).is_file():
+            shutil.copy2(roots[0] / name, staged / name)
+    if not (staged / "LICENSE").is_file():
+        raise ValueError(f"missing LICENSE for {source.name}")
     if not (staged / "SKILL.md").is_file():
         raise ValueError(f"unreadable staged SKILL.md for {source.name}")
     return staged
@@ -167,7 +172,7 @@ def update(vendor: Path) -> None:
                 continue
             commit = latest_commit(entry)
             updated = replace(entry, commit=commit)
-            if commit == entry.commit:
+            if commit == entry.commit and (vendor / entry.name / "LICENSE").is_file():
                 print(f"up to date: {entry.name}")
             else:
                 updates.append((updated, stage_skill(updated, workspace)))
@@ -179,9 +184,12 @@ def update(vendor: Path) -> None:
                 for entry in entries
                 if isinstance(entry, Source) and entry.name == source.name
             )
-            print(
-                f"updated:    {source.name}  {original.commit[:12]} -> {source.commit[:12]}"
-            )
+            if original.commit == source.commit:
+                print(f"licences:   {source.name}  {source.commit[:12]}")
+            else:
+                print(
+                    f"updated:    {source.name}  {original.commit[:12]} -> {source.commit[:12]}"
+                )
 
 
 def main() -> None:
