@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { type TestContext, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
@@ -24,7 +24,7 @@ import {
 	TUI_KEYBINDINGS,
 	visibleWidth,
 } from "@earendil-works/pi-tui";
-import commit from "../extensions/git-commit.ts";
+import commit from "../extensions/git.ts";
 
 type Hook = (event: unknown, ctx: ExtensionContext) => unknown;
 type Prompt = Component & { dispose?(): void };
@@ -57,6 +57,7 @@ function harness(t: TestContext, initial = true) {
 	const commands = new Map<string, { handler: (args: string, ctx: ExtensionCommandContext) => Promise<void> }>();
 	const hooks = new Map<string, Hook>();
 	let tool: ToolDefinition | undefined;
+	let pullTool: ToolDefinition | undefined;
 	const messages: string[] = [];
 	const completions: { content: unknown; details?: unknown }[] = [];
 	const events = createEventBus();
@@ -150,26 +151,71 @@ function harness(t: TestContext, initial = true) {
 					}
 					while (!finished) {
 						// Select through the UI, retaining only controls this screen exposes.
-						const choices = [
-							"Edit message",
-							"Changed files",
-							"Diff",
-							"Regenerate",
-							"Earlier commits",
-							"Warning details",
-							"Destination",
-							"Commit & push despite warnings",
-							"Commit & push",
-							"Push",
-							"Commit only despite warnings",
-							"Commit only",
-							"Cancel",
-						].filter((choice) => {
+						const pullScreen =
+							title.startsWith("Pull preview ·") ||
+							title.startsWith("Conflict proposal ·") ||
+							title === "Pull complete";
+						const choices = (
+							pullScreen
+								? [
+										"AI explanation",
+										"Incoming commits",
+										"Changed files",
+										"Diff",
+										"Conflict details",
+										"Resolution diff",
+										"Result",
+										"Propose fixes",
+										"Apply proposal in preview",
+										"Integrate rebase",
+										"Pull fast-forward",
+										"Integrate rebase despite withheld contents",
+										"Pull fast-forward despite withheld contents",
+										"Push preview",
+										"Cancel",
+									]
+								: [
+										"Edit message",
+										"Changed files",
+										"Diff",
+										"Regenerate",
+										"Earlier commits",
+										"Warning details",
+										"Destination",
+										"Commit & push despite warnings",
+										"Commit & push",
+										"Push",
+										"Commit only despite warnings",
+										"Commit only",
+										"Commit, then preview pull despite warnings",
+										"Commit, then preview pull",
+										"Pull preview",
+										"Cancel",
+									]
+						).filter((choice) => {
+							if (pullScreen)
+								return rendered
+									.split("\n")
+									.some(
+										(line) =>
+											line === `> ${choice}` ||
+											line === `  ${choice}` ||
+											line === `> ▸ ${choice}` ||
+											line === `  ▸ ${choice}`,
+									);
+							if (choice === "Commit, then preview pull")
+								return rendered.includes(choice) && !rendered.includes(`${choice} despite warnings`);
+							if (choice === "Pull preview")
+								return rendered.includes("  Pull preview") || rendered.includes("> Pull preview");
 							if (choice === "Push") return title.startsWith("Push ·") && /(?:>| ) Push(?:\s|$)/.test(rendered);
 							if (choice === "Commit & push" || choice === "Commit only")
 								return rendered.includes(choice) && !rendered.includes(`${choice} despite warnings`);
 							return rendered.includes(choice);
 						});
+						if (pullScreen) {
+							const footer = rendered.split("\n").map((line) => line.replace(/^(?:>| ) (?:▸ )?/, ""));
+							choices.sort((a, b) => footer.indexOf(a) - footer.indexOf(b));
+						}
 						let cursor = choices.findIndex(
 							(choice) =>
 								rendered.includes(`> ${choice}`) ||
@@ -197,7 +243,19 @@ function harness(t: TestContext, initial = true) {
 						}
 						rendered = component.render(100).join("\n");
 						prompt.text += `\n${rendered}`;
-						if (["Changed files", "Diff", "Earlier commits", "Warning details"].includes(selection)) {
+						if (
+							[
+								"Changed files",
+								"Diff",
+								"Earlier commits",
+								"Warning details",
+								"AI explanation",
+								"Incoming commits",
+								"Conflict details",
+								"Resolution diff",
+								"Result",
+							].includes(selection)
+						) {
 							for (let i = 0; i < 10_000; i++) {
 								component.handleInput?.("\x1b[6;2~");
 								const next = component.render(100).join("\n");
@@ -217,7 +275,8 @@ function harness(t: TestContext, initial = true) {
 		registerMessageRenderer() {},
 		sendMessage: (message: { content: unknown; details?: unknown }) => completions.push(message),
 		registerTool: (definition: ToolDefinition) => {
-			tool = definition;
+			if (definition.name === "git_pull") pullTool = definition;
+			else tool = definition;
 		},
 		registerCommand: (name: string, value: typeof commands extends Map<string, infer T> ? T : never) =>
 			commands.set(name, value),
@@ -268,8 +327,17 @@ function harness(t: TestContext, initial = true) {
 		set selectFile(value: number) {
 			selectFile = value;
 		},
-		command: async (args = "") => {
-			const command = commands.get("commit");
+		pull: async (signal?: AbortSignal) => {
+			assert.ok(pullTool);
+			hooks.get("tool_execution_start")?.({ toolName: "git_pull", toolCallId: "test", args: {} }, ctx);
+			try {
+				return await pullTool.execute("test", {}, signal, undefined, ctx as unknown as ExtensionToolContext);
+			} finally {
+				hooks.get("tool_execution_end")?.({ toolName: "git_pull", toolCallId: "test" }, ctx);
+			}
+		},
+		command: async (args = "", name = "commit") => {
+			const command = commands.get(name);
 			assert.ok(command);
 			await command.handler(args, ctx);
 		},
@@ -885,7 +953,7 @@ test("the command drafts directly and retains mutation, duplicate-command, and s
 		assert.ok(guard);
 		assert.deepEqual(guard({ toolName: "write", input: {} }, app.ctx), {
 			block: true,
-			reason: "Commit preview owns editing. Finish or cancel it first.",
+			reason: "Git preview owns editing. Finish or cancel it first.",
 		});
 		assert.equal(guard({ toolName: "read", input: {} }, app.ctx), undefined);
 		assert.deepEqual(app.hooks.get("session_before_switch")?.({}, app.ctx), { cancel: true });
@@ -903,7 +971,7 @@ test("the command drafts directly and retains mutation, duplicate-command, and s
 	assert.equal(app.modelInputs.length, 1);
 	assert.match(JSON.stringify(app.modelInputs), /focus on behaviour/);
 	assert.match(String(app.completions[0].content), /cancelled/);
-	assert.match(app.notices[0], /current commit preview/);
+	assert.match(app.notices[0], /current Git preview/);
 	assert.equal(app.head(), head);
 	assert.equal(app.hooks.get("tool_call")?.({ toolName: "write", input: {} }, app.ctx), undefined);
 	assert.equal(app.hooks.get("session_before_switch")?.({}, app.ctx), undefined);
@@ -1115,7 +1183,7 @@ test(
 						noPromptTemplates: true,
 						noThemes: true,
 						noContextFiles: true,
-						additionalExtensionPaths: [fileURLToPath(new URL("../extensions/git-commit.ts", import.meta.url))],
+						additionalExtensionPaths: [fileURLToPath(new URL("../extensions/git.ts", import.meta.url))],
 						extensionFactories: [
 							(api) => {
 								api.registerCommand("capture-commit-context", {
@@ -1432,6 +1500,790 @@ test("command ownership refusals do no Git work and leave the command usable", a
 	app.selections.push("Cancel");
 	await app.command();
 	assert.match(String(app.completions[0].content), /cancelled/);
+});
+
+function incoming(t: TestContext, files: Record<string, string | null> = { "remote.txt": "incoming\n" }) {
+	const app = harness(t);
+	const path = remote(app, "origin");
+	app.git(["branch", "--set-upstream-to", "origin/main"]);
+	const peer = mkdtempSync(join(tmpdir(), "ai-workflow-pull-peer-"));
+	t.after(() => rmSync(peer, { recursive: true, force: true }));
+	app.git(["clone", "--branch", "main", path, peer]);
+	app.git(["config", "user.name", "Peer"], peer);
+	app.git(["config", "user.email", "peer@example.invalid"], peer);
+	app.git(["config", "commit.gpgsign", "false"], peer);
+	const advance = (changes: Record<string, string | null>) => {
+		for (const [name, contents] of Object.entries(changes)) {
+			if (contents === null) rmSync(join(peer, name), { force: true });
+			else {
+				mkdirSync(dirname(join(peer, name)), { recursive: true });
+				writeFileSync(join(peer, name), contents);
+			}
+		}
+		app.git(["add", "-A"], peer);
+		app.git(["commit", "-m", "fix: incoming work"], peer);
+		app.git(["push", "origin", "HEAD:main"], peer);
+		return app.git(["rev-parse", "HEAD"], peer);
+	};
+	const head = advance(files);
+	return { app, path, peer, head, advance };
+}
+
+function preserved(app: ReturnType<typeof harness>) {
+	return {
+		head: app.head(),
+		index: readFileSync(join(app.root, ".git", "index")),
+		refs: app.git(["show-ref"]),
+		status: app.git(["--no-optional-locks", "status", "--porcelain=v1"]),
+	};
+}
+
+function localCommit(app: ReturnType<typeof harness>, path = "local.txt", contents = "local work\n") {
+	app.write(path, contents);
+	app.stage();
+	app.git(["commit", "-m", "fix: local work"]);
+	return app.head();
+}
+
+// The previous push check could not distinguish missing remote objects from divergence.
+test("commit explains missing history and known incoming commits without changing the remote", async (t) => {
+	const { app, path, head } = incoming(t);
+	app.write("code.txt", "local edit\n");
+	app.stage();
+	app.selections.push("Commit only");
+	let result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts[0].text, /Remote history needs checking/);
+	assert.match(app.prompts[0].text, /Commit, then preview pull/);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	app.git(["fetch", "origin"]);
+	app.write("code.txt", "second local edit\n");
+	app.stage();
+	app.selections.push("Commit only");
+	result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts.at(-1)?.text ?? "", /1 incoming · 1 outgoing/);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+});
+
+test("pull cancellation preserves refs, index bytes, working files, and fetch metadata", async (t) => {
+	const { app, head } = incoming(t);
+	const before = preserved(app);
+	const fetchHead = join(app.root, ".git", "FETCH_HEAD");
+	writeFileSync(fetchHead, "keep fetch metadata\n");
+	app.onPrompt = ({ title, component }) => {
+		if (!title.startsWith("Pull preview ·")) return;
+		assert.deepEqual(app.hooks.get("session_before_switch")?.({}, app.ctx), { cancel: true });
+		assert.deepEqual(app.hooks.get("tool_call")?.({ toolName: "edit", input: {} }, app.ctx), {
+			block: true,
+			reason: "Git preview owns editing. Finish or cancel it first.",
+		});
+		for (const width of [20, 40, 80]) {
+			app.terminal.rows = 24;
+			const lines = component.render(width);
+			assert.ok(lines.length <= 24);
+			assert.ok(lines.every((line) => visibleWidth(line) <= width));
+			assert.match(lines.join("\n"), /Cancel/);
+		}
+	};
+	app.selections.push("Incoming commits", "Diff", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.text(result), /cancelled/);
+	assert.deepEqual(preserved(app), before);
+	assert.equal(readFileSync(fetchHead, "utf8"), "keep fetch metadata\n");
+	assert.throws(() => app.git(["cat-file", "-e", head]));
+	assert.match(app.prompts[0].text, /1 incoming · 0 outgoing/);
+	assert.match(JSON.stringify(app.modelInputs), /incoming work/);
+	assert.equal(result.usage?.totalTokens, 15);
+	assert.equal(app.hooks.get("tool_call")?.({ toolName: "edit", input: {} }, app.ctx), undefined);
+});
+
+test("approved fast-forward updates only the selected branch and tracking ref without pushing", async (t) => {
+	const { app, path, head } = incoming(t);
+	app.git(["branch", "untouched"]);
+	const original = app.head();
+	app.selections.push("Pull fast-forward", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.head(), head);
+	assert.equal(app.git(["rev-parse", "origin/main"]), head);
+	assert.equal(app.git(["rev-parse", "untouched"]), original);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.equal(readFileSync(join(app.root, "remote.txt"), "utf8"), "incoming\n");
+	assert.match(app.text(result), /Not pushed/);
+	assert.equal(app.git(["status", "--porcelain"]), "");
+});
+
+// A real pull was unnecessarily blocked despite incoming files being separate from local edits.
+test("fast-forward preserves unrelated staged, unstaged, and untracked work without committing or stashing", async (t) => {
+	for (const approve of [false, true])
+		await t.test(approve ? "approve" : "cancel", async (t) => {
+			const { app, head } = incoming(t);
+			app.write("code.txt", "staged work\n");
+			app.stage();
+			app.write("code.txt", "unstaged work\n");
+			app.write("outside.txt", "untracked work\n");
+			const before = preserved(app);
+			const staged = app.git(["diff", "--cached"]);
+			const unstaged = app.git(["diff"]);
+			app.selections.push(approve ? "Pull fast-forward" : "Cancel", ...(approve ? ["Cancel"] : []));
+			const result = await app.pull();
+			assert.equal(result.isError, false, app.text(result));
+			assert.match(app.prompts[0].initial ?? "", /Pull fast-forward/);
+			assert.equal(app.head(), approve ? head : before.head);
+			if (!approve) assert.deepEqual(preserved(app), before);
+			assert.equal(app.git(["diff", "--cached"]), staged);
+			assert.equal(app.git(["diff"]), unstaged);
+			assert.equal(app.git(["status", "--porcelain=v1"]), before.status);
+			assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "unstaged work\n");
+			assert.equal(readFileSync(join(app.root, "outside.txt"), "utf8"), "untracked work\n");
+			assert.equal(app.git(["stash", "list"]), "");
+		});
+});
+
+test("fast-forward keeps staged deletions, renames, file modes, and split-index hunks", async (t) => {
+	for (const kind of ["deletion", "rename", "split index"])
+		await t.test(kind, async (t) => {
+			const { app, head } = incoming(t);
+			if (kind === "deletion") app.git(["rm", "code.txt"]);
+			else if (kind === "rename") {
+				app.git(["mv", "code.txt", "moved.txt"]);
+				chmodSync(join(app.root, "moved.txt"), 0o755);
+			} else {
+				app.write("code.txt", "first\nstaged\nthird\n");
+				app.stage();
+				app.write("code.txt", "first\nstaged\nunstaged\n");
+				app.git(["update-index", "--split-index"]);
+			}
+			const staged = app.git(["diff", "--cached"]);
+			const unstaged = app.git(["diff"]);
+			const entries = app.git(["ls-files", "--stage", "--", "code.txt", "moved.txt"]);
+			app.selections.push("Pull fast-forward", "Cancel");
+			const result = await app.pull();
+			assert.equal(result.isError, false, app.text(result));
+			assert.equal(app.head(), head);
+			assert.equal(app.git(["diff", "--cached"]), staged);
+			assert.equal(app.git(["diff"]), unstaged);
+			assert.equal(app.git(["ls-files", "--stage", "--", "code.txt", "moved.txt"]), entries);
+			assert.equal(app.git(["stash", "list"]), "");
+		});
+});
+
+test("local edits overlapping incoming files block fast-forward without touching either version", async (t) => {
+	for (const staged of [false, true])
+		await t.test(staged ? "staged" : "unstaged", async (t) => {
+			const { app } = incoming(t, { "code.txt": "remote edit\n" });
+			app.write("code.txt", "keep my pending edit\n");
+			if (staged) app.stage();
+			const before = preserved(app);
+			app.selections.push("Cancel");
+			const result = await app.pull();
+			assert.equal(result.isError, false, app.text(result));
+			assert.match(app.prompts[0].text, /local changes overlap/i);
+			assert.doesNotMatch(app.prompts[0].text, /Pull fast-forward/);
+			assert.deepEqual(preserved(app), before);
+			assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "keep my pending edit\n");
+		});
+});
+
+test("a dirty rebase still needs manual handling and never stashes or commits pending work", async (t) => {
+	const { app } = incoming(t);
+	localCommit(app);
+	app.write("code.txt", "keep pending work\n");
+	const before = preserved(app);
+	app.selections.push("Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.prompts[0].text, /rebase requires a clean working tree/i);
+	assert.doesNotMatch(app.prompts[0].text, /Integrate rebase/);
+	assert.deepEqual(preserved(app), before);
+	assert.equal(app.git(["stash", "list"]), "");
+});
+
+test("same-status edits to existing pending work invalidate fast-forward approval", async (t) => {
+	const { app } = incoming(t);
+	app.write("code.txt", "first pending edit\n");
+	const before = preserved(app);
+	app.onPrompt = ({ title }) => {
+		if (title.startsWith("Pull preview ·")) app.write("code.txt", "new pending edit\n");
+	};
+	app.selections.push("Pull fast-forward");
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.match(app.text(result), /changed during pull review/);
+	assert.deepEqual(preserved(app), before);
+	assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "new pending edit\n");
+});
+
+test("approved clean rebase preserves local intent on incoming history and changes commit IDs", async (t) => {
+	const { app, path, head } = incoming(t);
+	const local = localCommit(app);
+	app.selections.push("Integrate rebase", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.notEqual(app.head(), local);
+	assert.equal(app.git(["rev-parse", "HEAD^"]), head);
+	assert.equal(app.git(["log", "-1", "--format=%s"]), "fix: local work");
+	assert.equal(app.git(["show", "HEAD:local.txt"]), "local work");
+	assert.equal(app.git(["show", "HEAD:remote.txt"]), "incoming");
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.match(app.text(result), /Local commit IDs changed/);
+});
+
+test("conflict proposals stay isolated until both proposal and integration approval", async (t) => {
+	for (const integrate of [false, true])
+		await t.test(integrate ? "integrate" : "cancel after proposal", async (t) => {
+			const { app, path, head } = incoming(t, { "code.txt": "remote\nsecond\nthird\n" });
+			localCommit(app, "code.txt", "local\nsecond\nthird\n");
+			const before = preserved(app);
+			const resolved = "remote and local\nsecond\nthird\n";
+			app.drafts.push(
+				JSON.stringify({
+					explanation: "Both sides change the first line. Combine their intent; review this assumption.",
+					files: [{ path: "code.txt", content: resolved }],
+				}),
+			);
+			app.onPrompt = ({ title }) => {
+				if (title.startsWith("Pull preview ·") || title.startsWith("Conflict proposal ·"))
+					assert.deepEqual(preserved(app), before);
+			};
+			app.selections.push(
+				"Conflict details",
+				"Propose fixes",
+				"Resolution diff",
+				"Apply proposal in preview",
+				integrate ? "Integrate rebase" : "Cancel",
+				...(integrate ? ["Cancel"] : []),
+			);
+			const result = await app.pull();
+			assert.equal(result.isError, false, app.text(result));
+			const conflict = app.prompts[0].text;
+			assert.match(conflict, /Remote\/new base/);
+			assert.match(conflict, /Local commit being replayed/);
+			assert.match(
+				app.prompts.find((prompt) => prompt.title.startsWith("Conflict proposal"))?.text ?? "",
+				/remote and local/,
+			);
+			if (integrate) {
+				assert.equal(app.git(["show", "HEAD:code.txt"]), resolved.trim());
+				assert.equal(app.git(["rev-parse", "HEAD^"]), head);
+				assert.equal(app.git(["status", "--porcelain"]), "");
+			} else assert.deepEqual(preserved(app), before);
+			assert.equal(app.git(["rev-parse", "main"], path), head);
+			assert.equal(existsSync(join(app.root, ".git", "rebase-merge")), false);
+		});
+});
+
+test("invalid conflict proposals cannot edit extra files or apply unsafe output", async (t) => {
+	const proposals = [
+		{ explanation: "bad path", files: [{ path: "../outside", content: "bad" }] },
+		{ explanation: "missing file", files: [] },
+		{
+			explanation: "duplicate",
+			files: [
+				{ path: "code.txt", content: "a" },
+				{ path: "code.txt", content: "b" },
+			],
+		},
+		{
+			explanation: "unresolved",
+			files: [{ path: "code.txt", content: "<<<<<<< HEAD\nbad\n=======\nother\n>>>>>>> local\n" }],
+		},
+		{ explanation: "credential", files: [{ path: "code.txt", content: `sk-${"x".repeat(32)}` }] },
+	];
+	for (const proposal of proposals)
+		await t.test(proposal.explanation, async (t) => {
+			const { app } = incoming(t, { "code.txt": "remote\n" });
+			localCommit(app, "code.txt", "local\n");
+			const before = preserved(app);
+			app.drafts.push(JSON.stringify(proposal));
+			app.selections.push("Propose fixes");
+			const result = await app.pull();
+			assert.equal(result.isError, true);
+			assert.match(app.text(result), /proposal/i);
+			assert.deepEqual(preserved(app), before);
+			assert.equal(existsSync(join(app.root, ".git", "rebase-merge")), false);
+		});
+});
+
+test("changed files, branch, remote configuration, or remote history invalidate pull approval", async (t) => {
+	for (const change of ["files", "branch", "configuration", "remote"] as const)
+		await t.test(change, async (t) => {
+			const { app, advance } = incoming(t);
+			const head = app.head();
+			const refs = app.git(["rev-parse", "origin/main"]);
+			app.onPrompt = ({ title }) => {
+				if (!title.startsWith("Pull preview ·")) return;
+				if (change === "files") app.write("code.txt", "external edit\n");
+				if (change === "branch") app.git(["switch", "-c", "external"]);
+				if (change === "configuration") app.git(["remote", "set-url", "origin", join(app.root, "unavailable.git")]);
+				if (change === "remote") advance({ "later.txt": "another remote change\n" });
+			};
+			app.selections.push("Pull fast-forward");
+			const result = await app.pull();
+			assert.equal(result.isError, true, app.text(result));
+			assert.match(app.text(result), /changed during pull review/);
+			assert.equal(app.head(), head);
+			assert.equal(app.git(["rev-parse", "origin/main"]), refs);
+			assert.equal(existsSync(join(app.root, "remote.txt")), false);
+			if (change === "files") assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "external edit\n");
+			if (change === "branch") assert.equal(app.git(["branch", "--show-current"]), "external");
+		});
+});
+
+test("rebasing known shared commits and rewritten remote history requires manual review", async (t) => {
+	for (const history of ["shared", "rewritten"] as const)
+		await t.test(history, async (t) => {
+			const { app, peer } = incoming(t);
+			if (history === "shared") {
+				const local = localCommit(app);
+				app.git(["update-ref", "refs/remotes/archive/shared", local]);
+			} else {
+				app.git(["fetch", "origin"]);
+				app.git(["checkout", "-B", "rewritten", app.head()], peer);
+				writeFileSync(join(peer, "replacement.txt"), "rewritten history\n");
+				app.git(["add", "replacement.txt"], peer);
+				app.git(["commit", "-m", "fix: rewritten remote"], peer);
+				app.git(["push", "--force", "origin", "HEAD:main"], peer);
+			}
+			const before = preserved(app);
+			const result = await app.pull();
+			assert.equal(result.isError, true, app.text(result));
+			assert.match(app.text(result), history === "shared" ? /known remote history/ : /history was rewritten/);
+			assert.deepEqual(preserved(app), before);
+			assert.equal(app.modelInputs.length, 0);
+		});
+});
+
+test("a rejecting real rebase hook runs once, never in preview, and triggers no retry", async (t) => {
+	const { app, path, head } = incoming(t);
+	const local = localCommit(app);
+	app.hook("pre-rebase", "echo invoked >> .git/hook-count\nexit 1");
+	app.selections.push("Integrate rebase");
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.equal(readFileSync(join(app.root, ".git", "hook-count"), "utf8"), "invoked\n");
+	assert.equal(app.head(), local);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.match(app.text(result), /No automatic retry or rollback/);
+});
+
+test("commit then preview pull saves first and never integrates without another approval", async (t) => {
+	const { app, path, head } = incoming(t);
+	app.write("code.txt", "approved local work\n");
+	app.stage();
+	app.selections.push("Commit, then preview pull", "Cancel");
+	const result = await app.execute();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(app.text(result), /Committed.*\nPull cancelled/s);
+	assert.equal(app.git(["log", "-1", "--format=%s"]), "fix: update code");
+	assert.equal(app.git(["show", "HEAD:code.txt"]), "approved local work");
+	assert.equal(existsSync(join(app.root, "remote.txt")), false);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.equal(app.modelInputs.length, 2);
+});
+
+test("fresh push preview after rebase publishes only with explicit push approval", async (t) => {
+	for (const push of [false, true])
+		await t.test(push ? "push" : "cancel push", async (t) => {
+			const { app, path, head } = incoming(t);
+			localCommit(app);
+			app.selections.push("Integrate rebase", "Push preview", "Earlier commits", push ? "Push" : "Cancel");
+			const result = await app.pull();
+			assert.equal(result.isError, false, app.text(result));
+			assert.equal(app.git(["rev-parse", "main"], path), push ? app.head() : head);
+			assert.match(app.prompts.find((prompt) => prompt.title.startsWith("Push ·"))?.text ?? "", /fix: local work/);
+			assert.match(app.text(result), push ? /Pushed to origin/ : /Not pushed/);
+		});
+});
+
+test("missing upstream requires a selected pull source without changing tracking configuration", async (t) => {
+	const { app, head } = incoming(t);
+	app.git(["branch", "--unset-upstream"]);
+	const configuration = app.git(["config", "--local", "--list"]);
+	app.inputs.push("main");
+	app.selections.push("origin", "Pull fast-forward", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.head(), head);
+	assert.equal(app.git(["config", "--local", "--list"]), configuration);
+	assert.match(app.prompts[0].title, /No upstream/);
+});
+
+test("sensitive conflict contents stay out of explanation and proposal tools", async (t) => {
+	const app = harness(t);
+	app.write(".env", "BASE-OPAQUE-FIXTURE\n");
+	app.stage();
+	app.git(["commit", "-m", "chore: seed fixture"]);
+	const path = remote(app, "origin");
+	app.git(["branch", "--set-upstream-to", "origin/main"]);
+	const peer = mkdtempSync(join(tmpdir(), "ai-workflow-private-peer-"));
+	t.after(() => rmSync(peer, { recursive: true, force: true }));
+	app.git(["clone", "--branch", "main", path, peer]);
+	app.git(["config", "user.name", "Peer"], peer);
+	app.git(["config", "user.email", "peer@example.invalid"], peer);
+	writeFileSync(join(peer, ".env"), "REMOTE-OPAQUE-FIXTURE\n");
+	app.git(["add", ".env"], peer);
+	app.git(["commit", "-m", "fix: incoming fixture"], peer);
+	app.git(["push", "origin", "main"], peer);
+	localCommit(app, ".env", "LOCAL-OPAQUE-FIXTURE\n");
+	const before = preserved(app);
+	app.selections.push("Conflict details", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.deepEqual(preserved(app), before);
+	assert.match(app.prompts[0].text, /requires manual resolution/);
+	assert.doesNotMatch(app.prompts[0].text, /Propose fixes/);
+	for (const output of [JSON.stringify(app.modelInputs), JSON.stringify(app.prompts), JSON.stringify(result)])
+		assert.doesNotMatch(output, /(?:BASE|REMOTE|LOCAL)-OPAQUE-FIXTURE/);
+});
+
+test("pull command and cancellation during simulation release editing without mutating Git", async (t) => {
+	const { app } = incoming(t);
+	const before = preserved(app);
+	app.onWorking = (component) => {
+		if (component.render(80).join("\n").includes("Checking fast-forward")) component.handleInput?.(ESC);
+	};
+	await app.command("explain incoming changes", "pull");
+	assert.match(String(app.completions[0].content), /Pull cancelled/);
+	assert.deepEqual(preserved(app), before);
+	assert.equal(app.modelInputs.length, 0);
+	assert.equal(app.hooks.get("tool_call")?.({ toolName: "edit", input: {} }, app.ctx), undefined);
+	app.onWorking = () => {};
+	app.selections.push("Cancel");
+	await app.command("explain incoming changes", "pull");
+	assert.match(JSON.stringify(app.modelInputs), /explain incoming changes/);
+	assert.deepEqual(preserved(app), before);
+});
+
+test("pull protects ignored files that Git would otherwise overwrite", async (t) => {
+	for (const rebase of [false, true])
+		await t.test(rebase ? "rebase" : "fast-forward", async (t) => {
+			const { app } = incoming(t, { "ignored.txt": "remote version\n" });
+			if (rebase) localCommit(app);
+			const exclude = join(app.root, ".git", "info", "exclude");
+			writeFileSync(exclude, `${readFileSync(exclude, "utf8")}\nignored.txt\n`);
+			app.write("ignored.txt", "precious ignored work\n");
+			const before = preserved(app);
+			assert.equal(before.status, "");
+			app.selections.push(rebase ? "Integrate rebase" : "Pull fast-forward");
+			const result = await app.pull();
+			assert.equal(result.isError, true, app.text(result));
+			assert.match(app.text(result), /ignored path.*would be overwritten/);
+			assert.deepEqual(preserved(app), before);
+			assert.equal(readFileSync(join(app.root, "ignored.txt"), "utf8"), "precious ignored work\n");
+		});
+});
+
+test("rebase replays multiple approved conflict resolutions in commit order", async (t) => {
+	const { app, head } = incoming(t, { "code.txt": "remote\nsecond\nthird\n" });
+	localCommit(app, "code.txt", "local one\nsecond\nthird\n");
+	localCommit(app, "code.txt", "local two\nsecond\nthird\n");
+	app.drafts.push(
+		...["remote + local one\nsecond\nthird\n", "remote + local one + local two\nsecond\nthird\n"].map((content) =>
+			JSON.stringify({ explanation: "Combine the named changes.", files: [{ path: "code.txt", content }] }),
+		),
+	);
+	app.selections.push(
+		"Propose fixes",
+		"Apply proposal in preview",
+		"Propose fixes",
+		"Apply proposal in preview",
+		"Integrate rebase",
+		"Cancel",
+	);
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.git(["rev-list", "--count", `${head}..HEAD`]), "2");
+	assert.equal(app.git(["show", "HEAD:code.txt"]), "remote + local one + local two\nsecond\nthird");
+	assert.equal(app.git(["status", "--porcelain"]), "");
+});
+
+test("an approved modify-delete resolution can preserve the local deletion", async (t) => {
+	const { app, head } = incoming(t, { "code.txt": "remote edit\n" });
+	rmSync(join(app.root, "code.txt"));
+	app.stage();
+	app.git(["commit", "-m", "fix: remove obsolete code"]);
+	app.drafts.push(
+		JSON.stringify({
+			explanation: "The remote edits the file, but the local commit removes it. Preserve the approved removal.",
+			files: [{ path: "code.txt", content: null }],
+		}),
+	);
+	app.selections.push("Propose fixes", "Apply proposal in preview", "Integrate rebase", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(existsSync(join(app.root, "code.txt")), false);
+	assert.equal(app.git(["rev-parse", "HEAD^"]), head);
+	assert.equal(app.git(["log", "-1", "--format=%s"]), "fix: remove obsolete code");
+});
+
+test("pull source remains independent of the configured push destination", async (t) => {
+	const { app, path, head } = incoming(t);
+	const publish = mkdtempSync(join(tmpdir(), "ai-workflow-publish-"));
+	t.after(() => rmSync(publish, { recursive: true, force: true }));
+	app.git(["init", "--bare", publish]);
+	app.git(["remote", "add", "publish", publish]);
+	app.git(["push", "publish", "main:main"]);
+	app.git(["config", "branch.main.pushRemote", "publish"]);
+	app.git(["config", "push.default", "current"]);
+	localCommit(app);
+	app.selections.push("Integrate rebase", "Push preview", "Push");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.match(
+		app.prompts.find((prompt) => prompt.title.startsWith("Pull preview ·"))?.initial ?? "",
+		/Pull from: origin\/main/,
+	);
+	assert.match(
+		app.prompts.find((prompt) => prompt.title.startsWith("Push ·"))?.initial ?? "",
+		/Push to: publish\/main/,
+	);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.equal(app.git(["rev-parse", "main"], publish), app.head());
+});
+
+test("explicit push after dirty fast-forward publishes incoming history, not pending local data", async (t) => {
+	const { app, head } = incoming(t);
+	const publish = mkdtempSync(join(tmpdir(), "ai-workflow-publish-"));
+	t.after(() => rmSync(publish, { recursive: true, force: true }));
+	app.git(["init", "--bare", publish]);
+	app.git(["remote", "add", "publish", publish]);
+	app.git(["push", "publish", "main:main"]);
+	app.git(["config", "branch.main.pushRemote", "publish"]);
+	app.git(["config", "push.default", "current"]);
+	app.write("code.txt", "staged unpublished data\n");
+	app.stage();
+	app.write("code.txt", "pending unpublished data\n");
+	const staged = app.git(["diff", "--cached"]);
+	app.selections.push("Pull fast-forward", "Push preview", "Push");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.head(), head);
+	assert.equal(app.git(["rev-parse", "main"], publish), head);
+	assert.equal(app.git(["show", "main:code.txt"], publish), "first\nsecond\nthird");
+	assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "pending unpublished data\n");
+	assert.equal(app.git(["diff", "--cached"]), staged);
+});
+
+test("failed push after integration keeps the rebased work without retrying or undoing it", async (t) => {
+	const { app, path, head } = incoming(t);
+	const local = localCommit(app);
+	const reject = join(path, "hooks", "pre-receive");
+	writeFileSync(reject, "#!/bin/sh\necho invoked >> rejection-count\nexit 1\n");
+	chmodSync(reject, 0o755);
+	app.selections.push("Integrate rebase", "Push preview", "Push");
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.notEqual(app.head(), local);
+	assert.equal(app.git(["rev-parse", "HEAD^"]), head);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.equal(readFileSync(join(path, "rejection-count"), "utf8"), "invoked\n");
+	assert.match(app.text(result), /Integrated HEAD .* remains/);
+});
+
+test("hook changes to integrated history stop before the push preview and retain the hook's work", async (t) => {
+	const { app, path, head } = incoming(t);
+	localCommit(app);
+	app.hook(
+		"post-rewrite",
+		"printf 'hook work\\n' > local.txt\ngit add local.txt\ngit -c core.hooksPath=/dev/null commit -m 'chore: hook work'",
+	);
+	app.selections.push("Integrate rebase");
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.match(app.text(result), /Integrated result differs from the preview/);
+	assert.equal(app.git(["show", "HEAD:local.txt"]), "hook work");
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+	assert.equal(
+		app.prompts.some((prompt) => prompt.title === "Pull complete"),
+		false,
+	);
+});
+
+test("pull works in a linked worktree without switching or advancing the other checkout", async (t) => {
+	const { app, head } = incoming(t);
+	const original = app.head();
+	const checkout = join(app.root, "checkout");
+	app.git(["worktree", "add", "-b", "work", checkout]);
+	app.git(["branch", "--set-upstream-to", "origin/main", "work"]);
+	app.ctx.cwd = checkout;
+	app.selections.push("Pull fast-forward", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.git(["rev-parse", "HEAD"], checkout), head);
+	assert.equal(app.git(["branch", "--show-current"], checkout), "work");
+	assert.equal(app.head(), original);
+	assert.equal(app.git(["branch", "--show-current"]), "main");
+	assert.equal(existsSync(join(app.root, "remote.txt")), false);
+});
+
+test("a remote rewound to local HEAD is not mistaken for an ordinary up-to-date pull", async (t) => {
+	const { app, peer } = incoming(t);
+	app.git(["fetch", "origin"]);
+	app.git(["push", "--force", "origin", `${app.head()}:main`], peer);
+	const before = preserved(app);
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.match(app.text(result), /history was rewritten/);
+	assert.deepEqual(preserved(app), before);
+});
+
+test("checkout filters affecting incoming files require manual handling and never run in preview", async (t) => {
+	const { app } = incoming(t, {
+		".gitattributes": "remote.txt filter=custom\n",
+		"remote.txt": "incoming filtered data\n",
+	});
+	app.git(["config", "filter.custom.smudge", "touch .git/filter-invoked"]);
+	const before = preserved(app);
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.match(app.text(result), /Checkout filter.*remote\.txt.*manual integration/);
+	assert.deepEqual(preserved(app), before);
+	assert.equal(existsSync(join(app.root, ".git", "filter-invoked")), false);
+	assert.equal(app.modelInputs.length, 0);
+});
+
+// Git LFS is often configured globally even when the incoming files do not use it.
+test("unrelated globally configured LFS filters do not block pull or execute during preview", async (t) => {
+	const { app, advance } = incoming(t, {
+		".gitattributes": "cached.dat filter=lfs -text\n",
+		"cached.dat": `version https://git-lfs.github.com/spec/v1\noid sha256:${"a".repeat(64)}\nsize 123\n`,
+	});
+	app.git(["fetch", "origin"]);
+	app.git(["merge", "--ff-only", "origin/main"]);
+	const head = advance({ "remote.txt": "new lesson\n" });
+	const global = join(app.root, ".git", "fixture-global-config");
+	const marker = join(app.root, ".git", "filter-invoked");
+	app.git(["config", "--file", global, "filter.lfs.clean", "cat"]);
+	app.git(["config", "--file", global, "filter.lfs.smudge", `touch ${JSON.stringify(marker)}; exit 1`]);
+	app.git(["config", "--file", global, "filter.lfs.required", "true"]);
+	process.env.GIT_CONFIG_GLOBAL = global;
+	app.write("code.txt", "pending notes\n");
+	const staged = app.git(["diff", "--cached"]);
+	app.selections.push("Pull fast-forward", "Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.equal(app.head(), head);
+	assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "pending notes\n");
+	assert.equal(app.git(["diff", "--cached"]), staged);
+	assert.equal(existsSync(marker), false);
+	assert.equal(app.git(["stash", "list"]), "");
+});
+
+test("preview and real rebase honor repository-specific attribute files", async (t) => {
+	for (const kind of ["relative attributesFile", "info/attributes"])
+		await t.test(kind, async (t) => {
+			const { app } = incoming(t, { "code.txt": "remote side\n" });
+			const path = kind === "info/attributes" ? ".git/info/attributes" : ".git/custom-attributes";
+			app.write(path, "code.txt merge=union\n");
+			if (kind !== "info/attributes") app.git(["config", "core.attributesFile", path]);
+			localCommit(app, "code.txt", "local side\n");
+			app.selections.push("Integrate rebase", "Cancel");
+			const result = await app.pull();
+			assert.equal(result.isError, false, app.text(result));
+			assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "remote side\nlocal side\n");
+			assert.equal(app.git(["status", "--porcelain=v1"]), "");
+		});
+});
+
+test("configured merge drivers only block affected rebase paths, including the default driver", async (t) => {
+	for (const kind of ["affected", "unrelated", "default"])
+		await t.test(kind, async (t) => {
+			const { app } = incoming(t, {
+				".gitattributes":
+					kind === "default" ? "" : `${kind === "affected" ? "code.txt" : "untouched.txt"} merge=custom\n`,
+				"code.txt": "remote side\n",
+			});
+			localCommit(app, "code.txt", "local side\n");
+			const marker = join(app.root, ".git", "merge-invoked");
+			app.git(["config", "merge.custom.driver", `touch ${JSON.stringify(marker)}; exit 1`]);
+			if (kind === "default") app.git(["config", "merge.default", "custom"]);
+			const before = preserved(app);
+			if (kind === "unrelated") app.selections.push("Cancel");
+			const result = await app.pull();
+			assert.equal(result.isError, kind !== "unrelated", app.text(result));
+			if (kind === "unrelated") assert.match(app.prompts[0].initial ?? "", /Propose fixes/);
+			else assert.match(app.text(result), /Custom merge driver.*manual integration/);
+			assert.equal(existsSync(marker), false);
+			assert.deepEqual(preserved(app), before);
+		});
+});
+
+test("pull refuses index flags that can hide uncommitted file changes", async (t) => {
+	for (const flag of ["--assume-unchanged", "--skip-worktree"])
+		await t.test(flag, async (t) => {
+			const { app } = incoming(t);
+			app.git(["update-index", flag, "code.txt"]);
+			app.write("code.txt", "hidden uncommitted work\n");
+			const before = preserved(app);
+			assert.equal(before.status, "");
+			const result = await app.pull();
+			assert.equal(result.isError, true, app.text(result));
+			assert.match(app.text(result), /index flags hiding working-file changes/);
+			assert.deepEqual(preserved(app), before);
+			assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "hidden uncommitted work\n");
+		});
+});
+
+test("unexpected edits to real conflict files are preserved instead of overwritten by approved fixes", async (t) => {
+	const { app, path, head } = incoming(t, { "code.txt": "remote\n" });
+	localCommit(app, "code.txt", "local\n");
+	const previousPath = process.env.PATH;
+	const realGit = previousPath
+		?.split(":")
+		.map((directory) => join(directory, "git"))
+		.find((file) => existsSync(file));
+	assert.ok(realGit);
+	const bin = mkdtempSync(join(tmpdir(), "ai-workflow-git-boundary-"));
+	t.after(() => {
+		process.env.PATH = previousPath;
+		rmSync(bin, { recursive: true, force: true });
+	});
+	const wrapper = join(bin, "git");
+	// Simulate another editor immediately after the real Git command stops on a conflict.
+	writeFileSync(
+		wrapper,
+		`#!/bin/sh\n${JSON.stringify(realGit)} "$@"\ncode=$?\nif [ "$PWD" = ${JSON.stringify(app.root)} ] && [ "$code" = 1 ] && [ -f .git/REBASE_HEAD ]; then\n  printf 'external resolution\\n' > code.txt\nfi\nexit "$code"\n`,
+	);
+	chmodSync(wrapper, 0o755);
+	process.env.PATH = `${bin}:${previousPath}`;
+	app.drafts.push(
+		JSON.stringify({
+			explanation: "Combine the changes.",
+			files: [{ path: "code.txt", content: "remote and local\n" }],
+		}),
+	);
+	app.selections.push("Propose fixes", "Apply proposal in preview", "Integrate rebase");
+	const result = await app.pull();
+	assert.equal(result.isError, true, app.text(result));
+	assert.match(app.text(result), /Real conflicts differ from the approved preview/);
+	assert.equal(readFileSync(join(app.root, "code.txt"), "utf8"), "external resolution\n");
+	assert.equal(existsSync(join(app.root, ".git", "rebase-merge")), true);
+	assert.equal(app.git(["rev-parse", "main"], path), head);
+});
+
+test("oversized combined diffs disclose omitted contents and require explicit integration approval", async (t) => {
+	const { app } = incoming(
+		t,
+		Object.fromEntries(["a", "b", "c"].map((name) => [`${name}.txt`, `${name.repeat(3 * 1024 * 1024)}\n`])),
+	);
+	const before = preserved(app);
+	app.onPrompt = ({ component }) => {
+		component.handleInput?.(UP);
+		component.handleInput?.(UP);
+		component.handleInput?.(ENTER); // Diff.
+		component.render(100);
+		for (let i = 0; i < 5000; i++) component.handleInput?.("\x1b[6;2~");
+		assert.match(component.render(100).join("\n"), /Remaining diffs withheld/);
+	};
+	app.selections.push("Cancel");
+	const result = await app.pull();
+	assert.equal(result.isError, false, app.text(result));
+	assert.deepEqual(preserved(app), before);
+	assert.match(app.prompts[0].initial ?? "", /Pull fast-forward despite withheld contents/);
+	assert.match(JSON.stringify(app.modelInputs), /Patch truncated/);
 });
 
 test("non-interactive and pre-aborted calls do not mutate Git", async (t) => {

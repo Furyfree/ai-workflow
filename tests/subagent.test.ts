@@ -22,7 +22,7 @@ import {
 	type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { type Component, KeybindingsManager, type TUI, TUI_KEYBINDINGS, visibleWidth } from "@earendil-works/pi-tui";
-import commit from "../extensions/git-commit.ts";
+import commit from "../extensions/git.ts";
 import notify from "../extensions/notify.ts";
 import subagent from "../extensions/subagent.ts";
 

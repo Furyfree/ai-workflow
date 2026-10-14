@@ -85,7 +85,9 @@ Supports Ghostty, WezTerm, Kitty, and iTerm2. Focus reports suppress alerts whil
 you watch; alerts can appear before the first focus report. `/notify test` bypasses
 focus and the toggle. Check delivery and click-to-return in your terminal.
 
-## Git commit
+## Git
+
+### Commit
 
 Use `/commit [message guidance]` or ask to commit. Staged changes define the scope.
 With nothing staged, choose Everything, Pick files, or Cancel. Space selects whole
@@ -100,13 +102,46 @@ current model for another message.
 Choose Commit & push, Commit only, or Cancel (the default). Git's push destination
 is prefilled when unambiguous; Destination lets you choose another. A clean working
 tree offers Push for existing unpublished commits. Esc cancels, including drafting.
-Cancellation preserves staging and working files.
+Cancellation preserves staging and working files. If incoming history blocks push,
+the screen explains whether history is missing or branches have diverged.
+**Commit, then preview pull** saves the approved commit and opens `/pull`'s preview;
+it does not approve integration or push. Pull source and push destination can differ.
 
 Possible secrets show masked warnings and require explicit approval; flagged contents
 stay out of the model and diff. The guard does not catch all secrets. Repository or
 remote changes invalidate approval. Hooks and signing stay enabled. Failures retain
 staging and local commits without retries or rollback; inspect history after an
 interrupted operation. Detached HEAD and active Git operations need manual handling.
+
+### Pull
+
+Use `/pull [guidance]` or ask to pull. Pi downloads history and simulates integration
+in a temporary repository, then the current model explains incoming changes.
+Choose a source if no upstream exists. Review commits, changed files, and diff;
+↑/↓ or Tab selects controls, and Shift+PageUp/PageDown scrolls details. Cancel is
+the default and leaves your repository unchanged.
+
+Pull advances a branch that is only behind; otherwise it prefers rebase, which
+changes local commit IDs. Conflicts offer **Propose fixes**, then a resolution diff.
+**Apply proposal in preview** changes only the temporary repository. Review the
+completed result before approving real integration. A clean simulation is not a
+passing test. Fast-forward can keep unrelated uncommitted edits and staging as-is;
+overlapping edits block integration. Rebase requires a clean working tree. Pi protects
+ignored files and never stashes or commits pending work for a pull. After integration,
+**Push preview** requires a separate push approval.
+
+Known shared commits, rewritten remote history, local merge commits, shallow
+repositories, and sparse checkouts need manual handling. Custom merge drivers and
+checkout filters on affected paths need manual handling. Unrelated global filter
+configuration does not block pulling. Pi disables custom drivers and filters in the
+temporary preview. Index flags that hide file changes (`assume-unchanged` or
+`skip-worktree`) also block integration.
+Shared-history checks use locally known remote refs, not proof that a commit was
+never shared. Binary, symlink, oversized, and sensitive conflicts need manual
+resolution; flagged contents stay out of the model. Real hooks and signing remain
+enabled. Unexpected conflicts or hook changes stop without retries or rollback;
+inspect any active rebase before continuing. Aborting after integration starts
+may leave partial work; it does not undo the pull or a saved commit.
 
 ## Subagents
 

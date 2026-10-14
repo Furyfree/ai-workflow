@@ -38,12 +38,15 @@ Say what you need, or name a skill: "use the pr skill".
 | --- | --- |
 | `validate` | "validate this", "second opinion", "valider" |
 | `pr` | "make a PR", "lav en PR", "check the PR" |
+| `commit` | "/commit", "commit and push", "lav et commit" |
+| `pull` | "/pull", "pull the latest", "hent ændringer" |
 | `subagent` | "use subagents", "ask opus to ..." |
 | `lean-docs` | "write an AGENTS.md", "debloat the docs" |
 | `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF"; needs `mise use -g npm:@llamaindex/liteparse` |
 | `video-analysis` | A YouTube link, "summarise this video" |
 | `study` | "explain", "quiz me", "hør mig" (DTU coursework) |
+| `week-overview` | "give me a week overview", "hvad skal jeg kunne i uge 4" (DTU) |
 | `lightpanda` | "the page needs JavaScript", "fill in the form"; needs Lightpanda from Mise |
 
 For video analysis, install `yt-dlp`, Node from Mise, and ffmpeg for frames.

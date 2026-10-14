@@ -1,6 +1,6 @@
 ---
 name: lean-docs
-description: Write or cut repository docs - AGENTS.md, CLAUDE.md, README. Use when the user says "write an AGENTS.md", "update AGENTS.md", "debloat the docs", "README is too long", "shorten the README", "clean up the docs", "README er for lang", "gør README kortere", "ryd op i docs". Not for writing code comments or release notes.
+description: Create, review or cut repository docs - AGENTS.md, CLAUDE.md, README. Use when the user says "write an AGENTS.md", "review AGENTS.md", "update AGENTS.md", "skriv en AGENTS.md", "debloat the docs", "README is too long", "shorten the README", "clean up the docs", "README er for lang", "gør README kortere", "ryd op i docs". Not for writing code comments or release notes.
 ---
 
 # Lean docs
@@ -8,23 +8,44 @@ description: Write or cut repository docs - AGENTS.md, CLAUDE.md, README. Use wh
 The whole set for most repositories:
 
 - `README.md`: what it is and how to use it. For people.
-- `AGENTS.md`: the map for agents, below.
-- `CLAUDE.md` and any other agent file: one line, `@AGENTS.md`.
+- `AGENTS.md`: purpose, priorities and a working guide for agents.
+- `CLAUDE.md`: one line, `@AGENTS.md`.
 
 A large active project may keep one behaviour spec and one TASKS file with
 open items only. Ask before adding either.
 
-## AGENTS.md is a map
+## Creating or reviewing agent files
 
-Write it so an agent that has never seen the repository knows where to edit.
+- Read existing instructions, README, entry points, relevant code and check
+  commands. Separate the maintainer's intent from current implementation.
+- Establish what the project is for, who uses it and what changes must preserve.
+  Ask one focused question when intent or a trade-off is unclear.
+- Do not invent goals, supported platforms, production status or policies.
+  Scaffolds and old plans do not establish support.
+- Use [T3 Code's guide](https://github.com/pingdotgg/t3code/blob/main/AGENTS.md)
+  as a purpose-first reference, not a template to copy. Keep this repository's
+  constraints; do not import another project's rules.
+- Propose the files and content before creating or rewriting them. Wait for
+  approval; a review request grants no edit permission.
+- Check paths, commands and links against the repository. Check that
+  `CLAUDE.md` contains only `@AGENTS.md`. Do not activate live systems to
+  verify documentation.
+
+## AGENTS.md explains purpose before layout
+
+Explain what the maintainer wants and what must stay good before giving the
+map. Include their project-specific approach when it affects decisions.
 Aim for under 60 lines, and go over when the lines are needed. Use this order
 and skip a section with nothing real in it:
 
     # <project>
-    <What it is and who uses it, two or three sentences.>
+    <What it is for, who uses it and the intended outcome, two or three sentences.>
 
     ## What must not break
     <The few things users rely on. Non-goals: what this will not become.>
+
+    ## Approach
+    <Maintainer preferences and trade-offs specific to this project, if needed.>
 
     ## Map
     - `cmd/`: entry points. A new subcommand starts here.
