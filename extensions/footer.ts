@@ -2,7 +2,7 @@ import { basename } from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { stripTerminalSequences, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 
-const PROVIDERS = new Set(["openai-codex"]);
+const PROVIDERS = new Set(["openai", "openai-codex"]);
 const tokens = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
 
 function clean(text: string) {
@@ -79,7 +79,7 @@ export default function footer(pi: ExtensionAPI) {
 						[
 							clean(model.id),
 							model.reasoning ? (ctx.thinkingLevel ?? pi.getThinkingLevel()) : "",
-							model.provider === "openai-codex" && statuses.get("ai-workflow-fast") === "Fast: on" ? "fast" : "",
+							statuses.get("ai-workflow-fast") === "Fast: on" ? "fast" : "",
 						]
 							.filter(Boolean)
 							.join(" · "),

@@ -8,7 +8,7 @@ import footer from "../extensions/footer.ts";
 type Factory = NonNullable<Parameters<ExtensionContext["ui"]["setFooter"]>[0]>;
 type Hook = (event: never, ctx: ExtensionContext) => unknown;
 
-function model(provider = "openai-codex", id = "example-model") {
+function model(provider = "openai", id = "example-model") {
 	return { provider, id, reasoning: true, contextWindow: 128_000 } as NonNullable<ExtensionContext["model"]>;
 }
 
@@ -211,7 +211,7 @@ test("a long-running clock remains inline and narrow layouts keep its time and c
 	}
 });
 
-test("only Codex replaces the native footer; provider switches and shutdown release branch watchers", () => {
+test("only OpenAI and legacy Codex replace the native footer; switches and shutdown release branch watchers", () => {
 	const app = harness();
 	app.ctx.model = model("anthropic");
 	app.emit("session_start");
@@ -221,12 +221,15 @@ test("only Codex replaces the native footer; provider switches and shutdown rele
 	assert.match(app.render().join("\n"), /example-model/);
 	app.ctx.model = next;
 	assert.equal(app.watchers.size, 1);
-	for (const provider of ["openai", "anthropic"]) {
+	for (const provider of ["openrouter", "anthropic"]) {
 		app.emit("model_select", { model: model(provider) });
 		assert.deepEqual(app.render(), []);
 		assert.equal(app.watchers.size, 0);
-		app.emit("model_select", { model: next });
-		assert.equal(app.watchers.size, 1);
+		for (const supported of ["openai", "openai-codex"]) {
+			app.emit("model_select", { model: model(supported) });
+			assert.match(app.render().join("\n"), /example-model/);
+			assert.equal(app.watchers.size, 1);
+		}
 	}
 	app.emit("session_start");
 	assert.equal(app.watchers.size, 1);
@@ -251,9 +254,10 @@ test("rendering reads live branch, reasoning, context and Fast state without an 
 	assert.doesNotMatch(app.render().join("\n"), /fast/i);
 	app.branch = null;
 	assert.doesNotMatch(app.render().join("\n"), /\(release\)/);
+	app.statuses.set("ai-workflow-fast", "Fast: on");
 	app.ctx.model = model("openai-codex", "another-model");
 	app.emit("model_select", { model: app.ctx.model });
-	assert.match(app.render().join("\n"), /another-model/);
+	assert.match(app.render().join("\n"), /another-model.*fast/);
 });
 
 test("unknown context keeps its capacity until usage returns; high usage retains warning colours", () => {

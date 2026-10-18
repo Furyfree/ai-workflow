@@ -1,6 +1,10 @@
 default:
     @just --list
 
+setup:
+    pnpm install --frozen-lockfile --ignore-scripts
+    uv sync --locked
+
 [positional-arguments]
 install *args:
     python install.py "$@"

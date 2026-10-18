@@ -5,6 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync
 import { dirname, join } from "node:path";
 import { type ExtensionAPI, type ExtensionContext, getAgentDir } from "@earendil-works/pi-coding-agent";
 
+const PROVIDERS = new Set(["openai", "openai-codex"]);
+
 export default function fast(pi: ExtensionAPI) {
 	const statePath = join(getAgentDir(), "state", "ai-workflow-fast.json");
 	let enabled = false;
@@ -13,13 +15,13 @@ export default function fast(pi: ExtensionAPI) {
 
 	function updateStatus(ctx: ExtensionContext, model = ctx.model) {
 		if (ctx.mode !== "tui") return;
-		const label = model?.provider === "openai-codex" ? `Fast: ${enabled ? "on" : "off"}` : undefined;
+		const label = PROVIDERS.has(model?.provider ?? "") ? `Fast: ${enabled ? "on" : "off"}` : undefined;
 		ctx.ui.setStatus("ai-workflow-fast", label);
 	}
 
 	function statusMessage(ctx: ExtensionContext) {
 		if (!enabled) return "Fast mode is off.";
-		if (ctx.model?.provider !== "openai-codex") {
+		if (!PROVIDERS.has(ctx.model?.provider ?? "")) {
 			return "Fast preference is on, but inactive on this provider.";
 		}
 		return "Fast mode is on: requesting priority processing; OpenAI may reject or downgrade it.";
@@ -46,7 +48,7 @@ export default function fast(pi: ExtensionAPI) {
 	pi.on("model_select", (event, ctx) => updateStatus(ctx, event.model));
 
 	pi.registerCommand("fast", {
-		description: "Toggle saved Codex Fast mode, or use on, off, status",
+		description: "Toggle saved OpenAI Fast mode, or use on, off, status",
 		getArgumentCompletions: (prefix) =>
 			["on", "off", "status"]
 				.filter((value) => value.startsWith(prefix.trim().toLowerCase()))
@@ -66,7 +68,7 @@ export default function fast(pi: ExtensionAPI) {
 			updateStatus(ctx);
 			if (enabled) {
 				ctx.ui.notify(
-					"Fast requests priority processing for Codex. It can consume extra usage; speed is not guaranteed.",
+					"Fast requests priority processing for OpenAI. It can consume extra usage; speed is not guaranteed.",
 					"warning",
 				);
 			}
@@ -93,7 +95,7 @@ export default function fast(pi: ExtensionAPI) {
 	});
 
 	pi.on("before_provider_request", (event, ctx) => {
-		if (!enabled || ctx.model?.provider !== "openai-codex") return;
+		if (!enabled || !PROVIDERS.has(ctx.model?.provider ?? "")) return;
 		if (typeof event.payload !== "object" || event.payload === null || Array.isArray(event.payload)) {
 			if (!warnedAboutPayload) {
 				warnedAboutPayload = true;

@@ -23,8 +23,12 @@ import fast from "../extensions/fast.ts";
 
 type Hook = (event: ExtensionEvent, ctx: ExtensionContext) => unknown;
 
-function model(provider = "openai-codex", id = "example-codex") {
-	return { provider, id, api: "openai-codex-responses" } as NonNullable<ExtensionContext["model"]>;
+function model(provider = "openai", id = "example-codex") {
+	return {
+		provider,
+		id,
+		api: provider === "openai-codex" ? "openai-codex-responses" : "openai-responses",
+	} as NonNullable<ExtensionContext["model"]>;
 }
 
 function harness(t: TestContext, agentDir = mkdtempSync(join(tmpdir(), "ai-workflow-fast-"))) {
@@ -102,7 +106,7 @@ test("starts off; status and invalid commands never save or enable priority", as
 	assert.equal(existsSync(app.statePath), false);
 });
 
-test("toggle requests priority for any Codex model without altering reasoning or input", async (t) => {
+test("toggle requests priority on OpenAI and legacy Codex without altering reasoning or input", async (t) => {
 	const app = harness(t);
 	const settingsPath = join(app.agentDir, "settings.json");
 	writeFileSync(settingsPath, '{"unrelated":true}\n');
@@ -112,17 +116,22 @@ test("toggle requests priority for any Codex model without altering reasoning or
 	assert.equal(app.statuses.get("ai-workflow-fast"), "Fast: on");
 	assert.equal(app.statuses.get("another-extension"), "keep this");
 	assert.ok(app.notices.some(({ type, message }) => type === "warning" && /extra usage/.test(message)));
-	for (const id of ["gpt-5.4", "future-codex-model", "another-variant"]) {
-		await app.select(model("openai-codex", id));
-		const payload = Object.freeze({
-			model: id,
-			reasoning: { effort: "high", summary: "auto" },
-			text: { verbosity: "low" },
-			input: [{ role: "user", content: "hello" }],
-		});
-		const result = await app.request(payload);
-		assert.deepEqual(result, { ...payload, service_tier: "priority" });
-		assert.equal(Object.hasOwn(payload, "service_tier"), false);
+	for (const provider of ["openai", "openai-codex"]) {
+		for (const id of ["gpt-5.4", "future-codex-model", "another-variant"]) {
+			await app.select(model(provider, id));
+			await app.command("status");
+			assert.match(app.notices.at(-1)?.message ?? "", /requesting priority processing/);
+			assert.equal(app.statuses.get("ai-workflow-fast"), "Fast: on");
+			const payload = Object.freeze({
+				model: id,
+				reasoning: { effort: "high", summary: "auto" },
+				text: { verbosity: "low" },
+				input: [{ role: "user", content: "hello" }],
+			});
+			const result = await app.request(payload);
+			assert.deepEqual(result, { ...payload, service_tier: "priority" });
+			assert.equal(Object.hasOwn(payload, "service_tier"), false);
+		}
 	}
 	assert.equal(readFileSync(settingsPath, "utf8"), '{"unrelated":true}\n');
 	assert.deepEqual(readdirSync(join(app.agentDir, "state")), ["ai-workflow-fast.json"]);
@@ -152,7 +161,7 @@ test("remembers on and off across new runtimes, projects, and reloads", async (t
 	assert.equal(await third.request({}), undefined);
 });
 
-test("shows Fast only on Codex models and retains the choice across provider switches", async (t) => {
+test("shows Fast only on supported providers and retains the choice across provider switches", async (t) => {
 	const app = harness(t);
 	app.ctx.model = model("anthropic");
 	await app.start();
@@ -160,7 +169,7 @@ test("shows Fast only on Codex models and retains the choice across provider swi
 	for (const enabled of [true, false]) {
 		await app.select(model());
 		await app.command(enabled ? "on" : "off");
-		for (const provider of ["openai", "anthropic"]) {
+		for (const provider of ["openrouter", "anthropic"]) {
 			await app.select(model(provider));
 			assert.equal(app.statuses.get("ai-workflow-fast"), undefined);
 			assert.equal(await app.request({ service_tier: "default" }), undefined);
