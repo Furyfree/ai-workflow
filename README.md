@@ -45,11 +45,16 @@ Say what you need, or name a skill: "use the pr skill".
 | `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF"; needs `mise use -g npm:@llamaindex/liteparse` |
 | `video-analysis` | A YouTube link, "summarise this video" |
+| `video-ideas` | "plan a video", "make a reel", "lav en feriefilm" |
+| `video-effects` | "add a transition", "colour grade this", "lav slowmotion" |
+| `craft-suite` | "edit it in FilmCraft", "lav det i ArtCraft" |
 | `study` | "explain", "quiz me", "hør mig" (DTU coursework) |
 | `week-overview` | "give me a week overview", "hvad skal jeg kunne i uge 4" (DTU) |
 | `lightpanda` | "the page needs JavaScript", "fill in the form"; needs Lightpanda from Mise |
 
 For video analysis, install `yt-dlp`, Node from Mise, and ffmpeg for frames.
+For video editing, put the ArtCraft CLIs (`filmcraft-cli`, `effectcraft-cli`,
+`soundcraft-cli`, `photocraft-cli`) and ffmpeg on `PATH`.
 `use-modern-go` needs Go installed.
 
 ## Updates and external tools
