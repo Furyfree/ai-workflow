@@ -25,12 +25,12 @@ What does not work yet, and the fallback: [gaps.md](gaps.md).
 
 1. Check the app is installed: `command -v filmcraft-cli`. If not, tell the
    user and stop. Never install or update an app.
-2. Check the command against the installed version with `<app>-cli commands`
-   (FilmCraft and SoundCraft also have `describe <id>`). The apps release every
-   few days; the maps here were checked on 22 October 2026 against FilmCraft
-   0.11.0, EffectCraft 0.15.0, SoundCraft 0.12.1, PhotoCraft 0.12.0,
-   VectorCraft 0.15.0 and LightCraft 0.12.0. Say when a name has changed.
-3. Work inside the project folder. Never write into camera originals.
+2. The apps are alpha and release every few days; the maps here were checked
+   on 22 October 2026. Treat every command name in them as a starting point:
+   confirm it and its parameters with `<app>-cli commands --json` (FilmCraft
+   and SoundCraft also have `describe <id>`). Say when a name has changed.
+3. Test a gap before routing around it; each row in gaps.md says how.
+4. Work inside the project folder. Never write into camera originals.
 
 ## Driving the apps
 
@@ -47,6 +47,9 @@ What does not work yet, and the fallback: [gaps.md](gaps.md).
   `photocraft-cli batch --actions a.json --in DIR --out DIR --format png`.
 
 ## Pitfalls
+
+Seen on 22 October 2026; if one no longer matches what the app does, trust
+the app.
 
 - Send FilmCraft and PhotoCraft MCP requests one at a time; their order is not
   guaranteed. Use `command_batch` for a sequence.
@@ -67,8 +70,7 @@ What does not work yet, and the fallback: [gaps.md](gaps.md).
 - FilmCraft → SoundCraft: WAV 48 kHz 24-bit plus an H.264 or ProRes picture
   reference. Back: `file.bounce_mix` or `file.bounce_stems` as WAV.
 - EffectCraft → FilmCraft: PNG sequence with alpha, then
-  `file.importImageSequence`. ProRes 4444 with alpha carries a wrong colour
-  tag (EffectCraft #340).
+  `file.importImageSequence`. For ProRes 4444 with alpha, see gaps.md.
 - FilmCraft → EffectCraft: `file.exportInterchange {format: xml}`, then
   `file.importTimeline`. There is no live link.
 - VectorCraft → EffectCraft: SVG with `edit.pasteSvg`. VectorCraft →

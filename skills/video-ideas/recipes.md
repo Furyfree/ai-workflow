@@ -54,9 +54,9 @@ final files with ffmpeg.
 - Explainer: record and lock the voice-over → VectorCraft style frames and
   icons → EffectCraft animates to the voice → FilmCraft 16:9 plus 1:1 and 9:16.
 - Faceless explainer short: script with the hook first → voice-over (recorded,
-  or FilmCraft `tts.create`) → B-roll search terms in script order, 1–3 words
-  each with the subject → clips of 1.5–3 s placed under the matching words →
-  captions from the transcript → music ducked under the voice → "Social Vertical
-  1080×1920" export.
+  or FilmCraft's text-to-speech) → B-roll search terms in script order, 1–3
+  words each with the subject → clips of 1.5–3 s placed under the matching
+  words → captions from the transcript → music ducked under the voice →
+  1080×1920 export.
 - Timelapse: LightCraft batch-develops the RAW frames with an exposure ramp →
   ffmpeg turns the sequence into video → EffectCraft deflickers and stabilises.
