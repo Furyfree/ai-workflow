@@ -1,9 +1,9 @@
 # Capability map
 
-Starting points, checked on 22 October 2026. Before using a command, confirm
+Starting points, checked on 25 October 2026. Before using a command, confirm
 it and read its parameters in the installed app: `<app>-cli commands --json`
-lists every command with its parameters, and FilmCraft and SoundCraft also have
-`describe <id>`. Effects and transitions are listed by `effects.list`
+lists every command with its parameters, FilmCraft and SoundCraft also have
+`describe <id>`, and EffectCraft has the command `command.describe`. Effects and transitions are listed by `effects.list`
 (FilmCraft) and `effect.list` (EffectCraft). If a name is gone, search the
 listing for the technique and tell the user. Known limits are in
 [gaps.md](gaps.md).
