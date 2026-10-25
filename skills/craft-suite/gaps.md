@@ -7,7 +7,7 @@ the user so the row can be removed.
 | Gap | Check if it still holds | Fallback |
 | --- | --- | --- |
 | FilmCraft stores speed-ramp keyframes but ignores them when rendering | Ramp a test clip from 100 % to 50 % and `render_frame` the same moment with and without the ramp; identical frames mean it still holds | Ramp in EffectCraft and bring it back as ProRes, or split the clip and set a constant speed per piece |
-| No speech-to-text in FilmCraft release builds | `filmcraft-cli commands --json` shows `transcript.generate` with `enabled: false` | Transcribe outside (whisper.cpp) and load the words with `transcript.set` |
+| No speech-to-text in FilmCraft release builds | `filmcraft-cli exec help.systemReport` shows `"speechToText": false` | Transcribe outside (whisper.cpp) and load the words with `transcript.set` |
 | FilmCraft on Linux and Windows cannot open 10-bit or 4:2:2 H.264 and HEVC | Import a 10-bit 4:2:2 test clip; `media.status` reports it unreadable | Transcode to ProRes 422 HQ with ffmpeg first |
 | No HEVC or AV1 export from FilmCraft on Linux | `export.formats` lists `hevc` and `av1` as not available | Export a ProRes master and encode with ffmpeg |
 | FilmCraft's stabiliser and auto reframe are simpler than EffectCraft's | Render the same shot from each and compare | Stabilise and reframe in EffectCraft |
@@ -19,4 +19,9 @@ the user so the row can be removed.
 | LightCraft cannot export LUTs | `lightcraft-cli commands` has no LUT export | Build the look in PhotoCraft and export it with `file.export.colorLookupTables` |
 | PhotoCraft cannot decode movie files | Loading an .mp4 as a video layer fails | FilmCraft `file.exportFrame` or ffmpeg |
 | Roto models are not bundled | `roto.models` shows MobileSAM as not installed | Ask the user to download it once; install with `roto.model.install` after checking the SHA-256 |
+| FilmCraft #2553: on hybrid Intel+NVIDIA the window panics at start with "Invalid surface" | The issue is still open, or the window fails to start | Work through the headless CLI and tell the user |
+| FilmCraft #2581: after a failed start the window stays in software mode | The issue is still open, or the window keeps starting in software mode | Tell the user; never change the app's settings |
+| FilmCraft #1584: `mcp --bridge` stalls while the window is hidden, and a command that times out still runs | The issue is still open | Keep the window visible or work headless; never resend a command that timed out, read the state first |
+| EffectCraft #1116: GPU compositing turns off after a resize on Hyprland + NVIDIA | The issue is still open | Start it with `env -u WAYLAND_DISPLAY effectcraft` |
+| FilmCraft and SoundCraft play audio through ALSA only | No sound with PipeWire or PulseAudio | Use PipeWire's ALSA layer |
 | No file drag-and-drop on Wayland | Dragging a file onto the window does nothing | Import by command, or start the app with `env -u WAYLAND_DISPLAY` |
