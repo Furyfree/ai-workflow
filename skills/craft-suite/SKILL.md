@@ -26,9 +26,10 @@ What does not work yet, and the fallback: [gaps.md](gaps.md).
 1. Check the app is installed: `command -v filmcraft-cli`. If not, tell the
    user and stop. Never install or update an app.
 2. The apps are alpha and release every few days; the maps here were checked
-   on 22 October 2026. Treat every command name in them as a starting point:
+   on 25 October 2026. Treat every command name in them as a starting point:
    confirm it and its parameters with `<app>-cli commands --json` (FilmCraft
-   and SoundCraft also have `describe <id>`). Say when a name has changed.
+   and SoundCraft also have `describe <id>`, EffectCraft `command.describe`).
+   Say when a name has changed.
 3. Test a gap before routing around it; each row in gaps.md says how.
 4. Work inside the project folder. Never write into camera originals.
 

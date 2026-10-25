@@ -8,7 +8,7 @@ the user so the row can be removed.
 | --- | --- | --- |
 | FilmCraft stores speed-ramp keyframes but ignores them when rendering | Ramp a test clip from 100 % to 50 % and `render_frame` the same moment with and without the ramp; identical frames mean it still holds | Ramp in EffectCraft and bring it back as ProRes, or split the clip and set a constant speed per piece |
 | No speech-to-text in FilmCraft release builds | `filmcraft-cli commands --json` shows `transcript.generate` with `enabled: false` | Transcribe outside (whisper.cpp) and load the words with `transcript.set` |
-| FilmCraft on Linux cannot open 10-bit or 4:2:2 H.264 and HEVC | Import a 10-bit 4:2:2 test clip; `media.status` reports it unreadable | Transcode to ProRes 422 HQ with ffmpeg first |
+| FilmCraft on Linux and Windows cannot open 10-bit or 4:2:2 H.264 and HEVC | Import a 10-bit 4:2:2 test clip; `media.status` reports it unreadable | Transcode to ProRes 422 HQ with ffmpeg first |
 | No HEVC or AV1 export from FilmCraft on Linux | `export.formats` lists `hevc` and `av1` as not available | Export a ProRes master and encode with ffmpeg |
 | FilmCraft's stabiliser and auto reframe are simpler than EffectCraft's | Render the same shot from each and compare | Stabilise and reframe in EffectCraft |
 | SoundCraft has no de-noise, no sidechain and no loudness-meter plugin | `soundcraft-cli plugins` lists none of them | De-noise and duck in FilmCraft's Essential Sound; SoundCraft's bounce still reports LUFS and true peak |
