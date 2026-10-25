@@ -1,6 +1,6 @@
 ---
 name: craft-suite
-description: Drive the ArtCraft apps - FilmCraft, EffectCraft, SoundCraft, PhotoCraft, VectorCraft, LightCraft - through their CLIs and MCP servers to make a video. Use when the user says "edit it in FilmCraft", "use EffectCraft", "make it with ArtCraft", "klip det i FilmCraft", "lav det i ArtCraft", or when a video task needs one of these apps. Not for choosing a concept or an effect (use video-ideas or video-effects) or for plain ffmpeg conversions.
+description: Drive the Craft apps - FilmCraft, EffectCraft, SoundCraft, PhotoCraft, VectorCraft, LightCraft - through their CLIs and MCP servers to make a video. Use when the user says "edit it in FilmCraft", "use EffectCraft", "use the Craft apps", "klip det i FilmCraft", "brug Craft-apperne", or when a video task needs one of these apps. Not for choosing a concept or an effect (use video-ideas or video-effects) or for plain ffmpeg conversions. Not for ArtCraft, the separate AI image and video generator.
 ---
 
 # Craft suite
@@ -24,11 +24,16 @@ What does not work yet, and the fallback: [gaps.md](gaps.md).
 ## Before any command
 
 1. Check the app is installed: `command -v filmcraft-cli`. If not, tell the
-   user and stop. Never install or update an app.
+   user and stop. Never install or update an app. LightCraft and VectorCraft
+   are optional: without VectorCraft, draw in EffectCraft shape layers
+   (`shape.newPath`, `layer.addShapeItem`); without LightCraft, use PhotoCraft
+   after checking it opens the RAW files (its RAW support is partial), or
+   ffmpeg for JPEG frames.
 2. The apps are alpha and release every few days; the maps here were checked
    on 25 October 2026. Treat every command name in them as a starting point:
-   confirm it and its parameters with `<app>-cli commands --json` (FilmCraft
-   and SoundCraft also have `describe <id>`, EffectCraft `command.describe`).
+   confirm it and its parameters with `<app>-cli commands --json` (SoundCraft:
+   plain `commands`; `--json` prints nothing). FilmCraft and SoundCraft also
+   have `describe <id>`, EffectCraft `command.describe`.
    Say when a name has changed.
 3. Test a gap before routing around it; each row in gaps.md says how.
 4. Work inside the project folder. Never write into camera originals.
