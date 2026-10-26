@@ -51,6 +51,9 @@ Say what you need, or name a skill: "use the pr skill".
 | `study` | "explain", "quiz me", "hør mig" (DTU coursework) |
 | `week-overview` | "give me a week overview", "hvad skal jeg kunne i uge 4" (DTU) |
 | `lightpanda` | "the page needs JavaScript", "fill in the form"; needs Lightpanda from Mise |
+| `rust-best-practices` | "write this in Rust", "skriv det i Rust"; needs Rust |
+| `rust-review` | "review this Rust", "gennemgå Rust-koden"; needs Rust |
+| `rust-port` | "port this to Rust", "omskriv det til Rust"; needs Rust |
 
 For video analysis, install `yt-dlp`, Node from Mise, and ffmpeg for frames.
 For video editing, put the Craft app CLIs (`filmcraft-cli`, `effectcraft-cli`,
