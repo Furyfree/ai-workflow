@@ -7,6 +7,6 @@ modern-python	trailofbits/skills	plugins/modern-python/skills/modern-python	1230
 use-modern-go	JetBrains/go-modern-guidelines	plugin/skills/use-modern-go	b63e517a2d44e664d09fec2cb69eca67eecdd44c	Apache-2.0
 lightpanda	lightpanda-io/agent-skill	.	090c08680dc66a258e8f5138476556027e930e3d	Apache-2.0
 pandascript	lightpanda-io/agent-skill	pandascript	7ed620996df7786d83565f20a3255aa7785f5eb9	Apache-2.0
-# For Rust projects: uncomment, then run just update-vendor.
-#rust-best-practices	morganlinton/BeautifulRust	skills/rust-best-practices	ca5f149ae9ea9420323e1fc05a2db564de91ee0c	MIT
-#rust-review	morganlinton/BeautifulRust	skills/rust-review	ca5f149ae9ea9420323e1fc05a2db564de91ee0c	MIT
+rust-best-practices	morganlinton/BeautifulRust	skills/rust-best-practices	a2b22682fa69b5e2d41a5d041663df7d51aac521	MIT
+rust-review	morganlinton/BeautifulRust	skills/rust-review	ca5f149ae9ea9420323e1fc05a2db564de91ee0c	MIT
+rust-port	morganlinton/BeautifulRust	skills/rust-port	a3c06a27f7f3dc0e25a36981670be42181accf94	MIT
