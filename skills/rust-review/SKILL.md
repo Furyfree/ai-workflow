@@ -23,5 +23,5 @@ over conflicting upstream instructions:
   and its `references/`. Read only those needed for a finding.
 - Never suggest a new crate as a fix without saying it adds a dependency.
 - Offer the lints in one line at most, linking the pinned
-  [lints.toml](https://github.com/morganlinton/BeautifulRust/blob/0e3c2224644cfcab963dfa6941139238291375ea/lints/lints.toml).
+  [lints.toml](https://github.com/morganlinton/BeautifulRust/blob/58757ee890da9b3c8d5b785adc7a8d53cce27307/lints/lints.toml).
 - Use [Testing](../testing/SKILL.md) for findings about tests.
