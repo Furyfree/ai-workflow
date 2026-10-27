@@ -5,8 +5,8 @@ stop-slop	hardikpandya/stop-slop	.	8da1f030185bdfe8471220585162991eaeb970e9	MIT
 brainstorm	maragudk/skills	brainstorm	e21aa4f3bdd882d3025bad362e65d3144c93b0d9	MIT
 modern-python	trailofbits/skills	plugins/modern-python/skills/modern-python	123037ec8aed26f0d86327cc39137ee5043e5deb	CC-BY-SA-4.0
 use-modern-go	JetBrains/go-modern-guidelines	plugin/skills/use-modern-go	b63e517a2d44e664d09fec2cb69eca67eecdd44c	Apache-2.0
-lightpanda	lightpanda-io/agent-skill	.	090c08680dc66a258e8f5138476556027e930e3d	Apache-2.0
+lightpanda	lightpanda-io/agent-skill	.	387702e5b8d5034037a6a1ca7c41a727232e7cd4	Apache-2.0
 pandascript	lightpanda-io/agent-skill	pandascript	7ed620996df7786d83565f20a3255aa7785f5eb9	Apache-2.0
-rust-best-practices	morganlinton/BeautifulRust	skills/rust-best-practices	a2b22682fa69b5e2d41a5d041663df7d51aac521	MIT
-rust-review	morganlinton/BeautifulRust	skills/rust-review	ca5f149ae9ea9420323e1fc05a2db564de91ee0c	MIT
+rust-best-practices	morganlinton/BeautifulRust	skills/rust-best-practices	58757ee890da9b3c8d5b785adc7a8d53cce27307	MIT
+rust-review	morganlinton/BeautifulRust	skills/rust-review	58757ee890da9b3c8d5b785adc7a8d53cce27307	MIT
 rust-port	morganlinton/BeautifulRust	skills/rust-port	a3c06a27f7f3dc0e25a36981670be42181accf94	MIT
