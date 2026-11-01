@@ -307,11 +307,13 @@ function harness(t: TestContext, bindings = {}) {
 				}
 			return [...jobs.values()];
 		},
+		// Fixtures may still be writing while a test polls: the last piece after
+		// splitting is empty or unfinished, so read only complete lines.
 		calls: (): Call[] =>
 			existsSync(join(root, "calls"))
 				? readFileSync(join(root, "calls"), "utf8")
-						.trim()
 						.split("\n")
+						.slice(0, -1)
 						.map((line) => JSON.parse(line))
 				: [],
 	};

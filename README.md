@@ -27,7 +27,7 @@ uv sync --locked
 just lint
 just typecheck-python
 just typecheck-typescript
-pnpm test
+just test
 ```
 
 Use `just format` to format code. Run Just inside the Nix shell.
@@ -43,7 +43,10 @@ Say what you need, or name a skill: "use the pr skill".
 | `commit` | "/commit", "commit and push", "lav et commit" |
 | `pull` | "/pull", "pull the latest", "hent ændringer" |
 | `subagent` | "use subagents", "ask opus to ..." |
+| `testing` | "write tests", "what needs testing", "skriv tests" |
 | `lean-docs` | "write an AGENTS.md", "debloat the docs" |
+| `stop-slop` | "remove the AI tells from this text" |
+| `brainstorm` | "brainstorm this idea", "turn this into a design" |
 | `notebook` | "read this notebook", "læs den her notebook" |
 | `document-analysis` | "read this PDF"; needs `mise use -g npm:@llamaindex/liteparse` |
 | `video-analysis` | A YouTube link, "summarise this video" |
@@ -55,6 +58,8 @@ Say what you need, or name a skill: "use the pr skill".
 | `lightpanda` | "the page needs JavaScript", "fill in the form"; needs Lightpanda from Mise |
 | `research` | "look it up", "the site blocked you", "søg på nettet" |
 | `computer-use` | "use the computer", "look at my screen", "brug computeren"; needs the tools from `~/Projects/nix` |
+| `modern-python` | "write a Python script", "skriv et Python-script" |
+| `use-modern-go` | "write Go code", "fix this Go"; needs Go |
 | `rust-best-practices` | "write this in Rust", "skriv det i Rust"; needs Rust |
 | `rust-review` | "review this Rust", "gennemgå Rust-koden"; needs Rust |
 | `rust-port` | "port this to Rust", "omskriv det til Rust"; needs Rust |

@@ -42,7 +42,7 @@ Ponytail and `find-skills` use their external update commands in README.
 ## Verify
 
 Set up dependencies as shown in README. Inside `nix develop`, run `just lint`,
-`just typecheck-python`, `just typecheck-typescript`, and `pnpm test`.
+`just typecheck-python`, `just typecheck-typescript`, and `just test`.
 Test installer changes with a temporary `HOME` and updater changes with controlled
 GitHub responses. After changing read-only CLI flags, use `run.sh` in a scratch
 directory: ask the CLI to create a file and check that none appears. A blocked

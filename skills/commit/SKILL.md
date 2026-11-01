@@ -27,4 +27,7 @@ where it says so.
    `--no-gpg-sign`.
 7. A failed hook or commit: show the error, keep staging, do not retry. A
    rejected push because the remote has new commits: offer the pull skill;
-   never force.
+   never force. Signing and push go through 1Password. A signing error or
+   `Permission denied (publickey)` usually means it is locked: ask me to
+   unlock it, then retry once. Never turn off signing or change the remote
+   to get around it.

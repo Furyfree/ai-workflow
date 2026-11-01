@@ -3,11 +3,21 @@
 set -euf # -f: entries in VALIDATORS are names, never file patterns
 [[ "${1:-}" == - || -r "${1:-}" ]] || { echo "usage: run.sh <file|-> [focus]" >&2; exit 2; }
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+material="$(cat -- "$1")"
+# Same key shapes as SECRET in extensions/git.ts. Print line numbers, never values.
+secret='-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|\b(gh[pousr]_|github_pat_|sk-(proj-|ant-)?)[A-Za-z0-9_-]{20,}|\b(AKIA|ASIA)[A-Z0-9]{16}\b'
+if [[ "${ALLOW_SECRETS:-}" != 1 ]]; then
+  lines="$(grep -nE -e "$secret" <<<"$material" | cut -d: -f1 | paste -sd, -)"
+  if [[ -n "$lines" ]]; then
+    echo "possible secret on line(s) $lines of the material; nothing sent" >&2
+    exit 3
+  fi
+fi
 prompt="$(cat "$here/prompt.txt")"
 if [[ -n "${2:-}" ]]; then prompt+=$'\n'"Focus: $2"; fi
 prompt+="
 ----- review material: $1 -----
-$(cat -- "$1")"
+$material"
 out="$(mktemp -d)"
 index=0
 for v in ${VALIDATORS:-grok@low glm}; do

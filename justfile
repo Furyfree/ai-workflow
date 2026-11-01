@@ -26,3 +26,7 @@ typecheck-python:
 
 typecheck-typescript:
     pnpm exec tsc --noEmit
+
+test:
+    pnpm test
+    uv run --locked python -m unittest discover -s tests

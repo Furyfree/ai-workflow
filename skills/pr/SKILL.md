@@ -13,7 +13,10 @@ comments and CI with `gh pr view`, then go to step 5. Never create anything.
 2. Run the checks the repository's AGENTS.md names. If one fails, stop and
    show the error.
 3. Branch, commit, push, `gh pr create`. Body: what changed and how to test
-   it, five lines at most.
+   it, five lines at most. Signing and push go through 1Password. A signing
+   error or `Permission denied (publickey)` usually means it is locked: ask
+   me to unlock it, then retry once. Never turn off signing or change the
+   remote to get around it.
 4. Ask one question - which review?
    - None
    - `validate` skill: local, other models (Recommended)

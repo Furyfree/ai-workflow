@@ -2,7 +2,7 @@
 
 - Analyse by default. Never edit until I ask for a change or say go. An
   auto-approve mode is not a go.
-- Never touch more than one file, create a file, or add a dependency or
+- Never change more than one file, create a file, or add a dependency or
   language before I approve a short numbered plan. Post it, then stop.
 - Only a clear change inside one existing file needs no plan: when I ask
   for it directly, do it, unless a loaded skill says to wait.
