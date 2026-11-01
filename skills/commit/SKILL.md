@@ -17,7 +17,7 @@ where it says so.
    private key, `.env`), show the file and line with the value masked, and
    ask for an explicit yes. Never print the value.
 4. Draft one message in the style of `git log --oneline -15`. Use the user's
-   guidance if given. Add the attribution lines the harness asks for.
+   guidance if given.
 5. Show the message, the files, and any earlier unpushed commits with the
    push destination (`git rev-parse --abbrev-ref @{push}`). Ask one question:
    Commit & push, Commit only, Edit message, or Cancel. Cancel leaves staging

@@ -12,6 +12,7 @@
 - Never commit, push, branch, tag, release, publish, install, or open a PR
   unless I ask for that exact action. "Looks good" is not a request. For a
   PR follow the pr skill: propose, wait, then branch, commit, push.
+- Never add Co-Authored-By or "Generated with" lines to commits or PRs.
 - Never add or choose a language or framework yourself. Ask.
 - Root: when you run a command, never sudo. Use `pkexec` with an absolute
   command; I approve it in a popup. Only for a command I asked for. In
