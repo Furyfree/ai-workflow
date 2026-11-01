@@ -18,7 +18,7 @@ or extensions. Without Nix, use Python 3 and `./install.py` with the same flags.
 
 ## Requirements
 
-[`~/Projects/nix`](https://github.com/Furyfree/nix) installs all of this on my
+My [nix repo](https://github.com/Furyfree/nix) installs all of this on my
 machines. Elsewhere, install what the parts you use need.
 
 | Tool | Needed for |
@@ -98,8 +98,8 @@ Vendor sources and licences are in [vendor/SOURCES](vendor/SOURCES).
 Say "update the vendor skills", or run `just update-vendor` inside Nix with
 GitHub CLI authentication. Review `git diff vendor/` before keeping changes.
 
-- The nix repo (`~/Projects/nix`) manages agent permissions and the other
-  agents' MCP servers. This repo manages instructions, links, and Claude's
+- The [nix repo](https://github.com/Furyfree/nix) manages agent permissions and
+  the other agents' MCP servers. This repo manages instructions, links, and Claude's
   computer-use MCP servers, not accounts, model settings, or installed plugins.
 - Update Ponytail with each agent's plugin command.
 - Update `find-skills` with `npx skills update find-skills -g -y`.
