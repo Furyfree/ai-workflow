@@ -6,11 +6,13 @@ One set of rules and skills for OpenCode, Claude Code, Codex, Grok, and Pi.
 nix develop --no-warn-dirty
 just install              # link rules, skills, and Pi extensions
 just install --force      # replace conflicts; back up real files and folders
-just install --uninstall  # remove only links that point here
+just install --uninstall  # remove only links and MCP servers from here
 ```
 
 The installer links `rules.md` as each agent's global instructions and skills
-into `~/.agents/skills` or `~/.claude/skills` for Claude. Restart agent sessions
+into `~/.agents/skills` or `~/.claude/skills` for Claude. It also registers the
+computer-use tools with Claude once Nix has installed them; Grok reads them from
+Claude. Restart agent sessions
 after changing instructions; rerun the installer after adding or removing skills
 or extensions. Without Nix, use Python 3 and `./install.py` with the same flags.
 
@@ -51,6 +53,8 @@ Say what you need, or name a skill: "use the pr skill".
 | `study` | "explain", "quiz me", "hør mig" (DTU coursework) |
 | `week-overview` | "give me a week overview", "hvad skal jeg kunne i uge 4" (DTU) |
 | `lightpanda` | "the page needs JavaScript", "fill in the form"; needs Lightpanda from Mise |
+| `research` | "look it up", "the site blocked you", "søg på nettet" |
+| `computer-use` | "use the computer", "look at my screen", "brug computeren"; needs the tools from `~/Projects/nix` |
 | `rust-best-practices` | "write this in Rust", "skriv det i Rust"; needs Rust |
 | `rust-review` | "review this Rust", "gennemgå Rust-koden"; needs Rust |
 | `rust-port` | "port this to Rust", "omskriv det til Rust"; needs Rust |
@@ -68,8 +72,9 @@ Vendor sources and licences are in [vendor/SOURCES](vendor/SOURCES).
 Say "update the vendor skills", or run `just update-vendor` inside Nix with
 GitHub CLI authentication. Review `git diff vendor/` before keeping changes.
 
-- Chezmoi in `~/Projects/dotfiles` manages agent permissions. This repo manages
-  instructions and links, not accounts, model settings, or installed plugins.
+- The nix repo (`~/Projects/nix`) manages agent permissions and the other
+  agents' MCP servers. This repo manages instructions, links, and Claude's
+  computer-use MCP servers, not accounts, model settings, or installed plugins.
 - Update Ponytail with each agent's plugin command.
 - Update `find-skills` with `npx skills update find-skills -g -y`.
 

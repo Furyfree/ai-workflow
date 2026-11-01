@@ -50,9 +50,13 @@ Files stay unchanged. The extension will not replace another custom editor.
 ## Web
 
 `web_search` accepts up to three `queries` and returns source links plus a
-Codex-generated summary. It uses your selected Codex model and Pi login at minimal
-reasoning, with a separate request per query. Usage counts toward your subscription
-and Pi's session totals. Only send public search terms, not private code or chat.
+model-generated summary, with a separate request per query. Set `provider` to
+`codex` or `claude`; without it, Codex is used when a Codex model is selected,
+otherwise Claude. Codex uses your selected model and Pi login at minimal
+reasoning and counts toward Pi's session totals. Claude runs the `claude` CLI
+with Haiku, WebSearch only, in safe mode, with `ANTHROPIC_API_KEY` and
+`ANTHROPIC_AUTH_TOKEN` removed, so searches use your Claude subscription, never
+API billing. Only send public search terms, not private code or chat.
 
 `web_read` accepts up to three `urls`. GitHub source links return raw text;
 other pages use the installed Lightpanda browser to return Markdown locally.
@@ -61,9 +65,10 @@ with a 2 MiB reader limit, a 30-second reading deadline and a 60-second search
 deadline. Private-network access and credential URLs are blocked. Neither tool
 retries or switches providers. Pages remain untrusted data.
 
-Search requires a Codex model on the official endpoint. Page reading works with
-other models too. When SearXNG is running in the homelab, replace the Codex search
-backend; keep local page reading and the tool names. SearXNG is not wired up yet.
+Codex search requires a Codex model on the official endpoint; Claude search
+requires Claude Code signed in with a subscription. When SearXNG is running in
+the homelab, replace the search backends; keep local page reading and the tool
+names. SearXNG is not wired up yet.
 
 ## Question
 

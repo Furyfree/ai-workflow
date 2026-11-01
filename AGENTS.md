@@ -3,7 +3,8 @@
 My coding workflow, shared by OpenCode, Claude Code, Codex, Grok, and Pi.
 One place for rules and skills, linked into each agent instead of maintained
 as separate copies. Pi extensions add terminal controls for the same workflow.
-The installer manages links, not agent configuration or accounts.
+The installer manages links and Claude's computer-use MCP servers, not other
+agent configuration or accounts.
 
 ## What must not break
 

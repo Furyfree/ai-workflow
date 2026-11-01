@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Link rules, skills, and Pi extensions into coding agent homes."""
+"""Link rules, skills, and Pi extensions into coding agent homes, and register
+the computer-use MCP servers with Claude Code."""
 
 import argparse
+import json
 import os
 import shutil
+import subprocess
 import tempfile
 from collections.abc import Iterator
 from datetime import datetime
@@ -20,7 +23,9 @@ def parse_args() -> argparse.Namespace:
         help="replace conflicts; back up real files and folders",
     )
     flags.add_argument(
-        "--uninstall", action="store_true", help="remove only this repository's links"
+        "--uninstall",
+        action="store_true",
+        help="remove only this repository's links and MCP servers",
     )
     return parser.parse_args()
 
@@ -136,6 +141,43 @@ def prune_links(repo: Path, home: Path) -> None:
                 print(f"pruned: {target}")
 
 
+def claude_mcp(home: Path, uninstall: bool) -> None:
+    """Register the computer-use tools, which Nix installs, with Claude Code."""
+    claude = shutil.which("claude")
+    if claude is None or not (home / ".claude").is_dir():
+        return
+    try:
+        state = json.loads((home / ".claude.json").read_text(encoding="utf-8"))
+        servers: dict[str, dict[str, object]] = state.get("mcpServers", {})
+    except (OSError, ValueError):
+        servers = {}
+    for name in ("computer-use-linux", "agent-workspace-linux"):
+        current = servers.get(name)
+        ours = current is not None and current.get("command") == name
+        if uninstall:
+            if ours:
+                subprocess.run(
+                    [claude, "mcp", "remove", "-s", "user", name],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    timeout=60,
+                )
+                print(f"removed MCP server: {name}")
+        elif current is not None:
+            if not ours:
+                print(f"skip, not ours: MCP server {name}")
+        elif shutil.which(name) is None:
+            print(f"skip, not installed: MCP server {name}")
+        else:
+            subprocess.run(
+                [claude, "mcp", "add", "-s", "user", name, "--", name, "mcp"],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                timeout=60,
+            )
+            print(f"added MCP server: {name}")
+
+
 def main() -> None:
     args = parse_args()
     repo = Path(__file__).resolve().parent
@@ -154,6 +196,7 @@ def main() -> None:
             backup=backup,
         )
     prune_links(repo, home)
+    claude_mcp(home, args.uninstall)
 
 
 if __name__ == "__main__":

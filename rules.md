@@ -13,8 +13,9 @@
   unless I ask for that exact action. "Looks good" is not a request. For a
   PR follow the pr skill: propose, wait, then branch, commit, push.
 - Never add or choose a language or framework yourself. Ask.
-- Root: never sudo. Use `pkexec` with an absolute command; I approve it in
-  a popup. Only for a command I asked for.
+- Root: when you run a command, never sudo. Use `pkexec` with an absolute
+  command; I approve it in a popup. Only for a command I asked for. In
+  commands you give me to run, use `sudo`.
 
 ## Work
 
@@ -39,7 +40,8 @@
 - Never override a model or reasoning level I name.
 - Stop a command or subagent that hangs, and tell me.
 - When a sandbox blocks a command (pkexec, gh, push, another CLI), tell me.
-  Never work around it.
+  Never work around it. A website refusing you is not a sandbox block: use
+  the research skill.
 
 ## Words
 

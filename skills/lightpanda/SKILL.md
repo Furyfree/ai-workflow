@@ -6,7 +6,7 @@ description: >
   JavaScript", "click through the site", "fill in the form", "scrape this
   site", "use lightpanda", "åbn siden i en browser", "siden kræver
   JavaScript", "klik dig igennem siden", "udfyld formularen".
-  Not for plain web search or static pages the native fetch tool can read.
+  Not for web search or refused sites (use research).
 ---
 
 # Lightpanda
@@ -17,12 +17,13 @@ reference for commands and flags. These rules take precedence over it.
 
 Pick the first step that works:
 
-1. Search or page reading: use Pi's `web_search` and `web_read` when available;
-   otherwise use the harness's own search and fetch. Pi searches through its
-   selected Codex model and reads pages locally with Lightpanda or raw GitHub
-   sources. Send only public search terms, not private code or conversation text.
-2. Pages needing extra waiting, or JavaScript without a web reader:
-   `lightpanda fetch --block-private-networks --dump markdown <url>`.
+1. Search: use Pi's `web_search` when available; it searches through Codex or
+   Claude Code. Otherwise use the harness's own search. Send only public search
+   terms, not private code or conversation text.
+2. Page reading: use Pi's `web_read` when available; it reads pages locally
+   with Lightpanda or raw GitHub sources. Otherwise use
+   `lightpanda fetch --block-private-networks --dump markdown <url>` before the
+   harness's fetch tool, which may return a model's summary instead of the page.
    Add `--wait-selector` or `--wait-ms` when content loads late.
 3. Clicking, typing, or multi-page interactions: use Lightpanda MCP tools if the
    session has them. Otherwise write a script following the

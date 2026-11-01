@@ -10,3 +10,5 @@ pandascript	lightpanda-io/agent-skill	pandascript	7ed620996df7786d83565f20a3255a
 rust-best-practices	morganlinton/BeautifulRust	skills/rust-best-practices	58757ee890da9b3c8d5b785adc7a8d53cce27307	MIT
 rust-review	morganlinton/BeautifulRust	skills/rust-review	58757ee890da9b3c8d5b785adc7a8d53cce27307	MIT
 rust-port	morganlinton/BeautifulRust	skills/rust-port	a3c06a27f7f3dc0e25a36981670be42181accf94	MIT
+computer-use-linux	agent-sh/computer-use-linux	skills/computer-use-linux	82063308048a667ac5cad1f7dbaf930be649751d	MIT
+agent-workspace-linux	agent-sh/agent-workspace-linux	skills/agent-workspace-linux	99d326546a236ca53b3e38c07b128578aa747ede	MIT

@@ -16,7 +16,7 @@ type Complete = ExtensionContext["modelRegistry"]["complete"];
 type Message = Awaited<ReturnType<Complete>>;
 type Options = NonNullable<Parameters<Complete>[2]>;
 type Request = { model: Parameters<Complete>[0]; context: Parameters<Complete>[1]; options: Options; payload: unknown };
-type Output = { model?: string; results: Array<Record<string, unknown>> };
+type Output = { provider?: string; model?: string; results: Array<Record<string, unknown>> };
 
 function message(input = 10): Message {
 	return {
@@ -61,6 +61,32 @@ async function searched(request: Request, urls = ["https://docs.example.org/api"
 		},
 		request.model,
 	);
+}
+
+function claudeRun(urls = ["https://docs.example.org/api"], result: Record<string, unknown> = {}): ExecResult {
+	const events = [
+		{ type: "system", subtype: "init", tools: ["WebSearch"] },
+		...(urls.length
+			? [
+					{
+						type: "user",
+						tool_use_result: {
+							query: "search API documentation",
+							results: [{ tool_use_id: "search-1", content: urls.map((url) => ({ title: "API documentation", url })) }],
+						},
+					},
+				]
+			: []),
+		{
+			type: "result",
+			subtype: "success",
+			is_error: false,
+			stop_reason: "end_turn",
+			result: "Official documentation explains the search API.",
+			...result,
+		},
+	];
+	return { code: 0, killed: false, stderr: "", stdout: events.map((event) => JSON.stringify(event)).join("\n") };
 }
 
 function harness() {
@@ -210,7 +236,7 @@ test("batch search deduplicates trimmed queries, bounds sources, and adds all ne
 	assert.equal(result.usage?.cost.total, 0.04);
 });
 
-test("invalid model, endpoint, login, or blank query fails before a search request", async () => {
+test("an explicit Codex search without a usable Codex model fails instead of switching providers", async () => {
 	for (const change of [
 		(app: ReturnType<typeof harness>) => {
 			app.ctx.model = undefined;
@@ -227,12 +253,90 @@ test("invalid model, endpoint, login, or blank query fails before a search reque
 	]) {
 		const app = harness();
 		change(app);
-		await assert.rejects(app.run("web_search", { queries: ["public query"] }));
+		await assert.rejects(app.run("web_search", { queries: ["public query"], provider: "codex" }));
 		assert.equal(app.requests.length, 0);
+		assert.equal(app.executions.length, 0);
 	}
 	const app = harness();
 	await assert.rejects(app.run("web_search", { queries: ["valid", "   "] }), /blank/);
 	assert.equal(app.requests.length, 0);
+});
+
+// Claude subscription credentials must stay inside the real claude CLI; an API key would bill per search.
+test("search without a usable Codex model, or with provider claude, runs the claude CLI on the subscription", async () => {
+	for (const change of [
+		(app: ReturnType<typeof harness>) => {
+			app.ctx.model = undefined;
+		},
+		(app: ReturnType<typeof harness>) => {
+			assert.ok(app.ctx.model);
+			app.ctx.model.provider = "anthropic";
+		},
+		(app: ReturnType<typeof harness>) => app.setOAuth(false),
+	]) {
+		const app = harness();
+		change(app);
+		app.exec(async () => claudeRun());
+		const result = await app.run("web_search", { queries: ["search API documentation"] });
+		assert.equal(result.isError, false);
+		assert.equal(output(result).provider, "claude");
+		assert.deepEqual(output(result).results[0].sources, [
+			{ title: "API documentation", url: "https://docs.example.org/api" },
+		]);
+		assert.match(text(result), /Claude-generated summary:\nOfficial documentation explains/);
+		assert.equal(app.requests.length, 0);
+	}
+	const app = harness();
+	app.exec(async () => claudeRun());
+	const result = await app.run("web_search", { queries: ["-starts with a dash"], provider: "claude" });
+	assert.equal(output(result).provider, "claude");
+	assert.equal(app.requests.length, 0, "an explicit claude choice wins over the selected Codex model");
+	const call = app.executions[0];
+	assert.equal(call.command, "env");
+	assert.deepEqual(call.args.slice(0, 5), ["-u", "ANTHROPIC_API_KEY", "-u", "ANTHROPIC_AUTH_TOKEN", "claude"]);
+	assert.equal(call.args[call.args.indexOf("--tools") + 1], "WebSearch");
+	for (const flag of ["-p", "--safe-mode", "--strict-mcp-config", "--no-session-persistence"])
+		assert.ok(call.args.includes(flag));
+	assert.deepEqual(call.args.slice(-2), ["--", "-starts with a dash"]);
+	assert.doesNotMatch(JSON.stringify(call), /private-session-marker/);
+	assert.ok(call.options?.signal);
+});
+
+test("Claude answers without a search, a missing CLI, and Claude errors are failures, not answers", async () => {
+	for (const [run, expected] of [
+		[claudeRun([]), /did not perform a web search/],
+		[{ code: 127, killed: false, stdout: "", stderr: "env: 'claude': No such file" }, /Codex model.*Claude Code/],
+		[
+			claudeRun([], { is_error: true, result: "Claude AI usage limit reached, Bearer private-provider-token" }),
+			/usage or rate limit/,
+		],
+		[{ code: 1, killed: false, stdout: "not JSON", stderr: "private diagnostic" }, /Claude search failed/],
+	] as const) {
+		const app = harness();
+		assert.ok(app.ctx.model);
+		app.ctx.model.provider = "anthropic";
+		app.exec(async () => run);
+		const result = await app.run("web_search", { queries: ["public query"] });
+		assert.equal(result.isError, true);
+		assert.match(text(result), expected);
+		assert.doesNotMatch(text(result), /Official documentation explains/);
+		assert.doesNotMatch(JSON.stringify(result), /private-provider-token|private diagnostic/);
+	}
+});
+
+test("a Claude search past its deadline reports a timeout and stops the CLI", async (t) => {
+	const controller = new AbortController();
+	t.mock.method(AbortSignal, "timeout", () => controller.signal);
+	const app = harness();
+	app.exec(async () => {
+		controller.abort();
+		assert.equal(app.executions[0].options?.signal?.aborted, true);
+		return { ...claudeRun(), killed: true };
+	});
+	const result = await app.run("web_search", { queries: ["public query"], provider: "claude" });
+	assert.equal(result.isError, true);
+	assert.match(text(result), /Claude search timed out/);
+	assert.equal(output(result).results[0].summary, "");
 });
 
 test("a generated answer without completed hosted search is not accepted", async () => {
