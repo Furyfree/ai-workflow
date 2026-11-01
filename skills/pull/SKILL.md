@@ -12,9 +12,8 @@ where it says so.
    rebase, a shallow clone, or a sparse checkout, and say so. With no
    upstream, ask which remote branch to pull from.
 2. `git fetch`, then compare with `git rev-list --left-right --count HEAD...@{u}`.
-   Nothing incoming: say so and stop. A fetch failing with `Permission
-   denied (publickey)` usually means 1Password is locked: ask me to unlock
-   it, then retry once.
+   Nothing incoming: say so and stop. A fetch error: follow the 1Password
+   note in the [commit skill](../commit/SKILL.md).
 3. Show the incoming commits (`git log --oneline HEAD..@{u}`), changed files
    (`git diff --stat HEAD...@{u}`), and a short summary of what they change.
 4. Say which kind of pull it is, then ask: Pull or Cancel (the default).

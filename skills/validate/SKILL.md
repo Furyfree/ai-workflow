@@ -20,7 +20,9 @@ of the directory this file was loaded from; never assume the working directory.
    subagent launcher, and prints the directory holding their answers and logs.
    Exit 3 means it found a possible key and sent nothing: show the user those
    lines with the value masked, and rerun with `ALLOW_SECRETS=1` only after an
-   explicit yes.
+   explicit yes. Exit 4 means the repository's `origin` is not mine, or there
+   is none, and it sent nothing: say so, and rerun with `ALLOW_FOREIGN=1`
+   only after an explicit yes.
    For native reviewers, pass the same contract and collect their results.
 3. Read every output. Each ends with `[exit N]`. Anything but `[exit 0]`
    (124 is the time limit), or an empty answer, means that validator is

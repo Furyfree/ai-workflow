@@ -25,8 +25,8 @@ class Sandbox:
         path.write_text(f"#!/bin/sh\n{body}\n")
         path.chmod(0o755)
 
-    def install(self, *flags: str) -> None:
-        subprocess.run(
+    def install(self, *flags: str) -> str:
+        return subprocess.run(
             [sys.executable, self.repo / "install.py", *flags],
             env={
                 "HOME": str(self.home),
@@ -35,8 +35,9 @@ class Sandbox:
             },
             check=True,
             capture_output=True,
+            text=True,
             timeout=30,
-        )
+        ).stdout
 
     def links(self) -> dict[str, Path]:
         return {
@@ -90,7 +91,7 @@ class InstallTest(unittest.TestCase):
         }
         box.install()
         self.assertEqual(box.links(), expected)
-        box.install()
+        self.assertNotIn("linked:", box.install())
         self.assertEqual(box.links(), expected)
         self.assertFalse((box.home / ".config").exists())
         self.assertFalse((box.home / ".local/state/ai-workflow-backup").exists())

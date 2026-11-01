@@ -45,6 +45,8 @@ def link(
     uninstall: bool,
     backup: Path | None,
 ) -> Path | None:
+    if not uninstall and target.is_symlink() and target.readlink() == source:
+        return backup
     if target.is_symlink() and ours(target, repo):
         target.unlink()
     elif target.is_symlink() or (
@@ -153,9 +155,9 @@ def claude_mcp(home: Path, uninstall: bool) -> None:
         servers = {}
     for name in ("computer-use-linux", "agent-workspace-linux"):
         current = servers.get(name)
-        ours = current is not None and current.get("command") == name
+        owned = current is not None and current.get("command") == name
         if uninstall:
-            if ours:
+            if owned:
                 subprocess.run(
                     [claude, "mcp", "remove", "-s", "user", name],
                     check=True,
@@ -164,7 +166,7 @@ def claude_mcp(home: Path, uninstall: bool) -> None:
                 )
                 print(f"removed MCP server: {name}")
         elif current is not None:
-            if not ours:
+            if not owned:
                 print(f"skip, not ours: MCP server {name}")
         elif shutil.which(name) is None:
             print(f"skip, not installed: MCP server {name}")

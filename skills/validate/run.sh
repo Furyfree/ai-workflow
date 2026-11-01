@@ -13,6 +13,14 @@ if [[ "${ALLOW_SECRETS:-}" != 1 ]]; then
     exit 3
   fi
 fi
+# Reviewers here are outside providers: send only my own repositories' code.
+if [[ "${ALLOW_FOREIGN:-}" != 1 ]]; then
+  origin="$(git remote get-url origin 2>/dev/null || true)"
+  if [[ ! "$origin" =~ ^(git@github\.com:|ssh://git@github\.com/|https://github\.com/)Furyfree/ ]]; then
+    echo "origin is not a Furyfree GitHub repository; nothing sent" >&2
+    exit 4
+  fi
+fi
 prompt="$(cat "$here/prompt.txt")"
 if [[ -n "${2:-}" ]]; then prompt+=$'\n'"Focus: $2"; fi
 prompt+="
