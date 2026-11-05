@@ -6,7 +6,8 @@ description: Commit, and optionally push, on the current branch. Use when the us
 # Commit
 
 The request to commit is the go for this flow; every step below still waits
-where it says so.
+where it says so. Ask each question with the agent's question prompt
+(AskUserQuestion in Claude Code), not in chat; use chat only without one.
 
 1. Check `git status`. Stop on a detached HEAD or an unfinished merge,
    rebase, cherry-pick, or revert, and say so.
