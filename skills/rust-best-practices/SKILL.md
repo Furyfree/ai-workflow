@@ -22,8 +22,8 @@ over conflicting upstream instructions:
 - Never install Rust toolchains or components. If `cargo` is missing, tell
   the user and skip the cargo checks.
 - When a project has no `[lints]` table, offer once to copy
-  [lints.toml](https://github.com/morganlinton/BeautifulRust/blob/58757ee890da9b3c8d5b785adc7a8d53cce27307/lints/lints.toml)
-  and [clippy.toml](https://github.com/morganlinton/BeautifulRust/blob/58757ee890da9b3c8d5b785adc7a8d53cce27307/lints/clippy.toml)
+  [lints.toml](https://github.com/morganlinton/BeautifulRust/blob/3385ca73169c1631775627c258b2757d0ad1c13f/lints/lints.toml)
+  and [clippy.toml](https://github.com/morganlinton/BeautifulRust/blob/3385ca73169c1631775627c258b2757d0ad1c13f/lints/clippy.toml)
   from that pinned commit. Never fetch from another commit.
 - Use [Testing](../testing/SKILL.md) when choosing verification or writing
   or reviewing tests. Its guidance takes precedence over upstream testing

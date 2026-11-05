@@ -25,7 +25,8 @@ Pick the route:
    itself, not its config files.
 3. The app is open on my desktop: use it there (`computer-use-linux`).
    Typing takes my focus; clicks by coordinate, drags and scrolls move my
-   mouse. Prefer clicks by element.
+   mouse. Prefer clicks by element. A click or scroll with a window target
+   also focuses that window, which switches me to its workspace.
 4. The app is not open: open it in the hidden desktop
    (`agent-workspace-linux`), which never touches my mouse, keyboard, or
    focus. Apps there use my real files and accounts. Stop the workspace when

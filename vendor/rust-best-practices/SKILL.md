@@ -26,8 +26,8 @@ Where they disagree, this file says which to follow and why.
   constructors that validate once. Then the compiler enforces what a comment only requests.
 - **Application code is not library code.** Library code (anything with external users)
   follows the API-design rules below strictly. Application code should favor simplicity
-  and directness: concrete types, `anyhow`-style errors, `Vec` return values, no
-  speculative generality.
+  and directness: concrete types, `String` or `&str` rather than `impl Into<String>`
+  parameters, `anyhow`-style errors, `Vec` return values, no speculative generality.
 - **Let the tools do the work.** rustfmt owns formatting, clippy owns idiom checks, the
   compiler owns memory safety. Spend your attention on design.
 
@@ -218,8 +218,8 @@ docs which fields equality ignores.
   }
   ```
 
-- Hide implementation iterator types behind `impl Iterator<Item = T>` (internal APIs) or
-  a newtype (public APIs you must keep stable).
+- Library code returns iterators, not a `Vec` collected only to return, behind `impl
+  Iterator<Item = T>` (internal APIs) or a newtype (public APIs you must keep stable).
 - Expose each public item at exactly one path. Don't `pub use` a foreign crate's items
   unless you are an umbrella crate. Avoid leaking third-party types into your public API;
   feature-gate `serde` impls behind a feature named `serde`. If a dependency's type must
@@ -283,7 +283,7 @@ Pick the mechanism by contract:
 input, never rely on `catch_unwind` for control flow (it does nothing under
 `panic = "abort"` and can leave state inconsistent), and never catch a panic and continue
 inside a library. Where a panicking convenience is justified, pair it with a fallible API
-(`get` / `get_unchecked`, `new` / `try_new`) and document it under `# Panics`.
+(`v[i]` / `v.get(i)`, `new` / `try_new`) and document it under `# Panics`.
 
 **Every intentional panic carries a message with the relevant values:**
 `assert!(buf.len() >= HEADER, "buffer too small: {} bytes", buf.len())`,

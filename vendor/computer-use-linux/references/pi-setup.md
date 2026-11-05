@@ -46,6 +46,9 @@ Or search by capability:
 computer_use_linux_tools({ query: "inspect a window and type text" })
 ```
 
+Called with no arguments, the loader enables `doctor`, `list_windows`,
+`focused_window`, `get_app_state` and `get_tree_page`.
+
 The selected native tools appear starting on the next model turn with their
 full upstream schemas and remain active for the session:
 
@@ -87,6 +90,9 @@ for (const block of result.images) image(block);
 Native Computer Use tools execute sequentially. Cancellation is forwarded to
 the MCP request. If the server process exits, the failed call is never replayed
 automatically; call `get_app_state` again before another element-based action.
+Each call times out after 60 seconds. Set `COMPUTER_USE_LINUX_TIMEOUT_MS` in
+Pi's environment to change it, for example for `run_shell` calls with
+`timeout_seconds` above 60.
 
 ## Migration from the adapter-based package
 
@@ -110,14 +116,18 @@ legacy entry.
 
 The extension looks for `computer-use-linux` in this order:
 
-1. `COMPUTER_USE_LINUX_BIN`
-2. The binary downloaded inside the installed npm package
-3. `computer-use-linux` on `PATH`, from `npm install -g` or `cargo install`
+1. `COMPUTER_USE_LINUX_BIN`, when it is an absolute path to an executable. A
+   relative or non-executable value is ignored and the next step is used.
+2. The binary downloaded inside the installed npm package. When it is missing,
+   as after npm 12 skipped the install script, the first real tool call runs the
+   package's `npm/install.js` to download it.
+3. `computer-use-linux` on `PATH`, from `npm install -g` or `cargo install`,
+   when that download fails
 
-A temporary extension (`pi -e npm:@agent-sh/computer-use-linux`) is staged
-without the downloaded binary, so it relies on the `PATH` step. The extension
-still checks that the server version and tool catalog match, so a mismatched
-install fails with that reason instead of starting.
+The extension still checks that the server version and tool catalog match, so
+a mismatched install fails with that reason instead of starting. Set
+`COMPUTER_USE_LINUX_BIN` to run a `PATH` or development build instead of the
+download.
 
 Reinstall the package if the bundled binary is missing:
 
