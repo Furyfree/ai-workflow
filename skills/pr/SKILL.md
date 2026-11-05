@@ -8,6 +8,9 @@ description: Open or follow up a pull request. Use only when the user asks for i
 Follow-up ("check the PR", "what did the review say"): read the PR's
 comments and CI with `gh pr view`, then go to step 5. Never create anything.
 
+Ask each question, and each wait for go, with the agent's question prompt
+(AskUserQuestion in Claude Code), not in chat; use chat only without one.
+
 1. Look at what is uncommitted and unpushed. Propose the branch name and PR
    title in one line. Wait for go.
 2. Run the checks the repository's AGENTS.md names. If one fails, stop and
