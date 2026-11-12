@@ -32,7 +32,7 @@ Pick the route:
    focus. Apps there use my real files and accounts. Stop the workspace when
    done.
 5. I ask to see it: open it on my desktop, on its own empty workspace, and
-   switch me there (`hl.dsp.focus`).
+   switch me there.
 6. The hidden desktop cannot run it, because the app is not allowed or
    hands off to a copy already running, such as one in the tray (check with
    `pgrep` before launching): tell me why and ask before using my desktop.
@@ -66,50 +66,42 @@ Setup:
   read them from a screenshot or the full tree.
 - The viewer fills its picture and crops what does not fit, so start the
   hidden desktop in the picture's shape. The picture is the viewer window
-  (`hyprctl clients`, class `agent-workspace-linux-viewer`) minus 30x125,
-  or without a viewer, my focused monitor's logical size (pixels / scale)
-  minus 40x170. Use width 1920 and height 1920 x picture height / width.
+  minus 30x125, or without a viewer, the logical size (pixels / scale) of
+  the monitor it will open on, minus 40x170 on Hyprland and 46x175 on Niri.
+  Use width 1920 and height 1920 x picture height / width.
 - When I ask to watch, open the viewer with `workspace_open_viewer` and
   treat it as an app you opened on my desktop (below); close it with
   `workspace_close_viewer`. If I set it to Read only or Pause, stop and tell
   me.
 
-My Hyprland desktop:
+My desktop runs Hyprland or Niri; `$XDG_CURRENT_DESKTOP` says which. The
+commands for each follow these rules.
 
-- Start apps through Hyprland, never from your shell, which can carry the
-  host app's variables (T3 Code's `ELECTRON_RUN_AS_NODE` breaks Electron
-  apps): `hyprctl dispatch 'hl.dsp.exec_cmd("<app>", { workspace = "<id> silent" })'`.
-  `silent` keeps me on my workspace. Dispatch takes Lua; the old
-  `hyprctl dispatch exec` form fails, and `uwsm app` makes Hyprland ignore
-  the workspace.
+- Start apps through the compositor, never from your shell, which can carry
+  the host app's variables (T3 Code's `ELECTRON_RUN_AS_NODE` breaks Electron
+  apps).
 - Give each app you open its own empty workspace: on the monitor I am not
-  focused on when there are two, otherwise `emptym`. Find them with
-  `hyprctl monitors -j` and `hyprctl workspaces -j`. IDs differ from the
-  names I see: on the desktop, the second monitor's IDs 6-10 show as 1-5.
-  Pass IDs to Hyprland; tell me the name and monitor.
-- Open one app at a time. Note the window addresses in `hyprctl clients -j`
-  before launching; the new address is your window. Check where it landed:
-  an app already running, such as my Brave, or one whose launcher hands
-  off, such as VSCodium, ignores the rule and takes my focus. Move it, then
-  return me to my workspace:
-  `hyprctl dispatch 'hl.dsp.window.move({ workspace = "<id>", window = "address:<address>", follow = false })'`.
-- Target windows by `address:<address>`, never `pid:`: an app's windows
-  share one pid, so `pid:` can hit mine.
-- Before you start, note my active workspace (`hyprctl activeworkspace -j`)
-  and whether the app is running (`pgrep`). When done:
+  focused on when there are two, otherwise on mine. Tell me the workspace
+  number I see and the monitor.
+- Open one app at a time. Note the window IDs before launching; the new one
+  is your window. Check where it landed and move it if needed.
+- Target windows by their ID, never by pid: an app's windows share one pid,
+  so a pid can hit mine.
+- Before you start, note my workspace and whether the app is running
+  (`pgrep -x`; `-f` also matches your own command). When done:
   1. Close only windows and tabs you opened, unless I asked to keep them;
-     never close what was already open:
-     `hyprctl dispatch 'hl.dsp.window.close({ window = "address:<address>" })'`.
+     never close what was already open.
   2. Closing a window does not always quit the app: Claude Desktop stays in
-     the tray. If the app was not running before, note your window's `pid`
-     before closing it and `kill` that process if it outlives the window.
-     Never end any other process.
-  3. Return to that workspace unless I ask otherwise:
-     `hyprctl dispatch 'hl.dsp.focus({ workspace = "<id>" })'`.
+     the tray, and Nautilus for a few seconds. If the app was not running
+     before, note your window's `pid` before closing it and `kill` that
+     process if it outlives the window. Never end any other process.
+  3. Return me to that workspace unless I ask otherwise.
   4. Call `complete_interaction`, so I know you have finished.
 - Brave, VSCodium, Obsidian, and Claude Desktop list their controls; use
   them by element. Noctalia, T3 Code, Signal, and other apps work only by
   screenshot and coordinates.
+- VSCodium asks whether to trust a folder it has not opened before; answer
+  No.
 - Noctalia always runs on my desktop (route 3): open its settings with
   `noctalia msg settings-open [section]` and work from screenshots.
 - The Windows VM: a "Windows VM" window is route 3; otherwise run
@@ -121,6 +113,56 @@ My Hyprland desktop:
   `workspace_close_window`, which leaves FreeRDP hung and Windows running.
 - Fields without a click action, such as Brave's address bar, are clicked
   by coordinates and move my mouse; use the app's shortcut, such as Ctrl+L.
+
+On Hyprland:
+
+- Start apps with
+  `hyprctl dispatch 'hl.dsp.exec_cmd("<app>", { workspace = "<id> silent" })'`.
+  `silent` keeps me on my workspace. Dispatch takes Lua; the old
+  `hyprctl dispatch exec` form fails, and `uwsm app` makes Hyprland ignore
+  the workspace.
+- Find workspaces with `hyprctl monitors -j` and `hyprctl workspaces -j`;
+  `emptym` is an empty one on my monitor. IDs differ from the numbers I
+  see: on the desktop, the second monitor's IDs 6-10 show as 1-5. Pass IDs
+  to Hyprland.
+- Windows are `address:<address>` in `hyprctl clients -j`. An app already
+  running, such as my Brave, or one whose launcher hands off, such as
+  VSCodium, ignores the workspace rule and takes my focus. Move it:
+  `hyprctl dispatch 'hl.dsp.window.move({ workspace = "<id>", window = "address:<address>", follow = false })'`.
+- My workspace is `hyprctl activeworkspace -j`. Close with
+  `hyprctl dispatch 'hl.dsp.window.close({ window = "address:<address>" })'`
+  and return me with `hyprctl dispatch 'hl.dsp.focus({ workspace = "<id>" })'`.
+- The viewer is class `agent-workspace-linux-viewer` in `hyprctl clients`.
+
+On Niri:
+
+- `niri msg --json workspaces` lists each monitor's workspaces: `idx` is the
+  number I see, `output` the monitor, and an empty one has no
+  `active_window_id`. A number in `niri msg` is a position on the focused
+  monitor, so pass workspace names.
+- Spawn has no workspace option: a new window opens on the focused
+  workspace, also when the app hands off to a copy already running. Note my
+  window (`niri msg --json focused-window`) and each monitor's workspace,
+  then run `niri msg action focus-workspace <name>` and
+  `niri msg action spawn -- <app> <args>`, wait until the new ID shows in
+  `niri msg --json windows`, and return me with
+  `niri msg action focus-window --id <id>`.
+- Move a window with
+  `niri msg action move-window-to-workspace --window-id <id> --focus false <name>`
+  and close it with `niri msg action close-window --id <id>`. When done,
+  focus each monitor's earlier workspace, then my window.
+- With two monitors, `screenshot` and the screenshot in `get_app_state`
+  fail: Niri's screenshot service takes one monitor. Pass
+  `include_screenshot: false`, capture a monitor with
+  `grim -o <output> -s 0.5 <file>` in a temporary directory, and read the
+  file. Never use Niri's screenshot actions, such as
+  `niri msg action screenshot-window`: they also copy to my clipboard.
+  Clicks by coordinate are then refused: use elements and keys, and tell me
+  when an app needs coordinates. With one monitor, try `screenshot` first.
+- The viewer opens at half width. Start the hidden desktop with
+  `open_viewer: false`, open the viewer like an app, and widen it with
+  `niri msg action set-window-width --id <id> 100%`. Its app ID is
+  `agent-workspace-linux-viewer`, its size `layout.window_size`.
 
 Never:
 
