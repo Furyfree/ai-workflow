@@ -6,8 +6,9 @@ description: Open or follow up a pull request. Use only when the user asks for i
 # Pull request
 
 Follow-up ("check the PR", "what did the review say"): read the PR and its
-description with `gh pr view`, its checks with `gh pr checks`, and its line
-comments with `gh api repos/{owner}/{repo}/pulls/<number>/comments`. If the
+description with `gh pr view`, its conversation with `gh pr view --comments`,
+its checks with `gh pr checks`, and its line comments with
+`gh api repos/{owner}/{repo}/pulls/<number>/comments`. If the
 Greptile Review check is still running, say so and hand back; otherwise go
 to step 5. Never create anything. "The PR is ready": run `gh pr ready`, then
 hand back.
