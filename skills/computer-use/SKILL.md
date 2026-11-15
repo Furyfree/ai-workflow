@@ -92,9 +92,9 @@ commands for each follow these rules.
   1. Close only windows and tabs you opened, unless I asked to keep them;
      never close what was already open.
   2. Closing a window does not always quit the app: Claude Desktop stays in
-     the tray, and Nautilus for a few seconds. If the app was not running
-     before, note your window's `pid` before closing it and `kill` that
-     process if it outlives the window. Never end any other process.
+     the tray. If the app was not running before, note your window's `pid`
+     before closing it and `kill` that process if it outlives the window.
+     Never end any other process.
   3. Return me to that workspace unless I ask otherwise.
   4. Call `complete_interaction`, so I know you have finished.
 - Brave, VSCodium, Obsidian, and Claude Desktop list their controls; use
