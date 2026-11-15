@@ -35,7 +35,7 @@ machines. Elsewhere, install what the parts you use need.
 | [LiteParse](https://github.com/run-llama/liteparse) | `document-analysis` |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Node](https://nodejs.org/en/download), [ffmpeg](https://ffmpeg.org/download.html) | `video-analysis` |
 | [Craft apps](https://github.com/storytold), ffmpeg | `craft-suite`, `video-ideas`, `video-effects` |
-| [computer-use-linux](https://github.com/agent-sh/computer-use-linux), [agent-workspace-linux](https://github.com/agent-sh/agent-workspace-linux), [Hyprland](https://hypr.land/) | `computer-use` |
+| [computer-use-linux](https://github.com/agent-sh/computer-use-linux), [agent-workspace-linux](https://github.com/agent-sh/agent-workspace-linux), [Hyprland](https://hypr.land/) or [Niri](https://github.com/niri-wm/niri) | `computer-use` |
 | [Rust](https://rustup.rs/) | `rust-best-practices`, `rust-review`, `rust-port` |
 | [Go](https://go.dev/dl/) | `use-modern-go`; its wrapper fetches the guidelines CLI itself |
 
