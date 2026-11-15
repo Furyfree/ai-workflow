@@ -31,7 +31,7 @@ machines. Elsewhere, install what the parts you use need.
 | [1Password SSH agent](https://www.1password.dev/ssh/agent) with [commit signing](https://www.1password.dev/ssh/git-commit-signing) | Signing and pushing in `commit`, `pull`, `pr` |
 | [Lightpanda](https://github.com/lightpanda-io/browser) | `lightpanda`, `research`, Pi's `web_read` |
 | [OpenRouter](https://openrouter.ai/) in OpenCode | `validate`'s GLM reviewer |
-| [CodeRabbit CLI](https://docs.coderabbit.ai/cli) | `pr` reviews (optional) |
+| [Greptile](https://www.greptile.com/docs/quickstart) GitHub app | `pr` reviews (optional) |
 | [LiteParse](https://github.com/run-llama/liteparse) | `document-analysis` |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp), [Node](https://nodejs.org/en/download), [ffmpeg](https://ffmpeg.org/download.html) | `video-analysis` |
 | [Craft apps](https://github.com/storytold), ffmpeg | `craft-suite`, `video-ideas`, `video-effects` |
