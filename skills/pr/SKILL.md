@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Open or follow up a pull request. Use only when the user asks for it - "make a PR", "open a pull request", "lav en PR", "opret en PR", "åbn en PR", "check the PR", "tjek PR'en", "the PR is ready", "PR'en er klar", "what did the review say". Never use because of a commit or push.
+description: Open or follow up a pull request. Use only when the user asks for it - "make a PR", "open a pull request", "lav en PR", "opret en PR", "åbn en PR", "check the PR", "tjek PR'en", "the PR is ready", "PR'en er klar", "what did the review say". Not for a plain commit or push (use commit).
 ---
 
 # Pull request
@@ -24,12 +24,21 @@ Ask each question, and each wait for go, with the agent's question prompt
    to test it, five lines at most. A signing or push error: follow the
    1Password note in the [commit skill](../commit/SKILL.md).
 4. Ask one question - ready for review? Greptile reviews a PR once it is no
-   longer a draft, and each review costs money.
+   longer a draft and again on every push; each review costs money.
    - Keep as draft: more work is coming
    - Ready: `gh pr ready`, then hand back (Recommended)
    - `validate` skill first, then `gh pr ready` once its findings are settled
 5. Findings: one numbered list with a recommendation per item. The user's
    answer by number covers the fix, its commit, and the push to the PR
-   branch. No second review unless asked.
-6. When CI is green, say so and give the merge command. Merge and branch
-   cleanup only when asked.
+   branch. Put a round's fixes in one commit and one push; before longer
+   work, run `gh pr ready --undo`. Leave fixed Greptile comments alone; it
+   resolves them on its next review. Reply to a rejected one in one line
+   saying why: `gh api repos/{owner}/{repo}/pulls/<number>/comments/<id>/replies -f body=...`.
+   No second review unless asked.
+6. When CI is green, say so and give the merge command. Repositories owned
+   by Furyfree or byrne-homelab, unless their AGENTS.md says otherwise:
+   `gh pr merge <number> --rebase --delete-branch`. Others: the
+   method their recent merged PRs show in `git log`: "Merge pull request"
+   commits mean `--merge`, one commit ending in `(#N)` per PR means
+   `--squash`, otherwise `--rebase`. Merge and branch cleanup only when
+   asked.
