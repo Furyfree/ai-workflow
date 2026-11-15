@@ -30,7 +30,8 @@ harness's own search. Then take the first route that answers:
 1. GitHub: read the file or API through `gh` or raw.githubusercontent.com, not
    the rendered page.
 2. Full page: Pi's `web_read`, otherwise
-   `lightpanda fetch --block-private-networks --dump markdown <url>`. See
+   `lightpanda fetch --block-private-networks --dump markdown <url>`. When it
+   is blocked or empty, use Brave in the hidden desktop. See
    [lightpanda](../lightpanda/SKILL.md).
 3. Archive copy: `https://web.archive.org/web/<url>` opens the latest snapshot.
 4. Another source: official docs, a changelog, the vendor's repository, or a

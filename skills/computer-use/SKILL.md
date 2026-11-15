@@ -49,12 +49,13 @@ Setup:
   `doctor` reports blockers, tell me and stop.
 - The hidden desktop may launch only the apps in its allowlist
   (`mcp_permissions`): Brave, Obsidian, VSCodium, and the Windows VM. Open
-  Brave with `workspace_open_browser`, which gives it a profile of its own.
-  Never point it at my Brave profile or import one.
-- Brave opens small and on its own startup page, and narrow pages hide
-  their menus. Resize it to the workspace with `workspace_resize_window`,
-  then use `workspace_browser_navigate`. When a link click does not load
-  the page, navigate to the link's address.
+  Brave with `workspace_open_browser` and a fresh profile that skips its
+  welcome page, as in [lightpanda](../lightpanda/SKILL.md). Never point it
+  at my Brave profile or import one.
+- Brave opens at half width, and narrow pages hide their menus. Resize it
+  to the workspace with `workspace_resize_window`. When a link click does
+  not load the page, navigate to the link's address with
+  `workspace_browser_navigate`.
 - Closing a window does not always quit the app: VSCodium's launcher exits
   and its own process keeps running. When done, close your windows, end
   each one's process (`pid` in `workspace_list_windows`) that outlives it,
