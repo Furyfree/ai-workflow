@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import dns from "node:dns/promises";
+import { existsSync } from "node:fs";
+import http from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { mock, test } from "node:test";
 import type {
 	AgentToolResult,
@@ -178,7 +180,7 @@ function reply(value: unknown): ExecResult {
 	return { code: 0, killed: false, stderr: "", stdout: JSON.stringify(value) };
 }
 // agent-browser opens the page, then reads it in one batch: wait, get url, read.
-function page(content: string, { url = "https://site.example.org/final", read = true } = {}): Exec {
+function page(content: string, { url = "https://site.example.org/final", read = true, truncated = false } = {}): Exec {
 	return async (_command, args) =>
 		reply(
 			args.includes("open")
@@ -186,9 +188,46 @@ function page(content: string, { url = "https://site.example.org/final", read = 
 				: [
 						{ command: ["wait"], success: true, error: null, result: { result: true } },
 						{ command: ["get", "url"], success: true, error: null, result: { url } },
-						{ command: ["read"], success: read, error: null, result: read ? { content, url } : null },
+						{ command: ["read"], success: read, error: null, result: read ? { content, url, truncated } : null },
 					],
 		);
+}
+
+// The status a request through Brave's proxy gets: CONNECT for HTTPS, a plain request for HTTP.
+function proxied(proxy: URL, target: URL): Promise<number> {
+	return new Promise((resolve, reject) => {
+		const request =
+			target.protocol === "https:"
+				? http.request({
+						host: proxy.hostname,
+						port: proxy.port,
+						method: "CONNECT",
+						path: `${target.hostname}:${target.port || 443}`,
+					})
+				: http.request({ host: proxy.hostname, port: proxy.port, path: target.href });
+		request.on("connect", (response, socket) => {
+			socket.destroy();
+			resolve(response.statusCode ?? 0);
+		});
+		request.on("response", (response) => {
+			response.resume();
+			resolve(response.statusCode ?? 0);
+		});
+		request.on("error", reject);
+		request.end();
+	});
+}
+
+// Stands in for Brave: opening the page requests each hop, such as a redirect
+// target, through the proxy agent-browser was given, and fails if one is refused.
+function browserVia(hops: readonly string[]): Exec {
+	return async (command, args) => {
+		if (!args.includes("open")) return page("router admin secret")(command, args);
+		const proxy = new URL(args[args.indexOf("--proxy") + 1]);
+		for (const hop of hops)
+			if ((await proxied(proxy, new URL(hop))) !== 200) return reply({ success: false, data: null, error: "net::ERR" });
+		return page("router admin secret")(command, args);
+	};
 }
 
 // Protects model selection, conversation privacy, and actual hosted-search evidence at the caller interface.
@@ -484,46 +523,55 @@ test("page reading is local, guarded, deduplicated, and line-numbered after redi
 		limit: 10,
 	});
 	assert.equal(result.isError, false);
-	assert.equal(app.executions.length, 2);
+	assert.equal(app.executions.length, 3);
 	assert.equal(app.requests.length, 0);
 	assert.equal(output(result).results[0].sourceUrl, "https://site.example.org/final");
 	assert.equal(output(result).results[0].content, "3: third\n4: fourth");
 	assert.equal(output(result).results[0].truncated, false);
 	assert.equal(output(result).results[0].endLine, 4);
 	assert.equal(output(result).results[0].nextOffset, undefined);
-	const [open, batch] = app.executions;
-	for (const call of app.executions) {
+	const [open, batch, close] = app.executions;
+	const flag = (name: string) => open.args[open.args.indexOf(name) + 1];
+	const profile = flag("--profile");
+	for (const call of [open, batch]) {
 		assert.equal(call.command, "agent-browser");
-		// A throwaway profile of its own, never the agents' signed-in one.
-		assert.equal(call.args[call.args.indexOf("--profile") + 1], join(tmpdir(), "pi-web-read"));
-		assert.equal(call.args[call.args.indexOf("--session") + 1], "pi-web-read");
+		assert.deepEqual(call.args.slice(0, open.args.indexOf("open")), open.args.slice(0, open.args.indexOf("open")));
 		assert.ok(!call.args.some((arg) => /cookie|api-key|header|--headed/.test(arg)));
 		assert.equal(call.options?.timeout, 30_000);
 		assert.ok(call.options?.signal);
 	}
+	// Its own throwaway profile and session, never the agents' signed-in profile,
+	// behind the guard proxy, which loopback addresses must use too.
+	assert.ok(profile.startsWith(join(tmpdir(), "pi-web-read-")));
+	assert.equal(flag("--session"), basename(profile));
+	assert.match(flag("--proxy"), /^http:\/\/127\.0\.0\.1:\d+$/);
+	assert.equal(flag("--proxy-bypass"), "<-loopback>");
 	assert.deepEqual(open.args.slice(-2), ["open", "https://site.example.org/page"]);
 	assert.ok(["batch", "--bail", "get url", "read"].every((arg) => batch.args.includes(arg)));
 	assert.ok(!batch.args.some((arg) => arg.includes("site.example.org")));
+	// The browser closes and its profile is deleted when the call ends.
+	assert.deepEqual(close.args, ["--json", "--session", basename(profile), "close"]);
+	assert.equal(existsSync(profile), false);
+	await app.run("web_read", { urls: ["https://site.example.org/page"] });
+	assert.notEqual(app.executions[3].args[app.executions[3].args.indexOf("--profile") + 1], profile);
 });
 
-test("private network addresses are refused before loading and after redirects", async () => {
-	const app = harness();
-	for (const url of [
-		"http://127.0.0.1:3000/",
-		"http://[::1]/",
-		"http://192.168.1.1/",
-		"https://intranet.example.org/",
-	]) {
+test("the browser's proxy refuses private addresses, including names and redirects to them", async () => {
+	for (const [url, hops] of [
+		["http://127.0.0.1:3000/", ["http://127.0.0.1:3000/"]],
+		["https://[::1]/", ["https://[::1]/"]],
+		["http://192.168.1.1/", ["http://192.168.1.1/"]],
+		["https://intranet.example.org/", ["https://intranet.example.org/"]],
+		// A public page that redirects to a private one.
+		["https://site.example.org/page", ["http://intranet.example.org/admin"]],
+	] as const) {
+		const app = harness();
+		app.exec(browserVia(hops));
 		const result = await app.run("web_read", { urls: [url] });
 		assert.equal(result.isError, true);
 		assert.match(text(result), /Private network/);
+		assert.doesNotMatch(JSON.stringify(result), /router admin secret/);
 	}
-	assert.equal(app.executions.length, 0);
-	app.exec(page("router admin secret", { url: "https://intranet.example.org/admin" }));
-	const result = await app.run("web_read", { urls: ["https://site.example.org/page"] });
-	assert.equal(result.isError, true);
-	assert.match(text(result), /Private network/);
-	assert.doesNotMatch(JSON.stringify(result), /router admin secret|intranet/);
 });
 
 test("credential URLs and non-web schemes are rejected without invoking a reader or echoing credentials", async (t) => {
@@ -551,6 +599,7 @@ test("missing browser, blocked pages and malformed output are failures, not page
 	for (const failure of [
 		async () => reply({ success: false, data: null, error: "private diagnostic" }),
 		page("private diagnostic", { read: false }),
+		page("private diagnostic", { truncated: true }),
 		async () => ({ code: 1, killed: false, stdout: "invalid JSON", stderr: "private diagnostic" }),
 		async () => ({ code: 0, killed: true, stdout: "", stderr: "private diagnostic" }),
 	]) {
@@ -602,7 +651,12 @@ test("reader cancellation aborts the active process and prevents later URLs", as
 		app.run("web_read", { urls: ["https://one.example.org/", "https://two.example.org/"] }, controller.signal),
 		/abort/i,
 	);
-	assert.equal(app.executions.length, 1);
+	// The browser still closes, with a call the cancelled signal cannot stop.
+	assert.deepEqual(
+		app.executions.map((call) => call.args.at(-1)),
+		["https://one.example.org/", "close"],
+	);
+	assert.equal(app.executions[1].options?.signal, undefined);
 });
 
 test("partial reader failures leave successful pages available and later offsets work", async () => {
