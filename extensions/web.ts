@@ -141,6 +141,7 @@ function guardProxy(refused: Set<string>) {
 		}
 		publicAddress(url.hostname).then(
 			(address) => {
+				if (response.destroyed) return;
 				// Headers as Brave wrote them, minus the proxy's own: bot checks block
 				// requests that look forwarded.
 				const headers = request.rawHeaders.flatMap((name, index, raw) =>
@@ -155,16 +156,20 @@ function guardProxy(refused: Set<string>) {
 						headers,
 					},
 					(reply) => {
+						// A site that drops the connection mid-page fails only this request.
+						reply.on("error", () => response.destroy());
 						response.writeHead(reply.statusCode ?? 502, reply.headers);
 						reply.pipe(response);
 					},
 				);
 				upstream.on("error", () => response.destroy());
+				// Brave going away, or the proxy closing, also ends the request to the site.
+				response.on("close", () => upstream.destroy());
 				request.pipe(upstream);
 			},
 			() => {
 				refused.add(url.hostname);
-				response.writeHead(403).end();
+				if (!response.destroyed) response.writeHead(403).end();
 			},
 		);
 	});
@@ -179,6 +184,7 @@ function guardProxy(refused: Set<string>) {
 		}
 		publicAddress(target.hostname).then(
 			(address) => {
+				if (socket.destroyed) return;
 				const upstream = connect(Number(target.port) || 443, address, () => {
 					socket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
 					upstream.write(head);
@@ -189,7 +195,7 @@ function guardProxy(refused: Set<string>) {
 			},
 			() => {
 				refused.add(target.hostname);
-				socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
+				if (!socket.destroyed) socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
 			},
 		);
 	});
