@@ -59,7 +59,9 @@ with Haiku, WebSearch only, in safe mode, with `ANTHROPIC_API_KEY` and
 API billing. Only send public search terms, not private code or chat.
 
 `web_read` accepts up to three `urls`. GitHub source links return raw text;
-other pages open in Brave through agent-browser, which returns Markdown locally.
+other pages open in a fresh Brave through agent-browser, which returns Markdown
+locally. Each call gets a throwaway profile, and Brave reaches the web only
+through a local proxy that refuses private addresses, redirects included.
 Use `offset` and `limit` for longer pages. Each result is bounded to 12 KB,
 with a 2 MiB reader limit, a 30-second reading deadline and a 60-second search
 deadline. Private-network access and credential URLs are blocked. Neither tool
