@@ -45,7 +45,7 @@
   Never work around it. A website refusing you is not a sandbox block: use
   the research skill.
 - Find and skim pages with your built-in web tools. Read a page through the
-  lightpanda skill when you need its exact text or a built-in tool fails;
+  browser skill when you need its exact text or a built-in tool fails;
   GitHub through `gh`.
 
 ## Words

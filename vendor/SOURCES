@@ -5,8 +5,6 @@ stop-slop	hardikpandya/stop-slop	.	8da1f030185bdfe8471220585162991eaeb970e9	MIT
 brainstorm	maragudk/skills	brainstorm	e21aa4f3bdd882d3025bad362e65d3144c93b0d9	MIT
 modern-python	trailofbits/skills	plugins/modern-python/skills/modern-python	123037ec8aed26f0d86327cc39137ee5043e5deb	CC-BY-SA-4.0
 use-modern-go	JetBrains/go-modern-guidelines	plugin/skills/use-modern-go	b63e517a2d44e664d09fec2cb69eca67eecdd44c	Apache-2.0
-lightpanda	lightpanda-io/agent-skill	.	aa014f04b3f5065010aef93662051ffea588335f	Apache-2.0
-pandascript	lightpanda-io/agent-skill	pandascript	b45f90f79c2e6110f7e0e5c4ef0ddc1b4b6e1103	Apache-2.0
 rust-best-practices	morganlinton/BeautifulRust	skills/rust-best-practices	3385ca73169c1631775627c258b2757d0ad1c13f	MIT
 rust-review	morganlinton/BeautifulRust	skills/rust-review	3385ca73169c1631775627c258b2757d0ad1c13f	MIT
 rust-port	morganlinton/BeautifulRust	skills/rust-port	a3c06a27f7f3dc0e25a36981670be42181accf94	MIT

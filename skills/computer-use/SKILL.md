@@ -6,8 +6,7 @@ description: >
   through the app", "look at my screen", "what do I have open", "use my
   desktop", "brug computeren", "test det i appen", "kig på min skærm", "hvad
   har jeg åbent", "brug mit skrivebord".
-  Not for pages a fetch or Lightpanda can read (use lightpanda), or for code
-  and files.
+  Not for websites (use browser), or for code and files.
 ---
 
 # Computer use
@@ -48,14 +47,9 @@ Setup:
   plugins, `install.sh`, or `setup` commands. If a tool is missing or
   `doctor` reports blockers, tell me and stop.
 - The hidden desktop may launch only the apps in its allowlist
-  (`mcp_permissions`): Brave, Obsidian, VSCodium, and the Windows VM. Open
-  Brave with `workspace_open_browser` and a fresh profile that skips its
-  welcome page, as in [lightpanda](../lightpanda/SKILL.md). Never point it
-  at my Brave profile or import one.
-- Brave opens at half width, and narrow pages hide their menus. Resize it
-  to the workspace with `workspace_resize_window`. When a link click does
-  not load the page, navigate to the link's address with
-  `workspace_browser_navigate`.
+  (`mcp_permissions`): Brave, Obsidian, VSCodium, and the Windows VM. Run
+  Brave through agent-browser, as in [browser](../browser/SKILL.md), step 4.
+  Never point it at my Brave profile or import one.
 - Closing a window does not always quit the app: VSCodium's launcher exits
   and its own process keeps running. When done, close your windows, end
   each one's process (`pid` in `workspace_list_windows`) that outlives it,

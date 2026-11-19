@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import dns from "node:dns/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { mock, test } from "node:test";
 import type {
 	AgentToolResult,
 	ExecOptions,
@@ -17,6 +20,12 @@ type Message = Awaited<ReturnType<Complete>>;
 type Options = NonNullable<Parameters<Complete>[2]>;
 type Request = { model: Parameters<Complete>[0]; context: Parameters<Complete>[1]; options: Options; payload: unknown };
 type Output = { provider?: string; model?: string; results: Array<Record<string, unknown>> };
+type Exec = (command: string, args: string[]) => Promise<ExecResult>;
+
+// Tests never reach real DNS; intranet hosts stand for names on a private network.
+mock.method(dns, "lookup", (async (host: string) => [
+	{ address: host.startsWith("intranet.") ? "10.0.0.1" : "93.184.215.14", family: 4 },
+]) as unknown as typeof dns.lookup);
 
 function message(input = 10): Message {
 	return {
@@ -98,17 +107,7 @@ function harness() {
 		await searched(request);
 		return message();
 	};
-	let exec = async (): Promise<ExecResult> => ({
-		code: 0,
-		killed: false,
-		stderr: "",
-		stdout: JSON.stringify({
-			url: "https://site.example.org/final",
-			http_status: 200,
-			error: null,
-			content: "first\nsecond\nthird\nfourth",
-		}),
-	});
+	let exec: Exec = page("first\nsecond\nthird\nfourth");
 	const ctx = {
 		cwd: "/tmp",
 		model: {
@@ -136,7 +135,7 @@ function harness() {
 		registerTool: (definition: ToolDefinition) => tools.set(definition.name, definition),
 		exec: async (command: string, args: string[], options?: ExecOptions) => {
 			executions.push({ command, args, options });
-			return exec();
+			return exec(command, args);
 		},
 	} as unknown as ExtensionAPI);
 	return {
@@ -175,13 +174,21 @@ function text(result: AgentToolResult<unknown>): string {
 		.map((block) => block.text)
 		.join("\n");
 }
-function page(content: string, extra = {}) {
-	return {
-		code: 0,
-		killed: false,
-		stderr: "",
-		stdout: JSON.stringify({ http_status: 200, error: null, content, ...extra }),
-	};
+function reply(value: unknown): ExecResult {
+	return { code: 0, killed: false, stderr: "", stdout: JSON.stringify(value) };
+}
+// agent-browser opens the page, then reads it in one batch: wait, get url, read.
+function page(content: string, { url = "https://site.example.org/final", read = true } = {}): Exec {
+	return async (_command, args) =>
+		reply(
+			args.includes("open")
+				? { success: true, data: { title: "Page", url }, error: null }
+				: [
+						{ command: ["wait"], success: true, error: null, result: { result: true } },
+						{ command: ["get", "url"], success: true, error: null, result: { url } },
+						{ command: ["read"], success: read, error: null, result: read ? { content, url } : null },
+					],
+		);
 }
 
 // Protects model selection, conversation privacy, and actual hosted-search evidence at the caller interface.
@@ -477,21 +484,46 @@ test("page reading is local, guarded, deduplicated, and line-numbered after redi
 		limit: 10,
 	});
 	assert.equal(result.isError, false);
-	assert.equal(app.executions.length, 1);
+	assert.equal(app.executions.length, 2);
 	assert.equal(app.requests.length, 0);
 	assert.equal(output(result).results[0].sourceUrl, "https://site.example.org/final");
 	assert.equal(output(result).results[0].content, "3: third\n4: fourth");
 	assert.equal(output(result).results[0].truncated, false);
 	assert.equal(output(result).results[0].endLine, 4);
 	assert.equal(output(result).results[0].nextOffset, undefined);
-	const call = app.executions[0];
-	assert.equal(call.command, "lightpanda");
-	for (const flag of ["--block-private-networks", "--json", "--fail-on-http-error"])
-		assert.ok(call.args.includes(flag));
-	assert.ok(!call.args.some((arg) => /cookie|profile|api-key|http-header/.test(arg)));
-	assert.equal(call.args.at(-1), "https://site.example.org/page");
-	assert.equal(call.options?.timeout, 30_000);
-	assert.ok(call.options?.signal);
+	const [open, batch] = app.executions;
+	for (const call of app.executions) {
+		assert.equal(call.command, "agent-browser");
+		// A throwaway profile of its own, never the agents' signed-in one.
+		assert.equal(call.args[call.args.indexOf("--profile") + 1], join(tmpdir(), "pi-web-read"));
+		assert.equal(call.args[call.args.indexOf("--session") + 1], "pi-web-read");
+		assert.ok(!call.args.some((arg) => /cookie|api-key|header|--headed/.test(arg)));
+		assert.equal(call.options?.timeout, 30_000);
+		assert.ok(call.options?.signal);
+	}
+	assert.deepEqual(open.args.slice(-2), ["open", "https://site.example.org/page"]);
+	assert.ok(["batch", "--bail", "get url", "read"].every((arg) => batch.args.includes(arg)));
+	assert.ok(!batch.args.some((arg) => arg.includes("site.example.org")));
+});
+
+test("private network addresses are refused before loading and after redirects", async () => {
+	const app = harness();
+	for (const url of [
+		"http://127.0.0.1:3000/",
+		"http://[::1]/",
+		"http://192.168.1.1/",
+		"https://intranet.example.org/",
+	]) {
+		const result = await app.run("web_read", { urls: [url] });
+		assert.equal(result.isError, true);
+		assert.match(text(result), /Private network/);
+	}
+	assert.equal(app.executions.length, 0);
+	app.exec(page("router admin secret", { url: "https://intranet.example.org/admin" }));
+	const result = await app.run("web_read", { urls: ["https://site.example.org/page"] });
+	assert.equal(result.isError, true);
+	assert.match(text(result), /Private network/);
+	assert.doesNotMatch(JSON.stringify(result), /router admin secret|intranet/);
 });
 
 test("credential URLs and non-web schemes are rejected without invoking a reader or echoing credentials", async (t) => {
@@ -515,15 +547,15 @@ test("credential URLs and non-web schemes are rejected without invoking a reader
 	assert.equal(fetch.mock.callCount(), 0);
 });
 
-test("HTTP errors, missing browser, blocked pages and malformed output are failures, not page text", async () => {
+test("missing browser, blocked pages and malformed output are failures, not page text", async () => {
 	for (const failure of [
-		page("not found", { http_status: 404 }),
-		page("", { error: "BlockedPrivateAddress" }),
-		{ code: 1, killed: false, stdout: "invalid JSON", stderr: "private diagnostic" },
-		{ code: 0, killed: true, stdout: "", stderr: "private diagnostic" },
+		async () => reply({ success: false, data: null, error: "private diagnostic" }),
+		page("private diagnostic", { read: false }),
+		async () => ({ code: 1, killed: false, stdout: "invalid JSON", stderr: "private diagnostic" }),
+		async () => ({ code: 0, killed: true, stdout: "", stderr: "private diagnostic" }),
 	]) {
 		const app = harness();
-		app.exec(async () => failure);
+		app.exec(failure);
 		const result = await app.run("web_read", { urls: ["https://site.example.org/page"] });
 		assert.equal(result.isError, true);
 		assert.equal(output(result).results[0].content, "");
@@ -531,11 +563,11 @@ test("HTTP errors, missing browser, blocked pages and malformed output are failu
 	}
 	const app = harness();
 	app.exec(async () => {
-		throw Object.assign(new Error("spawn lightpanda ENOENT"), { code: "ENOENT" });
+		throw Object.assign(new Error("spawn agent-browser ENOENT"), { code: "ENOENT" });
 	});
 	const result = await app.run("web_read", { urls: ["https://site.example.org/page"] });
 	assert.equal(result.isError, true);
-	assert.match(text(result), /Lightpanda.*PATH/);
+	assert.match(text(result), /agent-browser.*PATH/);
 });
 
 test("raw source HTTP errors, binary responses and oversize downloads fail without browser fallback", async (t) => {
@@ -561,10 +593,10 @@ test("raw source HTTP errors, binary responses and oversize downloads fail witho
 test("reader cancellation aborts the active process and prevents later URLs", async () => {
 	const app = harness();
 	const controller = new AbortController();
-	app.exec(async () => {
+	app.exec(async (command, args) => {
 		controller.abort();
 		assert.equal(app.executions[0].options?.signal?.aborted, true);
-		return page("partial");
+		return page("partial")(command, args);
 	});
 	await assert.rejects(
 		app.run("web_read", { urls: ["https://one.example.org/", "https://two.example.org/"] }, controller.signal),
@@ -575,8 +607,10 @@ test("reader cancellation aborts the active process and prevents later URLs", as
 
 test("partial reader failures leave successful pages available and later offsets work", async () => {
 	const app = harness();
-	app.exec(async () =>
-		app.executions.length === 1 ? page("missing", { http_status: 404 }) : page("first\nsecond\nthird"),
+	app.exec(async (command, args) =>
+		app.executions.length === 1
+			? reply({ success: false, data: null, error: "blocked" })
+			: page("first\nsecond\nthird")(command, args),
 	);
 	const result = await app.run("web_read", {
 		urls: ["https://bad.example.org/", "https://good.example.org/"],
@@ -584,7 +618,7 @@ test("partial reader failures leave successful pages available and later offsets
 		limit: 2,
 	});
 	assert.equal(result.isError, false);
-	assert.match(String(output(result).results[0].error), /404/);
+	assert.match(String(output(result).results[0].error), /blocked or unavailable/);
 	assert.equal(output(result).results[1].content, "2: second\n3: third");
 	const empty = await app.run("web_read", { urls: ["https://good.example.org/"], offset: 100 });
 	assert.equal(empty.isError, false);
@@ -597,7 +631,7 @@ test("partial reader failures leave successful pages available and later offsets
 test("following the reader cursor retrieves byte-limited pages without gaps or repeats", async () => {
 	const app = harness();
 	const original = Array.from({ length: 12 }, (_, i) => `paragraph ${i + 1}: ${"x".repeat(1500)}`);
-	app.exec(async () => page(original.join("\n")));
+	app.exec(page(original.join("\n")));
 	const collected: string[] = [];
 	let offset = 1;
 	let reads = 0;
@@ -627,7 +661,7 @@ test("following the reader cursor retrieves byte-limited pages without gaps or r
 
 test("an oversize line is reported as skipped with a cursor to readable later lines", async () => {
 	const app = harness();
-	app.exec(async () => page(`${"x".repeat(16_000)}\narticle title\narticle body`));
+	app.exec(page(`${"x".repeat(16_000)}\narticle title\narticle body`));
 	const result = await app.run("web_read", { urls: ["https://site.example.org/article"] });
 	assert.equal(result.isError, true);
 	assert.match(text(result), /Line 1.*skipped/);
@@ -643,7 +677,7 @@ test("an oversize line is reported as skipped with a cursor to readable later li
 
 test("oversize redirect URLs cannot bypass structured reader output limits", async () => {
 	const app = harness();
-	app.exec(async () => page("page text", { url: `https://site.example.org/${"界".repeat(900)}` }));
+	app.exec(page("page text", { url: `https://site.example.org/${"界".repeat(900)}` }));
 	const result = await app.run("web_read", { urls: ["https://site.example.org/page"] });
 	assert.equal(result.isError, true);
 	assert.ok(Buffer.byteLength(JSON.stringify(result.structuredContent)) < 12_000);
@@ -652,7 +686,7 @@ test("oversize redirect URLs cannot bypass structured reader output limits", asy
 
 test("search and reader bound text and structured output, including escaping and multibyte text", async () => {
 	const app = harness();
-	app.exec(async () => page('\\"æ界\u001b\u0007'.repeat(10_000)));
+	app.exec(page('\\"æ界\u001b\u0007'.repeat(10_000)));
 	const read = await app.run("web_read", {
 		urls: ["https://one.example.org/", "https://two.example.org/", "https://three.example.org/"],
 	});
