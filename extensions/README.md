@@ -59,7 +59,7 @@ with Haiku, WebSearch only, in safe mode, with `ANTHROPIC_API_KEY` and
 API billing. Only send public search terms, not private code or chat.
 
 `web_read` accepts up to three `urls`. GitHub source links return raw text;
-other pages use the installed Lightpanda browser to return Markdown locally.
+other pages open in Brave through agent-browser, which returns Markdown locally.
 Use `offset` and `limit` for longer pages. Each result is bounded to 12 KB,
 with a 2 MiB reader limit, a 30-second reading deadline and a 60-second search
 deadline. Private-network access and credential URLs are blocked. Neither tool
@@ -180,7 +180,7 @@ the editing guard. Keep the repository layout: it needs [the launcher](../skills
 | Permission gate | Confirm dangerous commands; not a filesystem sandbox. | [Pi example](https://github.com/earendil-works/pi/blob/v1.0.3/packages/coding-agent/examples/extensions/permission-gate.ts) |
 | Presets | Switch model, tools, reasoning, and instructions together. | [Pi example](https://github.com/earendil-works/pi/blob/v1.0.3/packages/coding-agent/examples/extensions/preset.ts) |
 | Plan mode | Read-only exploration and progress tracking. | [Pi example](https://github.com/earendil-works/pi/tree/v1.0.3/packages/coding-agent/examples/extensions/plan-mode) |
-| Browser | Reuse existing browser tools before adding an adapter. | [Lightpanda skill](../skills/lightpanda/SKILL.md) |
+| Browser | Reuse existing browser tools before adding an adapter. | [Browser skill](../skills/browser/SKILL.md) |
 | Notebook context | Bring notebook content into prompts. | [Notebook reader](../skills/notebook/SKILL.md) |
 | PDF context | Add page-aware document context. | [Document analysis](../skills/document-analysis/SKILL.md) |
 | Git checkpoints | Confirm snapshots and restoration of staged, unstaged, and untracked files; never push snapshot refs. | [Pi example](https://github.com/earendil-works/pi/blob/v1.0.3/packages/coding-agent/examples/extensions/git-checkpoint.ts) |

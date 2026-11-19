@@ -29,7 +29,7 @@ machines. Elsewhere, install what the parts you use need.
 | [Claude Code](https://code.claude.com/docs/en/overview), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/anomalyco/opencode), [Grok](https://www.npmjs.com/package/@xai-official/grok), [Pi](https://github.com/earendil-works/pi) | The agents you use; `subagent` and `validate` call them |
 | [GitHub CLI](https://cli.github.com/) | `pr`, `research`, Pi's git tools |
 | [1Password SSH agent](https://www.1password.dev/ssh/agent) with [commit signing](https://www.1password.dev/ssh/git-commit-signing) | Signing and pushing in `commit`, `pull`, `pr` |
-| [Lightpanda](https://github.com/lightpanda-io/browser) | `lightpanda`, `research`, Pi's `web_read` |
+| [agent-browser](https://github.com/vercel-labs/agent-browser), [Brave Origin](https://brave.com/origin/) | `browser`, `research`, Pi's `web_read` |
 | [OpenRouter](https://openrouter.ai/) in OpenCode | `validate`'s GLM reviewer |
 | [Greptile](https://www.greptile.com/docs/quickstart) GitHub app | `pr` reviews (optional) |
 | [LiteParse](https://github.com/run-llama/liteparse) | `document-analysis` |
@@ -78,7 +78,7 @@ Say what you need, or name a skill: "use the pr skill".
 | `craft-suite` | "edit it in FilmCraft", "klip det i FilmCraft" |
 | `study` | "explain", "quiz me", "hør mig" (DTU coursework) |
 | `week-overview` | "give me a week overview", "hvad skal jeg kunne i uge 4" (DTU) |
-| `lightpanda` | "the page needs JavaScript", "fill in the form" |
+| `browser` | "the page needs JavaScript", "fill in the form" |
 | `research` | "look it up", "the site blocked you", "søg på nettet" |
 | `computer-use` | "use the computer", "look at my screen", "brug computeren" |
 | `modern-python` | "write a Python script", "skriv et Python-script" |

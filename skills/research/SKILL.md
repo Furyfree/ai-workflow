@@ -5,7 +5,7 @@ description: >
   "look it up", "research this", "find it online", "the site blocked you",
   "you got a 403", "søg på nettet", "undersøg det", "find det online",
   "siden blokerede dig". Not for local files, PDFs (use document-analysis),
-  or clicking through a site (use lightpanda).
+  or clicking through a site (use browser).
 ---
 
 # Research
@@ -29,10 +29,9 @@ harness's own search. Then take the first route that answers:
 
 1. GitHub: read the file or API through `gh` or raw.githubusercontent.com, not
    the rendered page.
-2. Full page: Pi's `web_read`, otherwise
-   `lightpanda fetch --block-private-networks --dump markdown <url>`. When it
-   is blocked or empty, use Brave in the hidden desktop. See
-   [lightpanda](../lightpanda/SKILL.md).
+2. Full page: Pi's `web_read`, otherwise agent-browser. When it is blocked
+   or empty, click through it or use Brave in the hidden desktop. See
+   [browser](../browser/SKILL.md).
 3. Archive copy: `https://web.archive.org/web/<url>` opens the latest snapshot.
 4. Another source: official docs, a changelog, the vendor's repository, or a
    second reputable site.
@@ -43,7 +42,7 @@ Rules:
 
 - Give a link for every claim. Name the archive or second source when the
   original page was not read.
-- Never fake a browser user agent, use unblocker proxies, or solve CAPTCHAs.
-  Go elsewhere instead.
+- Never use unblocker proxies or CAPTCHA-solving services. Ask me to solve a
+  CAPTCHA in the hidden desktop's viewer, or go elsewhere.
 - Send only public search terms, not private code or conversation text.
 - Say what you could not reach.
