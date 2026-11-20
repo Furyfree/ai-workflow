@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Open, merge, or follow up a pull request. Use only when the user asks for it, or when an approved plan step opens or merges a PR - "make a PR", "open a pull request", "merge it straight in", "lav en PR", "opret en PR", "åbn en PR", "bare ind i main", "check the PR", "check the PRs", "tjek PR'en", "tjek PR'erne", "the PR is ready", "PR'en er klar", "what did the review say". Not for a plain commit or push (use commit).
+description: Open, merge, or follow up a pull request. Use only when the user asks for it, or when an approved plan step opens or merges a PR - "make a PR", "open a pull request", "merge it straight in", "lav en PR", "opret en PR", "åbn en PR", "bare ind i main", "wait for Greptile", "babysit the PR", "vent på Greptile", "check the PR", "check the PRs", "tjek PR'en", "tjek PR'erne", "the PR is ready", "PR'en er klar", "what did the review say". Not for a plain commit or push (use commit).
 ---
 
 # Pull request
@@ -34,13 +34,17 @@ Ask each question, and each wait for go, with the agent's question prompt
    at most. A signing or push error: follow the 1Password note in the
    [commit skill](../commit/SKILL.md).
    - Merge now: `gh pr create`, not as a draft, since GitHub will not merge
-     one. Merge as in step 6 right after opening; never wait for Greptile
-     or watch the PR. If GitHub refuses until checks pass, say so and hand
-     back. On the default branch, `git fetch` and
+     one. Merge as in step 6 right after opening, unless the user asked to
+     wait for Greptile or babysit the PR. If GitHub refuses until checks
+     pass, say so and hand back. On the default branch, `git fetch` and
      `git merge --ff-only @{u}`. End with "Greptile reviews #N in a few
      minutes; say 'check the PR' for its findings", and repeat that line at
      the end of later replies in this chat until the PR is checked or the
      user skips it.
+   - Merge now, asked to wait or babysit: open it the same way, wait for the
+     Greptile Review check (T3 Code: `watch_pull_request`; elsewhere
+     `gh pr checks <number> --watch`), go to step 5, and merge as in step 6
+     once Greptile's latest review has nothing left.
    - Review first: `gh pr create --draft`, then step 4.
 4. Ask one question - ready for review? Greptile reviews a PR once it is no
    longer a draft and again on every push; each review costs money.
@@ -53,8 +57,11 @@ Ask each question, and each wait for go, with the agent's question prompt
    work, run `gh pr ready --undo`. Leave fixed Greptile comments alone; it
    resolves them on its next review. Reply to a rejected one in one line
    saying why: `gh api repos/{owner}/{repo}/pulls/<number>/comments/<id>/replies -f body=...`.
-   No second review unless asked. On a merged PR, the fixes go in a new PR
-   from step 1, and each fixed comment gets a one-line reply linking it.
+   No second review unless asked. A merged PR cannot be reopened or take
+   commits, so its fixes go in a new PR from step 1 whose body names it.
+   Reply to each of its comments in one line, linking the fix or saying why
+   not, then resolve the thread with the `resolveReviewThread` mutation;
+   Greptile never reviews a merged PR again.
 6. Merge method. Repositories owned by Furyfree or byrne-homelab, unless
    their AGENTS.md says otherwise: `gh pr merge <number> --rebase
    --delete-branch`. Others: the method their recent merged PRs show in
