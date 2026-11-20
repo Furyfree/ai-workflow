@@ -15,8 +15,8 @@ its checks with `gh pr checks`, and its line comments with
 `gh api repos/{owner}/{repo}/pulls/<number>/comments`. If the
 Greptile Review check is still running, say so and hand back; otherwise go
 to step 5. "Check the PRs": the same for every PR updated in the last two
-days (`gh pr list --state all --search "updated:>=<date>"`), listing only
-findings neither fixed nor answered. Never create anything. "The PR is
+days (`gh pr list --state all --limit 100 --search "updated:>=<date>"`),
+listing only findings neither fixed nor answered. Never create anything. "The PR is
 ready": run `gh pr ready`, then hand back.
 
 Ask each question, and each wait for go, with the agent's question prompt
