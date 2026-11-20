@@ -17,8 +17,10 @@ where it says so. Ask each question with the agent's question prompt
 3. Read the staged diff. If it may contain a secret (key, token, password,
    private key, `.env`), show the file and line with the value masked, and
    ask for an explicit yes. Never print the value.
-4. Draft one message in the style of `git log --oneline -15`. Use the user's
-   guidance if given.
+4. Draft one message. Subject: the prefix and wording of
+   `git log --oneline -15`, imperative, at most 72 characters, aim for 50, no
+   trailing period. Add a body only for a reason the diff does not show;
+   never restate the diff. Use the user's guidance if given.
 5. Show the message, the files, and any earlier unpushed commits with the
    push destination (`git rev-parse --abbrev-ref @{push}`). Ask one question:
    Commit & push, Commit only, Edit message, or Cancel. Cancel leaves staging

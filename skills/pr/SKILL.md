@@ -30,9 +30,10 @@ Ask each question, and each wait for go, with the agent's question prompt
    - Wait: nothing happens
 2. Run the checks the repository's AGENTS.md names. If one fails, stop and
    show the error.
-3. Branch, commit, push. Body: what changed and how to test it, five lines
-   at most. A signing or push error: follow the 1Password note in the
-   [commit skill](../commit/SKILL.md).
+3. Branch, commit, push. Write commit messages by the
+   [commit skill](../commit/SKILL.md)'s message rules; on a signing or push
+   error, follow its 1Password note. PR body: what changed and how to test
+   it, five lines at most.
    - Merge now: `gh pr create`, not as a draft, since GitHub will not merge
      one. Merge as in step 6 right after opening, unless the user asked to
      wait for Greptile or babysit the PR. If GitHub refuses until checks
