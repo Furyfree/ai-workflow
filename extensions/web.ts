@@ -105,12 +105,21 @@ for (const [network, prefix] of [
 	["169.254.0.0", 16],
 	["172.16.0.0", 12],
 	["192.168.0.0", 16],
+	["198.18.0.0", 15],
+	["224.0.0.0", 4],
+	["240.0.0.0", 4],
 ] as const)
 	privateNetworks.addSubnet(network, prefix, "ipv4");
+// NAT64, Teredo and 6to4 carry an IPv4 address that a translator or relay reaches.
 for (const [network, prefix] of [
-	["::", 127],
+	["::", 96],
+	["64:ff9b::", 96],
+	["64:ff9b:1::", 48],
+	["2001::", 32],
+	["2002::", 16],
 	["fc00::", 7],
 	["fe80::", 10],
+	["ff00::", 8],
 ] as const)
 	privateNetworks.addSubnet(network, prefix, "ipv6");
 

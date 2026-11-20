@@ -561,6 +561,18 @@ test("the browser's proxy refuses private addresses, including names and redirec
 		["http://127.0.0.1:3000/", ["http://127.0.0.1:3000/"]],
 		["https://[::1]/", ["https://[::1]/"]],
 		["http://192.168.1.1/", ["http://192.168.1.1/"]],
+		// Address forms that reach a private or local host (issue #14).
+		...[
+			"http://[64:ff9b::c0a8:101]/",
+			"http://[64:ff9b:1::c0a8:101]/",
+			"http://[2001:0:4136:e378:8000:63bf:3fff:fdd2]/",
+			"http://[2002:7f00:1::]/",
+			"http://[::127.0.0.1]/",
+			"http://[ff02::1]/",
+			"http://198.18.0.1/",
+			"http://224.0.0.1/",
+			"http://255.255.255.255/",
+		].map((url) => [url, [url]] as const),
 		["https://intranet.example.org/", ["https://intranet.example.org/"]],
 		// A public page that redirects to a private one.
 		["https://site.example.org/page", ["http://intranet.example.org/admin"]],
