@@ -27,7 +27,7 @@ machines. Elsewhere, install what the parts you use need.
 | [Git](https://git-scm.com/downloads) | `commit`, `pull`, `pr`, `subagent` |
 | [Nix](https://nixos.org/download/) | Development: `nix develop` brings just, pnpm, uv and the checkers |
 | [Claude Code](https://code.claude.com/docs/en/overview), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/anomalyco/opencode), [Grok](https://www.npmjs.com/package/@xai-official/grok), [Pi](https://github.com/earendil-works/pi) | The agents you use; `subagent` and `validate` call them |
-| [GitHub CLI](https://cli.github.com/) | `pr`, `research`, Pi's git tools |
+| [GitHub CLI](https://cli.github.com/) | `pr`, `github-stars`, `research`, Pi's git tools |
 | [1Password SSH agent](https://www.1password.dev/ssh/agent) with [commit signing](https://www.1password.dev/ssh/git-commit-signing) | Signing and pushing in `commit`, `pull`, `pr` |
 | [agent-browser](https://github.com/vercel-labs/agent-browser), [Brave Origin](https://brave.com/origin/) | `browser`, `research`, Pi's `web_read` |
 | [OpenRouter](https://openrouter.ai/) in OpenCode | `validate`'s GLM reviewer |
@@ -65,6 +65,7 @@ Say what you need, or name a skill: "use the pr skill".
 | `pr` | "make a PR", "lav en PR", "check the PR" |
 | `commit` | "/commit", "commit and push", "lav et commit" |
 | `pull` | "/pull", "pull the latest", "hent ændringer" |
+| `github-stars` | "triage my stars", "gennemgå mine stjerner" |
 | `subagent` | "use subagents", "ask opus to ..." |
 | `testing` | "write tests", "what needs testing", "skriv tests" |
 | `lean-docs` | "write an AGENTS.md", "debloat the docs" |

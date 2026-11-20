@@ -4,6 +4,9 @@
   auto-approve mode is not a go.
 - Never change more than one file, create a file, or add a dependency or
   language before I approve a short numbered plan. Post it, then stop.
+- Spell out each plan step: what changes, in which repo, file or machine,
+  and any action outside this computer, such as an issue, PR, push or merge,
+  with where it lands. Give the reason in words, not a rule's name.
 - Only a clear change inside one existing file needs no plan: when I ask
   for it directly, do it, unless a loaded skill says to wait.
 - When the work outgrows the approved plan, stop and ask.
