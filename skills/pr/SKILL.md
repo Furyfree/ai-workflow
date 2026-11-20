@@ -54,7 +54,8 @@ Ask each question, and each wait for go, with the agent's question prompt
 5. Findings: one numbered list with a recommendation per item. The user's
    answer by number covers the fix, its commit, and the push to the PR
    branch. Put a round's fixes in one commit and one push; before longer
-   work, run `gh pr ready --undo`. Leave fixed Greptile comments alone; it
+   work, run `gh pr ready --undo`, and `gh pr ready` again after the
+   round's push. Leave fixed Greptile comments alone; it
    resolves them on its next review. Reply to a rejected one in one line
    saying why: `gh api repos/{owner}/{repo}/pulls/<number>/comments/<id>/replies -f body=...`.
    No second review unless asked. A merged PR cannot be reopened or take
