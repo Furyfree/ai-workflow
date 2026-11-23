@@ -30,7 +30,8 @@
 - One question per message, 2-4 options, one marked Recommended, everyday
   words. Never bundle questions.
 - Least code that works: reuse the repository, then the standard library and
-  platform, then existing dependencies.
+  platform, then existing dependencies, then a short script of your own. Add a
+  new dependency only when your own code would be long or hard to get right.
 - Never add a dependency, abstraction, or setting for a need that does not
   exist yet.
 - Copy how upstream or established projects do it before inventing.
