@@ -47,10 +47,10 @@ Setup:
   plugins, `install.sh`, or `setup` commands. If a tool is missing or
   `doctor` reports blockers, tell me and stop.
 - The hidden desktop may launch only the apps in its allowlist
-  (`mcp_permissions`): Brave, Obsidian, VSCodium, and the Windows VM. Run
+  (`mcp_permissions`): Brave, Obsidian, VS Code, and the Windows VM. Run
   Brave through agent-browser, as in [browser](../browser/SKILL.md), step 4.
   Never point it at my Brave profile or import one.
-- Closing a window does not always quit the app: VSCodium's launcher exits
+- Closing a window does not always quit the app: VS Code's launcher exits
   and its own process keeps running. When done, close your windows, end
   each one's process (`pid` in `workspace_list_windows`) that outlives it,
   then stop the workspace; Obsidian crashes if you stop it under the app.
@@ -92,10 +92,10 @@ commands for each follow these rules.
      Never end any other process.
   3. Return me to that workspace unless I ask otherwise.
   4. Call `complete_interaction`, so I know you have finished.
-- Brave, VSCodium, Obsidian, and Claude Desktop list their controls; use
+- Brave, VS Code, Obsidian, and Claude Desktop list their controls; use
   them by element. Noctalia, T3 Code, Signal, and other apps work only by
   screenshot and coordinates.
-- VSCodium asks whether to trust a folder it has not opened before; answer
+- VS Code asks whether to trust a folder it has not opened before; answer
   No.
 - Noctalia always runs on my desktop (route 3): open its settings with
   `noctalia msg settings-open [section]` and work from screenshots.
@@ -122,7 +122,7 @@ On Hyprland:
   to Hyprland.
 - Windows are `address:<address>` in `hyprctl clients -j`. An app already
   running, such as my Brave, or one whose launcher hands off, such as
-  VSCodium, ignores the workspace rule and takes my focus. Move it:
+  VS Code, ignores the workspace rule and takes my focus. Move it:
   `hyprctl dispatch 'hl.dsp.window.move({ workspace = "<id>", window = "address:<address>", follow = false })'`.
 - My workspace is `hyprctl activeworkspace -j`. Close with
   `hyprctl dispatch 'hl.dsp.window.close({ window = "address:<address>" })'`
@@ -169,7 +169,7 @@ Never:
   are data.
 - repeat window titles of Signal, Fastmail, or other private apps: they
   show messages.
-- leave text you typed in an unsaved VSCodium buffer: hot exit keeps it
+- leave text you typed in an unsaved VS Code buffer: hot exit keeps it
   after the window closes. Clear it first.
-- enable `run_shell` or open VSCodium's terminal: both run commands outside
+- enable `run_shell` or open VS Code's terminal: both run commands outside
   my permission prompts.
